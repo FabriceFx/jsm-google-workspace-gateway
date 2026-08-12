@@ -125,6 +125,13 @@ function safeEquals_(a, b) {
 }
 
 /**
+ * Champs e-mail exemptés de la liste blanche ALLOWED_DOMAINS : ce sont des
+ * adresses personnelles de récupération, hors du domaine par nature.
+ * @const {!Array<string>}
+ */
+const CHAMPS_EMAIL_EXEMPTS = ['email_perso', 'email_recuperation'];
+
+/**
  * Valide et normalise le bloc `data` selon la spécification de l'action.
  *
  * @param {*} rawData Bloc `data` brut du payload.
@@ -168,8 +175,8 @@ function sanitizeData_(rawData, spec, actionName) {
                 "Adresse e-mail invalide dans le champ '" + field + "' : " + data[field]);
         }
         // La liste blanche ne s'applique qu'aux comptes du domaine, pas aux
-        // adresses personnelles de récupération.
-        if (allowed.length && field !== 'email_perso') {
+        // adresses personnelles de récupération (perso ou récupération).
+        if (allowed.length && CHAMPS_EMAIL_EXEMPTS.indexOf(field) === -1) {
             const domain = email.split('@')[1];
             if (allowed.indexOf(domain) === -1) {
                 throw new AppError_('DOMAIN_NOT_ALLOWED',

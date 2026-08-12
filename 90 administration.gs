@@ -237,30 +237,149 @@ function admin_genererSignatureEmail() {
 function admin_listerLicences() {
   assertAdminUI_();
   var productId = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
+
+  // L'API Licensing exige un customerId explicite (domaine principal ou ID
+  // client) : l'alias 'my_customer' de l'Admin SDK n'y est pas reconnu. On le
+  // prend dans LICENSE_CUSTOMER_ID, sinon dans le 1er ALLOWED_DOMAINS.
+  var customerId = getProp_('LICENSE_CUSTOMER_ID');
+  if (!customerId) {
+    customerId = getProp_('ALLOWED_DOMAINS').split(',')
+      .map(function (d) { return d.trim(); }).filter(Boolean)[0] || '';
+  }
+  if (!customerId) {
+    console.log('Impossible de lister les licences : renseigner LICENSE_CUSTOMER_ID ' +
+      '(domaine principal du client, ex. cooperl.com) ou ALLOWED_DOMAINS.');
+    return;
+  }
+
   try {
     var reponse = appelLicensingApi_('GET',
-      'product/' + encodeURIComponent(productId) + '/users?maxResults=1', null);
-    // L'endpoint /users liste les assignations ; le champ skuId y figure.
+      'product/' + encodeURIComponent(productId) + '/users' +
+      '?customerId=' + encodeURIComponent(customerId) + '&maxResults=100', null);
+    // L'endpoint listForProduct liste les assignations ; le champ skuId y figure.
     var skus = {};
     (reponse && reponse.items || []).forEach(function (a) {
       skus[a.skuId] = (skus[a.skuId] || 0) + 1;
     });
-    var lignes = ['Produit interrogé : ' + productId,
-      'SKU rencontrés (échantillon) :'];
+    var lignes = ['Produit : ' + productId + ' — client : ' + customerId,
+      'SKU rencontrés (échantillon des 100 premières assignations) :'];
     Object.keys(skus).forEach(function (s) {
       lignes.push('  - ' + s + ' (' + skus[s] + ' assignation(s) vues)');
     });
     if (!Object.keys(skus).length) {
-      lignes.push('  (aucune assignation lue — vérifier le scope apps.licensing ' +
-        'et le productId)');
+      lignes.push('  (aucune assignation lue — vérifier le scope apps.licensing, ' +
+        'le productId et le customerId)');
     }
     lignes.push('\nRenseigner LICENSE_SKU_ID avec le SKU de l\'édition à gérer.');
     console.log(lignes.join('\n'));
   } catch (err) {
     console.error('Lecture des licences impossible : ' + err.message +
       '\n  → Vérifier le scope apps.licensing (réautoriser après mise à jour ' +
-      'du manifeste) et les droits d\'administration.');
+      'du manifeste), le customerId et les droits d\'administration.');
   }
+}
+
+/**
+ * Smoke test des API en LECTURE SEULE : vérifie que chaque famille d'API
+ * répond réellement (Directory, Gmail impersoné, Licensing, Data Transfer),
+ * sans rien modifier. À lancer avant la mise en service.
+ *
+ * ✅ = appel réussi, ❌ = échec (message affiché), ⚠️ = non testé (config absente).
+ */
+function admin_verifierApis() {
+  assertAdminUI_();
+  var moi = Session.getEffectiveUser().getEmail();
+  var lignes = ['Smoke test des API (lecture seule) :', ''];
+
+  // 1-3. Admin SDK Directory
+  lignes.push(testerApi_('Directory / utilisateurs', function () {
+    var r = AdminDirectory.Users.list({ customer: 'my_customer', maxResults: 1 });
+    return (r.users ? r.users.length : 0) + ' lu(s)';
+  }));
+  lignes.push(testerApi_('Directory / unités org.', function () {
+    var r = AdminDirectory.Orgunits.list('my_customer', { type: 'all' });
+    return ((r.organizationUnits || []).length) + ' OU';
+  }));
+  lignes.push(testerApi_('Directory / appareils', function () {
+    AdminDirectory.Mobiledevices.list('my_customer', { maxResults: 1 });
+    return 'accessible';
+  }));
+
+  // 4. Gmail (compte de service + délégation de domaine)
+  if (!getProp_('SERVICE_ACCOUNT_EMAIL') || !getProp_('SERVICE_ACCOUNT_KEY')) {
+    lignes.push('  ⚠️ Gmail (compte de service) — NON CONFIGURÉ ' +
+      '(actions Gmail indisponibles tant que SERVICE_ACCOUNT_* est absent)');
+  } else if (!moi) {
+    lignes.push('  ⚠️ Gmail — IGNORÉ (adresse administrateur indisponible)');
+  } else {
+    lignes.push(testerApi_('Gmail (impersonation)', function () {
+      appelGmailApi_(moi, 'settings/vacation', 'GET', null,
+        'https://www.googleapis.com/auth/gmail.settings.basic');
+      return 'jeton + lecture des réglages OK (' + moi + ')';
+    }));
+  }
+
+  // 5. Licensing
+  var custId = getProp_('LICENSE_CUSTOMER_ID') ||
+    (getProp_('ALLOWED_DOMAINS').split(',')
+      .map(function (d) { return d.trim(); }).filter(Boolean)[0] || '');
+  if (!custId) {
+    lignes.push('  ⚠️ Licensing — IGNORÉ (renseigner LICENSE_CUSTOMER_ID ou ALLOWED_DOMAINS)');
+  } else {
+    var prod = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
+    lignes.push(testerApi_('Licensing', function () {
+      appelLicensingApi_('GET', 'product/' + encodeURIComponent(prod) +
+        '/users?customerId=' + encodeURIComponent(custId) + '&maxResults=1', null);
+      return 'accessible (' + prod + ' / ' + custId + ')';
+    }));
+  }
+
+  // 6. Data Transfer (Drive)
+  lignes.push(testerApi_('Data Transfer', function () {
+    var rep = UrlFetchApp.fetch(
+      'https://admin.googleapis.com/admin/datatransfer/v1/transfers?maxResults=1',
+      { headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+        muteHttpExceptions: true });
+    var code = rep.getResponseCode();
+    if (code >= 400) {
+      var msg = '';
+      try { msg = JSON.parse(rep.getContentText()).error.message; }
+      catch (e) { msg = rep.getContentText(); }
+      throw new Error('HTTP ' + code + ' — ' + msg);
+    }
+    return 'accessible';
+  }));
+
+  lignes.push('', 'Rappel : ce test ne modifie rien. Les ❌ indiquent un scope non ' +
+    'autorisé (réautoriser après mise à jour du manifeste) ou un droit manquant.');
+  console.log(lignes.join('\n'));
+}
+
+/**
+ * Exécute un test d'API et retourne une ligne de rapport formatée.
+ * @param {string} nom Nom de la famille d'API.
+ * @param {function():string} fn Appel de test (retourne un détail lisible).
+ * @return {string}
+ */
+function testerApi_(nom, fn) {
+  try {
+    return '  ✅ ' + nom + ' — ' + fn();
+  } catch (err) {
+    return '  ❌ ' + nom + ' — ' + ((err && err.message) || err);
+  }
+}
+
+/**
+ * Vide le cache des suggestions (listes déroulantes à autocomplétion de la
+ * console). À exécuter après un nettoyage des données de l'annuaire pour que
+ * les nouvelles valeurs (ou la disparition des anciennes) soient prises en
+ * compte sans attendre l'expiration automatique (6 h).
+ */
+function admin_viderCacheSuggestions() {
+  assertAdminUI_();
+  viderCacheSuggestions_();
+  console.log('Cache des suggestions vidé. Il sera reconstruit au prochain ' +
+    'chargement d\'un formulaire concerné.');
 }
 
 /** Affiche dans les logs les demandes actuellement en attente. */

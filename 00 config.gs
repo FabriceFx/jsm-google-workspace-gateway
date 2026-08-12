@@ -76,6 +76,33 @@ const CONFIG = Object.freeze({
 });
 
 /**
+ * Correspondance « champ plat du ticket → attribut de schéma personnalisé ».
+ *
+ * Permet d'exposer chaque attribut RH / accès comme un champ simple (un par
+ * champ, pratique côté Jira et pour les listes déroulantes) plutôt que d'exiger
+ * un objet JSON dans `custom_schemas`. construireProfilPatch_ (06_Workspace.gs)
+ * replie ces champs dans le bon schéma.
+ *
+ * ⚠️ À ADAPTER aux schémas réellement définis dans la console d'administration
+ * (Annuaire > Gérer les attributs personnalisés) : les noms ci-dessous
+ * reprennent les schémas observés (Ressources_humaines, Lumapps, Atlassian).
+ * `type` : 'number' | 'bool' | (défaut) 'string'.
+ * @const
+ */
+const MAPPING_SCHEMAS_PERSO = Object.freeze({
+  rh_matricule:             { schema: 'Ressources_humaines', champ: 'Matricule', type: 'number' },
+  rh_statut:                { schema: 'Ressources_humaines', champ: 'Statut' },
+  rh_sous_service:          { schema: 'Ressources_humaines', champ: 'Sous_service' },
+  rh_site_paie:             { schema: 'Ressources_humaines', champ: 'Site_de_paie' },  // string : garde les zéros ('01')
+  rh_cse:                   { schema: 'Ressources_humaines', champ: 'CSE' },
+  rh_batiment:              { schema: 'Ressources_humaines', champ: 'Batiment', type: 'number' },
+  rh_fonction_transversale: { schema: 'Ressources_humaines', champ: 'Fonction_transversale' },
+  acces_lumapps:            { schema: 'Lumapps',    champ: 'Acces',      type: 'bool' },
+  acces_jira:               { schema: 'Atlassian',  champ: 'JIRA',       type: 'bool' },
+  acces_confluence:         { schema: 'Atlassian',  champ: 'Confluence', type: 'bool' }
+});
+
+/**
  * Lecture typée d'une propriété de script.
  * @param {string} key Clé de la propriété.
  * @param {string} [fallback=''] Valeur par défaut si absente.

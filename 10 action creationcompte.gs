@@ -3,8 +3,12 @@
  * -----------------------------------------------------------------------------
  * Formulaire JSM : arrivée d'un collaborateur.
  *
- * Champs attendus dans `data` : prenom, nom, email_souhaite, [unite_organisationnelle], [email_perso],
- *        [manager_email], [intitule_poste], [telephone]
+ * Champs `data` : prenom, nom, email_souhaite (requis), [unite_organisationnelle],
+ * plus tous les champs de profil optionnels reconnus par construireProfilPatch_
+ * (voir 06_Workspace.gs) : email_perso/email_recuperation, manager_email,
+ * intitule_poste, departement, societe, centre_cout, telephone_pro,
+ * telephone_mobile, adresse, batiment, etage, bureau, tel_recuperation,
+ * custom_schemas.
  *
  * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
@@ -26,7 +30,7 @@ function SPEC_CREATION_COMPTE() {
     required: ['prenom', 'nom', 'email_souhaite'],
     // manager_email est listé ici pour que sanitizeData_ valide son format ET
     // son domaine : il reçoit le mot de passe provisoire, jamais vers l'externe.
-    emails: ['email_souhaite', 'email_perso', 'manager_email'],
+    emails: ['email_souhaite', 'email_perso', 'manager_email', 'email_recuperation'],
     fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
     handler: actionCreerUtilisateur
   };
@@ -65,24 +69,22 @@ function actionCreerUtilisateur(data, ctx) {
 
   const motDePasse = generatePassword_();
 
+  // Le profil (nom, poste, service, société, téléphones, manager, adresse,
+  // localisation, récupération, schémas personnalisés…) est bâti par la source
+  // partagée avec MISE_A_JOUR_PROFIL : les deux exposent le même jeu de champs.
+  const profil = construireProfilPatch_(data, null).patch;
+
   /** @type {!Object} Ressource User de l'Admin SDK. */
-  const nouvelUtilisateur = {
+  const nouvelUtilisateur = Object.assign({
     primaryEmail: email,
-    name: { givenName: data.prenom, familyName: data.nom },
     password: motDePasse,
     changePasswordAtNextLogin: true,
     orgUnitPath: data.unite_organisationnelle || getProp_('DEFAULT_OU', '/')
-  };
+  }, profil);
 
-  if (data.email_perso) nouvelUtilisateur.recoveryEmail = data.email_perso;
-  if (data.telephone) {
-    nouvelUtilisateur.phones = [{ value: data.telephone, type: 'work' }];
-  }
-  if (data.intitule_poste) {
-    nouvelUtilisateur.organizations = [{ title: data.intitule_poste, primary: true }];
-  }
-  if (data.manager_email) {
-    nouvelUtilisateur.relations = [{ value: data.manager_email, type: 'manager' }];
+  // Garantit un nom même si prenom/nom venaient à manquer (ils sont requis).
+  if (!nouvelUtilisateur.name) {
+    nouvelUtilisateur.name = { givenName: data.prenom, familyName: data.nom };
   }
 
   let cree;

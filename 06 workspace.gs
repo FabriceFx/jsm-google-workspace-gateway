@@ -205,6 +205,171 @@ function getGroupOrNull_(email) {
 }
 
 /**
+ * Construit un patch de profil Admin SDK à partir des champs `data`, en
+ * fusionnant avec l'utilisateur existant pour ne JAMAIS écraser un tableau
+ * (Users.patch remplace un champ tableau en bloc).
+ *
+ * Source unique partagée par CREATION_COMPTE (existant = null) et
+ * MISE_A_JOUR_PROFIL (existant = ressource lue) : les deux exposent ainsi
+ * exactement le même jeu de champs de profil.
+ *
+ * Champs `data` reconnus (tous optionnels) :
+ *   prenom, nom, intitule_poste, departement, societe, centre_cout,
+ *   manager_email, telephone_pro (ou telephone), telephone_mobile,
+ *   adresse, batiment, etage, bureau,
+ *   email_recuperation (ou email_perso), tel_recuperation,
+ *   visible_annuaire, custom_schemas (objet ou chaîne JSON).
+ *
+ * @param {!Object} data Données validées.
+ * @param {?Object} existant Ressource User existante, ou null (création).
+ * @return {!{patch: !Object, modifications: !Array<string>}}
+ */
+function construireProfilPatch_(data, existant) {
+  existant = existant || {};
+  var patch = {};
+  var mods = [];
+
+  // --- Nom ---
+  if (data.prenom || data.nom) {
+    var n = existant.name || {};
+    patch.name = {
+      givenName: data.prenom || n.givenName || '',
+      familyName: data.nom || n.familyName || ''
+    };
+    mods.push('nom : ' + patch.name.givenName + ' ' + patch.name.familyName);
+  }
+
+  // --- Organisation principale : poste, service, société, centre de coûts ---
+  if (data.intitule_poste || data.departement || data.societe || data.centre_cout) {
+    var orgs = (existant.organizations || []).map(function (o) {
+      return Object.assign({}, o);
+    });
+    var principale = null;
+    for (var i = 0; i < orgs.length; i++) {
+      if (orgs[i].primary) { principale = orgs[i]; break; }
+    }
+    if (!principale) { principale = { primary: true }; orgs.push(principale); }
+    if (data.intitule_poste) { principale.title = data.intitule_poste; mods.push('poste : ' + data.intitule_poste); }
+    if (data.departement) { principale.department = data.departement; mods.push('service : ' + data.departement); }
+    if (data.societe) { principale.name = data.societe; mods.push('société : ' + data.societe); }
+    if (data.centre_cout) { principale.costCenter = data.centre_cout; mods.push('centre de coûts : ' + data.centre_cout); }
+    patch.organizations = orgs;
+  }
+
+  // --- Téléphones par type (sans effacer les autres numéros) ---
+  var majTel = function (type, valeur, libelle) {
+    if (!valeur) return;
+    if (!patch.phones) {
+      patch.phones = (existant.phones || []).map(function (p) { return Object.assign({}, p); });
+    }
+    patch.phones = patch.phones.filter(function (p) { return p.type !== type; });
+    patch.phones.push({ value: String(valeur), type: type });
+    mods.push(libelle + ' : ' + valeur);
+  };
+  majTel('work', data.telephone_pro || data.telephone, 'téléphone pro');
+  majTel('mobile', data.telephone_mobile, 'mobile');
+
+  // --- Manager (relation) ---
+  if (data.manager_email) {
+    var rel = (existant.relations || []).filter(function (r) { return r.type !== 'manager'; });
+    rel.push({ value: data.manager_email, type: 'manager' });
+    patch.relations = rel;
+    mods.push('manager : ' + data.manager_email);
+  }
+
+  // --- Adresse professionnelle ---
+  if (data.adresse) {
+    var adr = (existant.addresses || []).filter(function (a) { return a.type !== 'work'; });
+    adr.push({ type: 'work', formatted: String(data.adresse) });
+    patch.addresses = adr;
+    mods.push('adresse');
+  }
+
+  // --- Localisation (poste de travail) ---
+  if (data.batiment || data.etage || data.bureau) {
+    var loc = (existant.locations || []).filter(function (l) { return l.type !== 'desk'; });
+    var desk = { type: 'desk', area: 'desk' };
+    if (data.batiment) desk.buildingId = String(data.batiment);
+    if (data.etage) desk.floorName = String(data.etage);
+    if (data.bureau) desk.deskCode = String(data.bureau);
+    loc.push(desk);
+    patch.locations = loc;
+    mods.push('localisation bureau');
+  }
+
+  // --- Informations de récupération ---
+  var recup = data.email_recuperation || data.email_perso;
+  if (recup) { patch.recoveryEmail = recup; mods.push('e-mail de récupération'); }
+  if (data.tel_recuperation) { patch.recoveryPhone = String(data.tel_recuperation); mods.push('téléphone de récupération'); }
+
+  // --- Visibilité dans l'annuaire global ---
+  if (data.visible_annuaire !== undefined && data.visible_annuaire !== '') {
+    patch.includeInGlobalAddressList = boolDeFormulaire_(data.visible_annuaire, true);
+    mods.push('visible dans l\'annuaire : ' + patch.includeInGlobalAddressList);
+  }
+
+  // --- Schémas personnalisés (RH, Atlassian, Lumapps…) ---
+  // Deux entrées possibles, combinées : un objet/chaîne JSON `custom_schemas`,
+  // et des champs plats mappés (MAPPING_SCHEMAS_PERSO). Fusion au niveau champ
+  // avec l'existant pour ne pas effacer les autres attributs d'un même schéma.
+  var fournis = {};
+  var ajouterAttribut = function (schema, champ, valeur) {
+    fournis[schema] = fournis[schema] || {};
+    fournis[schema][champ] = valeur;
+  };
+
+  if (data.custom_schemas) {
+    var parsed;
+    try {
+      parsed = (typeof data.custom_schemas === 'string')
+        ? JSON.parse(data.custom_schemas) : data.custom_schemas;
+    } catch (e) {
+      throw new AppError_('INVALID_SCHEMA',
+        "Le champ 'custom_schemas' n'est pas un JSON valide : " + e.message);
+    }
+    if (parsed && typeof parsed === 'object') {
+      Object.keys(parsed).forEach(function (schema) {
+        Object.keys(parsed[schema] || {}).forEach(function (champ) {
+          ajouterAttribut(schema, champ, parsed[schema][champ]);
+        });
+      });
+    }
+  }
+
+  // Champs plats → schéma/attribut (Matricule, Statut, accès Atlassian…).
+  Object.keys(MAPPING_SCHEMAS_PERSO).forEach(function (cle) {
+    var v = data[cle];
+    if (v === undefined || v === null || v === '') return;
+    var m = MAPPING_SCHEMAS_PERSO[cle];
+    var valeur;
+    if (m.type === 'number') {
+      valeur = Number(v);
+      if (isNaN(valeur)) {
+        throw new AppError_('INVALID_SCHEMA',
+          "Le champ '" + cle + "' doit être numérique (reçu : " + v + ').');
+      }
+    } else if (m.type === 'bool') {
+      valeur = boolDeFormulaire_(v, false);
+    } else {
+      valeur = String(v);
+    }
+    ajouterAttribut(m.schema, m.champ, valeur);
+  });
+
+  if (Object.keys(fournis).length) {
+    var existSchemas = existant.customSchemas || {};
+    var fusion = {};
+    Object.keys(fournis).forEach(function (schema) {
+      fusion[schema] = Object.assign({}, existSchemas[schema] || {}, fournis[schema]);
+    });
+    patch.customSchemas = fusion;
+    mods.push('attributs personnalisés : ' + Object.keys(fournis).join(', '));
+  }
+
+  return { patch: patch, modifications: mods };
+}
+
+/**
  * Récupère un utilisateur, ou lève une erreur NOT_FOUND explicite et uniforme.
  * Factorise le préambule « compte introuvable » répété dans une douzaine
  * d'actions et garantit un message identique côté ticket.
@@ -543,6 +708,101 @@ function appelGmailApi_(emailCible, endpoint, methode, payload, scopes) {
 
   if (code === 204 || !reponse.getContentText()) return null;
   return JSON.parse(reponse.getContentText());
+}
+
+// ---------------------------------------------------------------------------
+//  SUGGESTIONS — valeurs distinctes tirées de l'annuaire (pour datalists)
+// ---------------------------------------------------------------------------
+
+/**
+ * Sources de suggestions autorisées : où lire les valeurs distinctes dans la
+ * ressource User. Volontairement une liste blanche (le client ne peut demander
+ * qu'une clé connue). Les clés correspondent à celles de LISTES côté console.
+ * @const
+ */
+const SOURCES_SUGGESTIONS = Object.freeze({
+  societe:               { champ: 'organizations', sous: 'name' },
+  departement:           { champ: 'organizations', sous: 'department' },
+  centre_cout:           { champ: 'organizations', sous: 'costCenter' },
+  statut:                { schema: 'Ressources_humaines', attr: 'Statut' },
+  cse:                   { schema: 'Ressources_humaines', attr: 'CSE' },
+  fonction_transversale: { schema: 'Ressources_humaines', attr: 'Fonction_transversale' }
+});
+
+/** Nb max de pages (500 comptes/page) parcourues pour construire une suggestion. */
+const SUGGESTIONS_MAX_PAGES = 20;
+
+/**
+ * Extrait la ou les valeurs d'un champ d'un utilisateur selon la définition.
+ * @param {!Object} user Ressource User (projection full).
+ * @param {!Object} def Entrée de SOURCES_SUGGESTIONS.
+ * @return {!Array<*>}
+ */
+function extraireValeursUser_(user, def) {
+  if (def.champ === 'organizations') {
+    return (user.organizations || []).map(function (o) { return o[def.sous]; });
+  }
+  if (def.schema) {
+    var s = (user.customSchemas || {})[def.schema] || {};
+    return [s[def.attr]];
+  }
+  return [];
+}
+
+/**
+ * Retourne les valeurs distinctes existantes pour une clé de suggestion, en
+ * parcourant l'annuaire. Résultat MIS EN CACHE 6 h (l'énumération est coûteuse
+ * et le vocabulaire évolue lentement) — voir viderCacheSuggestions_ pour forcer.
+ *
+ * ⚠️ Reflète les données telles quelles : d'éventuelles variantes/fautes de
+ * saisie existantes apparaîtront ; c'est une aide (datalist), pas une liste
+ * fermée. Bornée à SUGGESTIONS_MAX_PAGES pages.
+ *
+ * @param {string} cle Clé de SOURCES_SUGGESTIONS.
+ * @return {!Array<!{val: string, txt: string}>}
+ */
+function suggestionsAnnuaire_(cle) {
+  var def = SOURCES_SUGGESTIONS[cle];
+  if (!def) return [];
+
+  var cache = CacheService.getScriptCache();
+  var cacheKey = 'sugg_' + cle;
+  var enCache = cache.get(cacheKey);
+  if (enCache) return JSON.parse(enCache);
+
+  var valeurs = {};
+  var pageToken = null;
+  var pages = 0;
+  do {
+    var opt = {
+      customer: 'my_customer', maxResults: 500,
+      projection: 'full', viewType: 'admin_view'
+    };
+    if (pageToken) opt.pageToken = pageToken;
+    var rep = AdminDirectory.Users.list(opt);
+    (rep.users || []).forEach(function (u) {
+      extraireValeursUser_(u, def).forEach(function (v) {
+        if (v !== null && v !== undefined && String(v).trim() !== '') {
+          valeurs[String(v)] = true;
+        }
+      });
+    });
+    pageToken = rep.nextPageToken;
+    pages++;
+  } while (pageToken && pages < SUGGESTIONS_MAX_PAGES);
+
+  var liste = Object.keys(valeurs).sort().map(function (v) {
+    return { val: v, txt: v };
+  });
+  // Cache 6 h (max autorisé par CacheService).
+  cache.put(cacheKey, JSON.stringify(liste), 21600);
+  return liste;
+}
+
+/** Vide le cache des suggestions (à appeler après un nettoyage de données). */
+function viderCacheSuggestions_() {
+  var cles = Object.keys(SOURCES_SUGGESTIONS).map(function (c) { return 'sugg_' + c; });
+  CacheService.getScriptCache().removeAll(cles);
 }
 
 // ---------------------------------------------------------------------------

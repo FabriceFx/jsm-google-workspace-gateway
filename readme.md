@@ -20,9 +20,9 @@ l'Admin SDK — le tout sans intervention manuelle.
 | Action | Description | Fenêtre |
 |---|---|---|
 | **Comptes** | | |
-| `CREATION_COMPTE` | Crée un compte Workspace, envoie le mot de passe par canal séparé | Standard |
+| `CREATION_COMPTE` | Crée un compte Workspace (profil complet), envoie le mot de passe par canal séparé | Standard |
 | `CHANGEMENT_OU` | Déplace un compte dans une autre unité organisationnelle | Standard |
-| `MISE_A_JOUR_PROFIL` | Met à jour nom, poste, téléphone, manager, département | Standard |
+| `MISE_A_JOUR_PROFIL` | Met à jour nom, poste, service, société, centre de coûts, téléphones, manager, adresse, localisation, récupération, visibilité annuaire et **attributs personnalisés** | Standard |
 | `RENOMMER_COMPTE` | Change l'adresse principale (l'ancienne devient alias) | Standard |
 | `SUPPRESSION_COMPTE` | Supprime définitivement un compte (confirmation obligatoire) | Standard |
 | **Groupes** | | |
@@ -65,6 +65,38 @@ l'Admin SDK — le tout sans intervention manuelle.
 
 > ⚙️ Les actions **Messagerie** nécessitent un compte de service avec
 > délégation de domaine (voir section « Actions Gmail »).
+>
+> 🧩 Les **attributs personnalisés** (création et mise à jour de profil)
+> peuvent être fournis de deux façons, combinables : un objet JSON
+> `custom_schemas` (`{"NomSchema": {"Champ": valeur}}`), ou des **champs plats**
+> plus simples pour Jira et les listes déroulantes (`rh_matricule`, `rh_statut`,
+> `rh_site_paie`, `rh_cse`, `acces_jira`, `acces_confluence`, `acces_lumapps`…),
+> repliés dans les bons schémas via `MAPPING_SCHEMAS_PERSO` (00_Config.gs — **à
+> adapter à vos schémas**). Les schémas doivent **exister au préalable** dans la
+> console d'administration (Annuaire > Gérer les attributs personnalisés).
+>
+> 🏢 La console propose des **listes déroulantes dynamiques** pour l'unité
+> organisationnelle (OU) et le bâtiment (buildingId), peuplées en direct depuis
+> Google. Le bâtiment nécessite le scope
+> `admin.directory.resource.calendar.readonly` (réautoriser après mise à jour du
+> manifeste).
+>
+> 📝 **Modifier les valeurs des listes déroulantes** : tout est regroupé dans
+> l'objet `LISTES`, en tête du `<script>` de `ui_test.html` (bloc « LISTES
+> DÉROULANTES — SEUL ENDROIT À MODIFIER »). Format : `{ val: 'valeur envoyée',
+> txt: 'texte affiché' }`. Une **liste vide `[]`** rend le champ en saisie libre
+> (et, pour l'OU, en liste dynamique). Concernés : `societe`, `centre_cout`,
+> `statut`, `cse`, `fonction_transversale`, `ou`, plus les listes techniques
+> (`role_groupe`, `type_effacement`…).
+>
+> 💡 **Autocomplétion depuis l'annuaire** : `societe`, `departement`,
+> `centre_cout`, `statut`, `cse`, `fonction_transversale` proposent en
+> **autocomplétion** (datalist) les valeurs déjà présentes dans l'annuaire,
+> **tout en autorisant une nouvelle saisie**. Priorité : une liste curée dans
+> `LISTES` (non vide) l'emporte ; sinon les suggestions s'affichent. Les valeurs
+> sont extraites en parcourant les comptes puis **mises en cache 6 h** (attention :
+> elles reflètent les données telles quelles, variantes/fautes comprises).
+> `admin_viderCacheSuggestions()` force le rafraîchissement après un nettoyage.
 
 **Fenêtre Standard** : exécution immédiate pendant les créneaux d'administration
 (lun.–ven. 8h30–17h30, sauf jours fériés français). Hors créneau, la demande
@@ -127,6 +159,7 @@ Groupes disponibles : `ARRIVEE_COLLABORATEUR` (onboarding),
    | `NOTIFY_EMAIL` | Recommandé | Adresse de notification (anomalies, mots de passe) |
    | `LICENSE_SKU_ID` | Optionnel | SKU de licence par défaut (actions de licence). Voir `admin_listerLicences()` |
    | `LICENSE_PRODUCT_ID` | Optionnel | Produit de licence (défaut `Google-Apps`) |
+   | `LICENSE_CUSTOMER_ID` | Optionnel | Client pour lister les licences (domaine principal). À défaut, 1er `ALLOWED_DOMAINS` |
    | `DEFAULT_OU` | Optionnel | Unité organisationnelle par défaut (ex. `/Collaborateurs`) |
    | `LOGO_URL` | Optionnel | URL publique du logo Cooperl pour les e-mails |
    | `LOGO_VARIANTE` | Optionnel | `BLANC` (défaut) ou `BLEU` selon le fichier hébergé |
@@ -214,6 +247,8 @@ En ouvrant l'URL du déploiement WebApp (`https://script.google.com/macros/s/...
 |---|---|
 | `test_unitaires()` | **Suite de tests automatiques** (assertions, aucun effet réel) |
 | `setup_verifierConfiguration()` | Diagnostic complet de la configuration |
+| `admin_verifierApis()` | **Smoke test des API** en lecture seule (Directory, Gmail, Licensing, Data Transfer) |
+| `admin_viderCacheSuggestions()` | Force le rafraîchissement des autocomplétions (après nettoyage de données) |
 | `test_verifierRegistre()` | Validation du catalogue des actions |
 | `test_verifierPlanning()` | Simulation des créneaux sur 7 jours |
 | `test_casDErreur()` | Vérifie les garde-fous (token, action, champs) par assertions |

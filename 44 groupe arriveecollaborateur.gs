@@ -32,7 +32,7 @@ function SPEC_ARRIVEE_COLLABORATEUR() {
     description: 'Onboarding complet : création du compte, licence, groupes et ' +
       'alias, dans l\'ordre.',
     required: ['prenom', 'nom', 'email_souhaite'],
-    emails: ['email_souhaite', 'email_perso', 'manager_email', 'alias'],
+    emails: ['email_souhaite', 'email_perso', 'email_recuperation', 'manager_email', 'alias'],
     fenetre: 'STANDARD',
     handler: actionArriveeCollaborateur
   };

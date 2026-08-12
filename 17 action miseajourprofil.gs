@@ -5,8 +5,11 @@
  * Tous les champs sont optionnels sauf email_cible : seuls les champs
  * renseignés sont mis à jour.
  *
- * Champs attendus dans `data` : email_cible, [prenom], [nom],
- *   [intitule_poste], [telephone], [manager_email], [departement]
+ * Champs `data` : email_cible + tous les champs de profil optionnels reconnus
+ * par construireProfilPatch_ (voir 06_Workspace.gs) : prenom, nom,
+ * intitule_poste, departement, societe, centre_cout, manager_email,
+ * telephone_pro, telephone_mobile, adresse, batiment, etage, bureau,
+ * email_recuperation, tel_recuperation, visible_annuaire, custom_schemas.
  *
  * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
@@ -17,7 +20,7 @@ function SPEC_MISE_A_JOUR_PROFIL() {
     action: 'MISE_A_JOUR_PROFIL',
     description: 'Met à jour les informations du profil utilisateur.',
     required: ['email_cible'],
-    emails: ['email_cible', 'manager_email'],
+    emails: ['email_cible', 'manager_email', 'email_recuperation'],
     fenetre: 'STANDARD',
     handler: actionMettreAJourProfil
   };
@@ -33,64 +36,12 @@ function SPEC_MISE_A_JOUR_PROFIL() {
 function actionMettreAJourProfil(data, ctx) {
   var utilisateur = requireUser_(data.email_cible);
 
-  var patch = {};
-  var modifications = [];
+  // Construction du patch fusionnée avec l'existant (source partagée avec
+  // CREATION_COMPTE) : aucun tableau — organizations, phones, relations,
+  // addresses, locations — n'est écrasé en bloc.
+  var resultat = construireProfilPatch_(data, utilisateur);
 
-  if (data.prenom || data.nom) {
-    const nomExistant = utilisateur.name || {};
-    patch.name = {
-      givenName: data.prenom || nomExistant.givenName || '',
-      familyName: data.nom || nomExistant.familyName || ''
-    };
-    modifications.push('nom : ' + patch.name.givenName + ' ' + patch.name.familyName);
-  }
-
-  // Les champs tableau (organizations, phones, relations) sont REMPLACÉS en bloc
-  // par Users.patch. On repart donc de l'existant et on ne touche qu'à l'entrée
-  // concernée, pour ne pas effacer département, centre de coûts, autres numéros
-  // ou autres relations déjà en place.
-  if (data.intitule_poste || data.departement) {
-    var orgs = (utilisateur.organizations || []).map(function (o) {
-      return Object.assign({}, o);
-    });
-    var orgPrincipale = null;
-    for (var i = 0; i < orgs.length; i++) {
-      if (orgs[i].primary) { orgPrincipale = orgs[i]; break; }
-    }
-    if (!orgPrincipale) {
-      orgPrincipale = { primary: true };
-      orgs.push(orgPrincipale);
-    }
-    if (data.intitule_poste) {
-      orgPrincipale.title = data.intitule_poste;
-      modifications.push('poste : ' + data.intitule_poste);
-    }
-    if (data.departement) {
-      orgPrincipale.department = data.departement;
-      modifications.push('département : ' + data.departement);
-    }
-    patch.organizations = orgs;
-  }
-
-  if (data.telephone) {
-    var phones = (utilisateur.phones || []).filter(function (p) {
-      return p.type !== 'work';   // on ne remplace que le numéro professionnel
-    });
-    phones.push({ value: data.telephone, type: 'work' });
-    patch.phones = phones;
-    modifications.push('téléphone : ' + data.telephone);
-  }
-
-  if (data.manager_email) {
-    var relations = (utilisateur.relations || []).filter(function (r) {
-      return r.type !== 'manager'; // on ne remplace que la relation manager
-    });
-    relations.push({ value: data.manager_email, type: 'manager' });
-    patch.relations = relations;
-    modifications.push('manager : ' + data.manager_email);
-  }
-
-  if (!modifications.length) {
+  if (!resultat.modifications.length) {
     return {
       idempotent: true,
       target: data.email_cible,
@@ -98,12 +49,12 @@ function actionMettreAJourProfil(data, ctx) {
     };
   }
 
-  AdminDirectory.Users.patch(patch, data.email_cible);
+  AdminDirectory.Users.patch(resultat.patch, data.email_cible);
 
   return {
     target: data.email_cible,
     message: 'Profil de ' + data.email_cible + ' mis à jour : ' +
-      modifications.join(', ') + '.',
-    details: { modifications: modifications }
+      resultat.modifications.join(', ') + '.',
+    details: { modifications: resultat.modifications }
   };
 }

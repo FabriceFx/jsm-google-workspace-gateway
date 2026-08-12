@@ -1458,55 +1458,197 @@
 
       const champsFormulaire = ObtenirChampsPourAction(actionSelectionnee);
 
+      const enLigne = (typeof google !== 'undefined' && google.script && google.script.run);
+
       champsFormulaire.forEach(field => {
         const div = document.createElement('div');
         div.className = 'md-field';
         const isRequired = actionSelectionnee.required.includes(field.id);
-        
+
         let inputHtml = '';
-        if (field.type === 'select') {
+        const aListeStatique = field.options && field.options.length;
+        if (aListeStatique) {
+          // Liste figée définie dans LISTES (prioritaire sur une source dynamique).
           inputHtml = `<select id="field_${field.id}" ${isRequired ? 'required' : ''}>
-            ${field.options.map(o => `<option value="${o.val}">${o.txt}</option>`).join('')}
+            ${field.options.map(o => `<option value="${escapeHtml(o.val)}">${escapeHtml(o.txt)}</option>`).join('')}
           </select>`;
+        } else if (field.optionsSource && enLigne) {
+          // Liste déroulante peuplée en direct depuis Google (voir chargerOptions).
+          inputHtml = `<select id="field_${field.id}" data-source="${escapeHtml(field.optionsSource)}" ${isRequired ? 'required' : ''}>
+            <option value="">Chargement…</option>
+          </select>`;
+        } else if (field.suggestSource && enLigne) {
+          // Champ libre AVEC autocomplétion des valeurs existantes de l'annuaire
+          // (datalist) : suggère sans verrouiller la saisie.
+          const dlId = 'dl_' + field.id;
+          inputHtml = `<input type="text" id="field_${field.id}" list="${dlId}" data-suggest="${escapeHtml(field.suggestSource)}" placeholder="${escapeHtml(field.placeholder || '')}" ${isRequired ? 'required' : ''} />
+            <datalist id="${dlId}"></datalist>`;
         } else {
-          inputHtml = `<input type="${field.type || 'text'}" id="field_${field.id}" placeholder="${field.placeholder || ''}" ${isRequired ? 'required' : ''} />`;
+          // Liste vide / source dynamique hors ligne : on retombe sur une saisie libre.
+          inputHtml = `<input type="${field.type || 'text'}" id="field_${field.id}" placeholder="${escapeHtml(field.placeholder || '')}" ${isRequired ? 'required' : ''} />`;
         }
 
         div.innerHTML = `
-          <label for="field_${field.id}">${field.label} ${isRequired ? '<span class="req">*</span>' : ''}</label>
+          <label for="field_${field.id}">${escapeHtml(field.label)} ${isRequired ? '<span class="req">*</span>' : ''}</label>
           ${inputHtml}
         `;
         container.appendChild(div);
       });
 
+      // Peupler les listes déroulantes dynamiques (OU, bâtiments) et les
+      // autocomplétions (suggestions tirées de l'annuaire).
+      if (enLigne) {
+        container.querySelectorAll('select[data-source]').forEach(sel => chargerOptions(sel));
+        container.querySelectorAll('input[data-suggest]').forEach(el => chargerSuggestions(el));
+      }
+
       // Masquer le résultat précédent
       document.getElementById('result-box').classList.remove('active');
     }
 
+    // Cache des options dynamiques par source (évite de réinterroger le serveur
+    // à chaque changement d'action).
+    const optionsCache = {};
+
+    function chargerOptions(selectEl) {
+      const source = selectEl.dataset.source;
+      if (optionsCache[source]) { remplirSelect(selectEl, optionsCache[source]); return; }
+      google.script.run
+        .withSuccessHandler(function(opts) {
+          optionsCache[source] = opts || [];
+          remplirSelect(selectEl, optionsCache[source]);
+        })
+        .withFailureHandler(function(err) {
+          selectEl.innerHTML = '<option value="">(chargement impossible — saisie manuelle)</option>';
+          selectEl.removeAttribute('data-source');
+        })
+        .getOptionsUI(source);
+    }
+
+    function remplirSelect(selectEl, opts) {
+      const courant = selectEl.value;
+      selectEl.innerHTML = '<option value="">— choisir —</option>' +
+        opts.map(o => `<option value="${escapeHtml(o.val)}">${escapeHtml(o.txt)}</option>`).join('');
+      if (courant) selectEl.value = courant;
+    }
+
+    // Autocomplétion : remplit le <datalist> associé à un champ avec les valeurs
+    // existantes de l'annuaire (source préfixée 'suggest:'). Échec silencieux :
+    // le champ reste une simple saisie libre.
+    function chargerSuggestions(inputEl) {
+      const cle = 'suggest:' + inputEl.dataset.suggest;
+      const dl = document.getElementById(inputEl.getAttribute('list'));
+      if (optionsCache[cle]) { remplirDatalist(dl, optionsCache[cle]); return; }
+      google.script.run
+        .withSuccessHandler(function(opts) {
+          optionsCache[cle] = opts || [];
+          remplirDatalist(dl, optionsCache[cle]);
+        })
+        .withFailureHandler(function() { /* saisie libre conservée */ })
+        .getOptionsUI(cle);
+    }
+
+    function remplirDatalist(dl, opts) {
+      if (!dl) return;
+      dl.innerHTML = opts.map(o => `<option value="${escapeHtml(o.val)}"></option>`).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  LISTES DÉROULANTES — SEUL ENDROIT À MODIFIER POUR LES VALEURS
+    //  ─────────────────────────────────────────────────────────────────────
+    //  Chaque entrée : { val: 'valeur envoyée à Google', txt: 'texte affiché' }
+    //   • Liste VIDE []  ⇒ le champ redevient une saisie libre
+    //                       (et, pour l'OU, la liste DYNAMIQUE tirée de Google).
+    //   • 1re entrée { val: '' } ⇒ rend le choix facultatif (« — choisir — »).
+    //  Pour ajouter une valeur : copier une ligne { val: '…', txt: '…' }.
+    // ═══════════════════════════════════════════════════════════════════════
+    const LISTES = {
+      // — Listes techniques (rarement à modifier) —
+      ouinon:           [{ val: '', txt: '(ne pas changer)' }, { val: 'true', txt: 'Oui' }, { val: 'false', txt: 'Non' }],
+      role_groupe:      [{ val: 'MEMBER', txt: 'Membre (MEMBER)' }, { val: 'MANAGER', txt: 'Gestionnaire (MANAGER)' }, { val: 'OWNER', txt: 'Propriétaire (OWNER)' }],
+      type_effacement:  [{ val: 'COMPTE', txt: 'Compte pro uniquement (COMPTE)' }, { val: 'COMPLET', txt: 'Réinitialisation usine complète (COMPLET)' }],
+      conserver_copie:  [{ val: 'true', txt: 'Oui (conserver copie)' }, { val: 'false', txt: 'Non (archiver directement)' }],
+      inclure_prives:   [{ val: 'false', txt: 'Non (fichiers partagés uniquement)' }, { val: 'true', txt: 'Oui (partagés et privés)' }],
+      visible_annuaire: [{ val: '', txt: '(ne pas changer)' }, { val: 'true', txt: 'Oui' }, { val: 'false', txt: 'Non' }],
+
+      // ═══ LISTES MÉTIER — À COMPLÉTER avec vos valeurs réelles ═══
+      // Unité organisationnelle : laisser [] = liste DYNAMIQUE (tous les OU de
+      // Google) ; renseigner pour n'en proposer qu'une sélection contrôlée.
+      ou:                    [],
+      societe:               [{ val: '', txt: '— choisir —' },
+                              { val: 'COOPERL ARC ATLANTIQUE', txt: 'COOPERL ARC ATLANTIQUE' }],
+      centre_cout:           [],   // ex. { val: 'DSI-001', txt: 'DSI-001' } — [] = saisie libre
+      statut:                [{ val: '', txt: '— choisir — ' },
+                              { val: 'Cadre', txt: 'Cadre' },
+                              { val: 'Agent de maîtrise', txt: 'Agent de maîtrise' },
+                              { val: 'Employé', txt: 'Employé' },
+                              { val: 'Ouvrier', txt: 'Ouvrier' }],
+      cse:                   [{ val: '', txt: '— choisir —' },
+                              { val: 'CSE Lamballe', txt: 'CSE Lamballe' }],
+      fonction_transversale: [{ val: '', txt: '— choisir —' },
+                              { val: 'Direction des Systèmes d\'Information', txt: 'Direction des Systèmes d\'Information' }]
+    };
+
+    // Champs RH / accès repliés côté serveur dans les schémas personnalisés
+    // (voir MAPPING_SCHEMAS_PERSO). Les valeurs des listes viennent de LISTES.
+    const CHAMPS_RH = [
+      { id: 'rh_matricule', label: 'Matricule RH', type: 'number', placeholder: '61578' },
+      { id: 'rh_statut', label: 'Statut', options: LISTES.statut, suggestSource: 'statut' },
+      { id: 'rh_sous_service', label: 'Sous-service', placeholder: 'Equipe Outils collaboratifs' },
+      { id: 'rh_site_paie', label: 'Site de paie', placeholder: '01' },
+      { id: 'rh_cse', label: 'CSE', options: LISTES.cse, suggestSource: 'cse' },
+      { id: 'rh_batiment', label: 'Bâtiment RH (code numérique)', type: 'number', placeholder: '289' },
+      { id: 'rh_fonction_transversale', label: 'Fonction transversale', options: LISTES.fonction_transversale, suggestSource: 'fonction_transversale' },
+      { id: 'acces_lumapps', label: 'Accès Lumapps', options: LISTES.ouinon },
+      { id: 'acces_jira', label: 'Accès Jira', options: LISTES.ouinon },
+      { id: 'acces_confluence', label: 'Accès Confluence', options: LISTES.ouinon }
+    ];
+
     function ObtenirChampsPourAction(spec) {
       const defs = {
         'CREATION_COMPTE': [
-          { id: 'prenom', label: 'Prénom', placeholder: 'Ex: Jean' },
-          { id: 'nom', label: 'Nom', placeholder: 'Ex: Dupont' },
+          { id: 'prenom', label: 'Prénom', placeholder: 'Jean' },
+          { id: 'nom', label: 'Nom', placeholder: 'Dupont' },
           { id: 'email_souhaite', label: 'E-mail souhaité', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
-          { id: 'unite_organisationnelle', label: 'Unité Organisationnelle (OU)', placeholder: '/Collaborateurs' },
-          { id: 'manager_email', label: 'E-mail du Manager', type: 'email', placeholder: 'manager@cooperl.com' },
+          { id: 'unite_organisationnelle', label: 'Unité Organisationnelle (OU)', options: LISTES.ou, optionsSource: 'orgunits', placeholder: '/Collaborateurs' },
+          { id: 'manager_email', label: 'E-mail du Manager (reçoit le mot de passe)', type: 'email', placeholder: 'manager@cooperl.com' },
           { id: 'intitule_poste', label: 'Intitulé de poste', placeholder: 'Chef de projet' },
-          { id: 'telephone', label: 'Téléphone professionnel', placeholder: '+33 2 96 00 00 00' },
-          { id: 'email_perso', label: 'E-mail de récupération (perso)', type: 'email', placeholder: 'jean.dupont@gmail.com' }
+          { id: 'departement', label: 'Service / département', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
+          { id: 'societe', label: 'Société', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
+          { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
+          { id: 'telephone_pro', label: 'Téléphone professionnel', placeholder: '+33 2 96 00 00 00' },
+          { id: 'telephone_mobile', label: 'Téléphone mobile', placeholder: '+33 6 00 00 00 00' },
+          { id: 'adresse', label: 'Adresse professionnelle', placeholder: '2Ter Rue Sébastien Coupé, 22403 Lamballe-Armor' },
+          { id: 'batiment', label: 'Bâtiment (buildingId)', optionsSource: 'buildings', placeholder: 'LMB-0022' },
+          { id: 'etage', label: 'Étage', placeholder: '1er étage' },
+          { id: 'bureau', label: 'Code bureau (deskCode)', placeholder: '1.3.123.C' },
+          { id: 'email_perso', label: 'E-mail de récupération (perso)', type: 'email', placeholder: 'jean.dupont@gmail.com' },
+          { id: 'tel_recuperation', label: 'Téléphone de récupération (E.164)', placeholder: '+33600000000' },
+          { id: 'custom_schemas', label: 'Attributs personnalisés (JSON)', placeholder: '{"Ressources_humaines":{"Matricule":61578,"Statut":"Cadre"}}' }
         ],
         'CHANGEMENT_OU': [
           { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
-          { id: 'unite_organisationnelle', label: 'Nouvelle Unité Organisationnelle', placeholder: '/Direction/IT' }
+          { id: 'unite_organisationnelle', label: 'Nouvelle Unité Organisationnelle', options: LISTES.ou, optionsSource: 'orgunits', placeholder: '/Direction/IT' }
         ],
         'MISE_A_JOUR_PROFIL': [
           { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
           { id: 'prenom', label: 'Nouveau prénom', placeholder: 'Jean' },
           { id: 'nom', label: 'Nouveau nom', placeholder: 'Dupont' },
-          { id: 'intitule_poste', label: 'Nouveau poste', placeholder: 'Directeur Projets' },
-          { id: 'departement', label: 'Département', placeholder: 'DSI' },
-          { id: 'telephone', label: 'Téléphone', placeholder: '+33 2 96 00 00 00' },
-          { id: 'manager_email', label: 'E-mail du Manager', type: 'email', placeholder: 'directeur@cooperl.com' }
+          { id: 'intitule_poste', label: 'Poste', placeholder: 'Directeur Projets' },
+          { id: 'departement', label: 'Service / département', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
+          { id: 'societe', label: 'Société', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
+          { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
+          { id: 'telephone_pro', label: 'Téléphone professionnel', placeholder: '+33 2 96 00 00 00' },
+          { id: 'telephone_mobile', label: 'Téléphone mobile', placeholder: '+33 6 00 00 00 00' },
+          { id: 'manager_email', label: 'E-mail du Manager', type: 'email', placeholder: 'directeur@cooperl.com' },
+          { id: 'adresse', label: 'Adresse professionnelle', placeholder: '2Ter Rue Sébastien Coupé, 22403 Lamballe-Armor' },
+          { id: 'batiment', label: 'Bâtiment (buildingId)', optionsSource: 'buildings', placeholder: 'LMB-0022' },
+          { id: 'etage', label: 'Étage', placeholder: '1er étage' },
+          { id: 'bureau', label: 'Code bureau (deskCode)', placeholder: '1.3.123.C' },
+          { id: 'email_recuperation', label: 'E-mail de récupération', type: 'email', placeholder: 'jean.dupont@gmail.com' },
+          { id: 'tel_recuperation', label: 'Téléphone de récupération (E.164)', placeholder: '+33600000000' },
+          { id: 'visible_annuaire', label: 'Visible dans l\'annuaire global ?', options: LISTES.visible_annuaire },
+          { id: 'custom_schemas', label: 'Attributs personnalisés (JSON)', placeholder: '{"Atlassian":{"JIRA":true,"Confluence":true}}' }
         ],
         'RENOMMER_COMPTE': [
           { id: 'email_cible', label: 'Ancien e-mail principal', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
@@ -1520,7 +1662,7 @@
         'AJOUT_GROUPE': [
           { id: 'email_cible', label: 'E-mail à ajouter', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
           { id: 'email_groupe', label: 'E-mail du groupe', type: 'email', placeholder: 'projet-it@cooperl.com' },
-          { id: 'role', label: 'Rôle dans le groupe', type: 'select', options: [{val: 'MEMBER', txt: 'Membre (MEMBER)'}, {val: 'MANAGER', txt: 'Gestionnaire (MANAGER)'}, {val: 'OWNER', txt: 'Propriétaire (OWNER)'}] }
+          { id: 'role', label: 'Rôle dans le groupe', options: LISTES.role_groupe }
         ],
         'RETRAIT_GROUPE': [
           { id: 'email_cible', label: 'E-mail à retirer', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
@@ -1562,7 +1704,7 @@
         ],
         'EFFACEMENT_APPAREIL': [
           { id: 'email_cible', label: 'E-mail du propriétaire', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
-          { id: 'type_effacement', label: 'Type d\'effacement', type: 'select', options: [{val: 'COMPTE', txt: 'Compte pro uniquement (COMPTE)'}, {val: 'COMPLET', txt: 'Réinitialisation usine complète (COMPLET)'}] },
+          { id: 'type_effacement', label: 'Type d\'effacement', options: LISTES.type_effacement },
           { id: 'device_id', label: 'ID de l\'appareil (optionnel)', placeholder: 'Laissez vide pour tous ses appareils' },
           { id: 'confirmation', label: 'Confirmation (si COMPLET sur tous les appareils)', placeholder: 'CONFIRMER_EFFACEMENT' }
         ],
@@ -1610,12 +1752,12 @@
         'TRANSFERT_EMAILS': [
           { id: 'email_cible', label: 'Boîte source', type: 'email', placeholder: 'partant@cooperl.com' },
           { id: 'email_destination', label: 'Boîte de destination', type: 'email', placeholder: 'successeur@cooperl.com' },
-          { id: 'conserver_copie', label: 'Conserver copie dans la boîte source ?', type: 'select', options: [{val: 'true', txt: 'Oui (conserver copie)'}, {val: 'false', txt: 'Non (archiver directement)'}] }
+          { id: 'conserver_copie', label: 'Conserver copie dans la boîte source ?', options: LISTES.conserver_copie }
         ],
         'TRANSFERT_DRIVE': [
           { id: 'email_source', label: 'E-mail du propriétaire actuel', type: 'email', placeholder: 'partant@cooperl.com' },
           { id: 'email_destination', label: 'E-mail du nouveau propriétaire', type: 'email', placeholder: 'successeur@cooperl.com' },
-          { id: 'inclure_prives', label: 'Transférer aussi les fichiers privés ?', type: 'select', options: [{val: 'true', txt: 'Oui (partagés et privés)'}, {val: 'false', txt: 'Non (fichiers partagés uniquement)'}] }
+          { id: 'inclure_prives', label: 'Transférer aussi les fichiers privés ?', options: LISTES.inclure_prives }
         ],
         'ATTRIBUTION_LICENCE': [
           { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
@@ -1631,11 +1773,19 @@
           { id: 'prenom', label: 'Prénom', placeholder: 'Jean' },
           { id: 'nom', label: 'Nom', placeholder: 'Dupont' },
           { id: 'email_souhaite', label: 'E-mail souhaité', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
-          { id: 'unite_organisationnelle', label: 'Unité Organisationnelle (optionnel)', placeholder: '/Collaborateurs' },
+          { id: 'unite_organisationnelle', label: 'Unité Organisationnelle (optionnel)', options: LISTES.ou, optionsSource: 'orgunits', placeholder: '/Collaborateurs' },
           { id: 'manager_email', label: 'E-mail du Manager (reçoit le mot de passe)', type: 'email', placeholder: 'manager@cooperl.com' },
           { id: 'intitule_poste', label: 'Intitulé de poste (optionnel)', placeholder: 'Chef de projet' },
-          { id: 'telephone', label: 'Téléphone (optionnel)', placeholder: '+33 2 96 00 00 00' },
+          { id: 'departement', label: 'Service / département (optionnel)', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
+          { id: 'societe', label: 'Société (optionnel)', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
+          { id: 'centre_cout', label: 'Centre de coûts (optionnel)', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
+          { id: 'telephone_pro', label: 'Téléphone pro (optionnel)', placeholder: '+33 2 96 00 00 00' },
+          { id: 'telephone_mobile', label: 'Téléphone mobile (optionnel)', placeholder: '+33 6 00 00 00 00' },
+          { id: 'adresse', label: 'Adresse professionnelle (optionnel)', placeholder: '2Ter Rue Sébastien Coupé, 22403 Lamballe-Armor' },
+          { id: 'batiment', label: 'Bâtiment (optionnel)', optionsSource: 'buildings', placeholder: 'LMB-0022' },
+          { id: 'bureau', label: 'Code bureau (optionnel)', placeholder: '1.3.123.C' },
           { id: 'email_perso', label: 'E-mail de récupération (optionnel)', type: 'email', placeholder: 'jean.dupont@gmail.com' },
+          { id: 'custom_schemas', label: 'Attributs personnalisés JSON (optionnel)', placeholder: '{"Atlassian":{"JIRA":true}}' },
           { id: 'groupes', label: 'Groupes à rejoindre (adresses séparées par des virgules)', placeholder: 'equipe-it@cooperl.com, tous@cooperl.com' },
           { id: 'alias', label: 'Alias e-mail (optionnel)', type: 'email', placeholder: 'j.dupont@cooperl.com' },
           { id: 'sku_id', label: 'SKU de licence (optionnel)', placeholder: 'ex. 1010020028' }
@@ -1645,8 +1795,8 @@
           { id: 'email_manager', label: 'E-mail du manager (délégation + destination par défaut)', type: 'email', placeholder: 'manager@cooperl.com' },
           { id: 'email_transfert', label: 'Destination du transfert d\'e-mails (optionnel)', type: 'email', placeholder: 'Défaut : le manager' },
           { id: 'email_drive', label: 'Nouveau propriétaire Drive (optionnel)', type: 'email', placeholder: 'Défaut : le manager' },
-          { id: 'conserver_copie', label: 'Conserver copie des e-mails dans la boîte source ?', type: 'select', options: [{val: 'true', txt: 'Oui (conserver copie)'}, {val: 'false', txt: 'Non (archiver directement)'}] },
-          { id: 'inclure_prives', label: 'Transférer aussi les fichiers Drive privés ?', type: 'select', options: [{val: 'false', txt: 'Non (fichiers partagés uniquement)'}, {val: 'true', txt: 'Oui (partagés et privés)'}] },
+          { id: 'conserver_copie', label: 'Conserver copie des e-mails dans la boîte source ?', options: LISTES.conserver_copie },
+          { id: 'inclure_prives', label: 'Transférer aussi les fichiers Drive privés ?', options: LISTES.inclure_prives },
           { id: 'motif', label: 'Motif du départ', placeholder: 'Fin de contrat' }
         ],
         'RETOUR_ABSENCE': [
@@ -1654,6 +1804,11 @@
           { id: 'email_delegue', label: 'Délégué à retirer (optionnel)', type: 'email', placeholder: 'remplacant@cooperl.com' }
         ]
       };
+
+      // Les champs RH / accès s'ajoutent aux formulaires de compte concernés.
+      ['CREATION_COMPTE', 'MISE_A_JOUR_PROFIL', 'ARRIVEE_COLLABORATEUR'].forEach(k => {
+        if (defs[k]) defs[k] = defs[k].concat(CHAMPS_RH);
+      });
 
       if (defs[spec.action]) return defs[spec.action];
 

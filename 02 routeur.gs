@@ -273,6 +273,49 @@ function getSpecsCatalogue() {
 }
 
 /**
+ * Fournit les options d'une liste déroulante dynamique de la console.
+ * Réservé aux administrateurs autorisés (voir assertAdminUI_).
+ *
+ * Extensible : ajouter un `case` par source. Chaque source renvoie un tableau
+ * d'options { val, txt } que le client injecte dans un <select>.
+ *
+ * @param {string} source Identifiant de la source (ex. 'orgunits').
+ * @return {!Array<!{val: string, txt: string}>}
+ */
+function getOptionsUI(source) {
+  assertAdminUI_();
+
+  if (source === 'orgunits') {
+    var reponse = AdminDirectory.Orgunits.list('my_customer', { type: 'all' });
+    var chemins = (reponse.organizationUnits || []).map(function (ou) {
+      return ou.orgUnitPath;
+    });
+    chemins.unshift('/');                 // la racine n'est pas listée par l'API
+    chemins.sort();
+    return chemins.map(function (c) { return { val: c, txt: c }; });
+  }
+
+  if (source === 'buildings') {
+    // Nécessite le scope admin.directory.resource.calendar.readonly.
+    var rep = AdminDirectory.Resources.Buildings.list('my_customer');
+    return (rep.buildings || []).map(function (b) {
+      return {
+        val: b.buildingId,
+        txt: b.buildingName ? (b.buildingName + ' (' + b.buildingId + ')') : b.buildingId
+      };
+    }).sort(function (a, b) { return a.txt.localeCompare(b.txt); });
+  }
+
+  // Suggestions tirées des valeurs existantes de l'annuaire (datalist, cache 6 h).
+  if (source.indexOf('suggest:') === 0) {
+    return suggestionsAnnuaire_(source.slice('suggest:'.length));
+  }
+
+  // Source inconnue : tableau vide (le client retombe sur une saisie libre).
+  return [];
+}
+
+/**
  * Exécute une action depuis la console de test WebApp.
  *
  * L'appelant doit d'abord être authentifié comme administrateur (assertAdminUI_).
