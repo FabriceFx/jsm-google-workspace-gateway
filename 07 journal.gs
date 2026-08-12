@@ -4,7 +4,7 @@
  * Traçabilité des opérations dans l'onglet AUDIT_LOG et alertes e-mail.
  * La journalisation ne doit jamais faire échouer une opération réussie.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

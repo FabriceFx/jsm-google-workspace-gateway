@@ -4,7 +4,7 @@
  * Briques réutilisables au-dessus de l'Admin SDK : lecture d'utilisateur,
  * appartenance à un groupe, génération et transmission des mots de passe.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -198,11 +198,16 @@ function estErreurGroupeDynamique_(err) {
  * (timeout réseau, relance manuelle) sans qu'on doive créer un doublon.
  *
  * @param {string} email Adresse à rechercher.
+ * @param {string=} projection 'full' pour inclure les schémas personnalisés
+ *     (customSchemas), absents de la projection 'basic' par défaut. À utiliser
+ *     avant toute fusion d'attributs de schéma, sous peine de les écraser.
  * @return {?Object} Ressource User de l'Admin SDK, ou null.
  */
-function getUserOrNull_(email) {
+function getUserOrNull_(email, projection) {
     try {
-        return AdminDirectory.Users.get(email);
+        return projection
+            ? AdminDirectory.Users.get(email, { projection: projection })
+            : AdminDirectory.Users.get(email);
     } catch (err) {
         // 404 = utilisateur inexistant, cas nominal. Toute autre erreur remonte.
         if (estNotFound_(err)) return null;
@@ -404,8 +409,8 @@ function construireProfilPatch_(data, existant) {
  * @return {!Object} Ressource User de l'Admin SDK.
  * @throws {AppError_} 404 si le compte n'existe pas.
  */
-function requireUser_(email, libelle) {
-    const utilisateur = getUserOrNull_(email);
+function requireUser_(email, libelle, projection) {
+    const utilisateur = getUserOrNull_(email, projection);
     if (!utilisateur) {
         throw new AppError_('NOT_FOUND',
             'Compte ' + (libelle ? libelle + ' ' : '') + email + ' introuvable.', 404);

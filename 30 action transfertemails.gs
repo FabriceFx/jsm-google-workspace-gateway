@@ -9,7 +9,7 @@
  *
  * Champs attendus dans `data` : email_cible, email_destination, [conserver_copie]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -20,7 +20,7 @@ function SPEC_TRANSFERT_EMAILS() {
     required: ['email_cible', 'email_destination'],
     emails: ['email_cible', 'email_destination'],
     fenetre: 'STANDARD',
-    handler: actionTransfererEmails
+    handler: actionTransfererEmails_
   };
 }
 
@@ -35,7 +35,7 @@ function SPEC_TRANSFERT_EMAILS() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionTransfererEmails(data, ctx) {
+function actionTransfererEmails_(data, ctx) {
   var SCOPE = 'https://www.googleapis.com/auth/gmail.settings.sharing';
   var conserverCopie = boolDeFormulaire_(data.conserver_copie, true);
 

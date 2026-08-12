@@ -11,7 +11,7 @@
  * Champs attendus dans `data` : email_source, email_destination,
  *   [inclure_prives]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -22,7 +22,7 @@ function SPEC_TRANSFERT_DRIVE() {
     required: ['email_source', 'email_destination'],
     emails: ['email_source', 'email_destination'],
     fenetre: 'STANDARD',
-    handler: actionTransfererDrive
+    handler: actionTransfererDrive_
   };
 }
 
@@ -33,7 +33,7 @@ function SPEC_TRANSFERT_DRIVE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionTransfererDrive(data, ctx) {
+function actionTransfererDrive_(data, ctx) {
   /** ID de l'application Google Drive dans l'API Data Transfer. */
   var DRIVE_APP_ID = '55656082996';
 

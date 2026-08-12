@@ -5,7 +5,7 @@
  *
  * Champs attendus dans `data` : email_cible, [manager_email]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -27,7 +27,7 @@ function SPEC_RESET_MOT_DE_PASSE() {
     // interdire l'envoi du secret vers une adresse hors du domaine.
     emails: ['email_cible', 'manager_email'],
     fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
-    handler: actionReinitialiserMotDePasse
+    handler: actionReinitialiserMotDePasse_
   };
 }
 
@@ -40,7 +40,7 @@ function SPEC_RESET_MOT_DE_PASSE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionReinitialiserMotDePasse(data, ctx) {
+function actionReinitialiserMotDePasse_(data, ctx) {
   requireUser_(data.email_cible);
 
   // Contrôle du destinataire AVANT d'écraser le mot de passe : sans lui, on

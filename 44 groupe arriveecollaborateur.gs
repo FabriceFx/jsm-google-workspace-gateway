@@ -22,7 +22,7 @@
  *   [groupes] (adresses de groupes séparées par des virgules),
  *   [alias], [sku_id], [product_id]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -34,7 +34,7 @@ function SPEC_ARRIVEE_COLLABORATEUR() {
     required: ['prenom', 'nom', 'email_souhaite'],
     emails: ['email_souhaite', 'email_perso', 'email_recuperation', 'manager_email', 'alias'],
     fenetre: 'STANDARD',
-    handler: actionArriveeCollaborateur
+    handler: actionArriveeCollaborateur_
   };
 }
 
@@ -45,19 +45,19 @@ function SPEC_ARRIVEE_COLLABORATEUR() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionArriveeCollaborateur(data, ctx) {
+function actionArriveeCollaborateur_(data, ctx) {
   var etapes = [
     {
       // Obligatoire : les étapes suivantes visent ce compte.
       nom: 'CREATION_COMPTE',
       obligatoire: true,
-      fn: function (d, c) { return actionCreerUtilisateur(d, c); }
+      fn: function (d, c) { return actionCreerUtilisateur_(d, c); }
     },
     {
       nom: 'ATTRIBUTION_LICENCE',
       si: function (d) { return !!(d.sku_id || getProp_('LICENSE_SKU_ID')); },
       fn: function (d, c) {
-        return actionAttribuerLicence({
+        return actionAttribuerLicence_({
           email_cible: d.email_souhaite,
           product_id: d.product_id,
           sku_id: d.sku_id
@@ -77,7 +77,7 @@ function actionArriveeCollaborateur(data, ctx) {
     etapes.push({
       nom: 'AJOUT_GROUPE (' + groupe + ')',
       fn: function (d, c) {
-        return actionAjouterGroupe({
+        return actionAjouterGroupe_({
           email_cible: d.email_souhaite,
           email_groupe: groupe,
           role: 'MEMBER'
@@ -90,7 +90,7 @@ function actionArriveeCollaborateur(data, ctx) {
     nom: 'AJOUT_ALIAS',
     si: function (d) { return !!d.alias; },
     fn: function (d, c) {
-      return actionAjouterAlias({
+      return actionAjouterAlias_({
         email_cible: d.email_souhaite,
         alias: d.alias
       }, c);

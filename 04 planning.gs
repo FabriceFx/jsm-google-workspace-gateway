@@ -7,7 +7,7 @@
  * Le fuseau de référence est celui du projet Apps Script
  * (Paramètres du projet > Fuseau horaire) : le positionner sur Europe/Paris.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

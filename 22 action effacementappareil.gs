@@ -11,7 +11,7 @@
  *   confirmation : requis (= 'CONFIRMER_EFFACEMENT') uniquement pour un wipe
  *   'COMPLET' visant TOUS les appareils (aucun device_id fourni).
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -22,7 +22,7 @@ function SPEC_EFFACEMENT_APPAREIL() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',
-    handler: actionEffacerAppareil
+    handler: actionEffacerAppareil_
   };
 }
 
@@ -33,7 +33,7 @@ function SPEC_EFFACEMENT_APPAREIL() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionEffacerAppareil(data, ctx) {
+function actionEffacerAppareil_(data, ctx) {
   var type = String(data.type_effacement || 'COMPTE').toUpperCase();
 
   // Enum validée explicitement : une valeur inattendue ne doit pas retomber

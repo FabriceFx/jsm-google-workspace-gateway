@@ -11,7 +11,7 @@
  * telephone_pro, telephone_mobile, adresse, batiment, etage, bureau,
  * email_recuperation, tel_recuperation, visible_annuaire, custom_schemas.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -22,7 +22,7 @@ function SPEC_MISE_A_JOUR_PROFIL() {
     required: ['email_cible'],
     emails: ['email_cible', 'manager_email', 'email_recuperation'],
     fenetre: 'STANDARD',
-    handler: actionMettreAJourProfil
+    handler: actionMettreAJourProfil_
   };
 }
 
@@ -33,8 +33,11 @@ function SPEC_MISE_A_JOUR_PROFIL() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionMettreAJourProfil(data, ctx) {
-  var utilisateur = requireUser_(data.email_cible);
+function actionMettreAJourProfil_(data, ctx) {
+  // Projection 'full' INDISPENSABLE : la projection basic ne renvoie pas
+  // customSchemas ; sans elle, la fusion des schémas repartirait d'un objet
+  // vide et EFFACERAIT les autres attributs (Matricule, accès…) lors du patch.
+  var utilisateur = requireUser_(data.email_cible, undefined, 'full');
 
   // Construction du patch fusionnée avec l'existant (source partagée avec
   // CREATION_COMPTE) : aucun tableau — organizations, phones, relations,

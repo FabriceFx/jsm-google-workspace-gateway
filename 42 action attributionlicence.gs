@@ -9,7 +9,7 @@
  *
  * Champs attendus dans `data` : email_cible, [product_id], [sku_id]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -20,7 +20,7 @@ function SPEC_ATTRIBUTION_LICENCE() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
-    handler: actionAttribuerLicence
+    handler: actionAttribuerLicence_
   };
 }
 
@@ -31,7 +31,7 @@ function SPEC_ATTRIBUTION_LICENCE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionAttribuerLicence(data, ctx) {
+function actionAttribuerLicence_(data, ctx) {
   requireUser_(data.email_cible);
   var lic = resoudreLicence_(data);
 

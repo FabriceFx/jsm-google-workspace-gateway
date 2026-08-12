@@ -6,7 +6,7 @@
  *
  * Champs attendus dans `data` : email_groupe
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -17,7 +17,7 @@ function SPEC_LISTE_MEMBRES_GROUPE() {
     required: ['email_groupe'],
     emails: ['email_groupe'],
     fenetre: 'PERMANENTE',   // lecture seule : aucune raison de différer
-    handler: actionListerMembresGroupe
+    handler: actionListerMembresGroupe_
   };
 }
 
@@ -30,7 +30,7 @@ function SPEC_LISTE_MEMBRES_GROUPE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionListerMembresGroupe(data, ctx) {
+function actionListerMembresGroupe_(data, ctx) {
   // Vérifier que le groupe existe.
   if (!getGroupOrNull_(data.email_groupe)) {
     throw new AppError_('NOT_FOUND',

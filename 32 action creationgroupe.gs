@@ -5,7 +5,7 @@
  *
  * Champs attendus dans `data` : email_groupe, nom_groupe, [description]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -16,7 +16,7 @@ function SPEC_CREATION_GROUPE() {
     required: ['email_groupe', 'nom_groupe'],
     emails: ['email_groupe'],
     fenetre: 'STANDARD',
-    handler: actionCreerGroupe
+    handler: actionCreerGroupe_
   };
 }
 
@@ -29,7 +29,7 @@ function SPEC_CREATION_GROUPE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionCreerGroupe(data, ctx) {
+function actionCreerGroupe_(data, ctx) {
   // Idempotence : vérifier si le groupe existe déjà.
   var existant = getGroupOrNull_(data.email_groupe);
   if (existant) {

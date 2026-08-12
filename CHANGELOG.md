@@ -3,6 +3,41 @@
 Tous les changements notables de ce projet sont documentés ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.8.0] — 2026-08-12
+
+Correctifs issus d'une revue d'expert de maturité (sécurité, correction, robustesse).
+
+### Sécurité
+
+- **SEC‑1 (critique) — Fermeture de l'exécution non authentifiée.** Les 34
+  handlers d'action sont désormais des fonctions **privées** (suffixe `_`),
+  donc **non appelables via `google.script.run`**. Avant, un détenteur de
+  compte Google atteignant l'URL pouvait invoquer directement un handler
+  (`actionSupprimerCompte_`…) avec les droits admin, en contournant le token,
+  `assertAdminUI_` et `sanitizeData_`. Les fonctions de test à effet réel sont
+  également gardées.
+- Le `SECRET_TOKEN` n'est **plus jamais journalisé** (`setup_genererToken`) — il
+  serait sinon persisté en clair dans Cloud Logging.
+- Le health check public (`?format=json`) ne divulgue plus l'inventaire des
+  actions ni l'état de configuration.
+
+### Corrigé
+
+- **DATA‑1 (critique) — Perte silencieuse d'attributs de schéma.** En mise à
+  jour de profil, l'utilisateur est lu en projection `full` : la fusion des
+  `customSchemas` ne repart plus d'un objet vide et **n'efface plus** les autres
+  attributs (Matricule, accès…).
+- **RENOMMER_COMPTE idempotent** : un rejeu Jira après renommage ne renvoie plus
+  un faux `ALREADY_EXISTS` (comparaison des `id`).
+- **REPONSE_ABSENCE** : la date de fin est désormais **incluse** (plus de coupure
+  un jour trop tôt).
+
+### Tests
+
+- Nouveaux tests unitaires sur `construireProfilPatch_` (non-régression DATA‑1 :
+  préservation des tableaux et des schémas) et sur l'ordre des motifs de
+  `traduireErreurAdmin_`.
+
 ## [2.7.0] — 2026-08-12
 
 ### Sécurité (correctifs critiques)

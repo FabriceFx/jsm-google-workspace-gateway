@@ -25,7 +25,7 @@
  *   [email_drive] (nouveau propriétaire Drive, défaut email_manager),
  *   [conserver_copie], [inclure_prives], [motif]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -37,7 +37,7 @@ function SPEC_DEPART_COLLABORATEUR() {
     required: ['email_cible'],
     emails: ['email_cible', 'email_manager', 'email_transfert', 'email_drive'],
     fenetre: 'PERMANENTE',   // contient une suspension : jamais différé
-    handler: actionDepartCollaborateur
+    handler: actionDepartCollaborateur_
   };
 }
 
@@ -48,7 +48,7 @@ function SPEC_DEPART_COLLABORATEUR() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionDepartCollaborateur(data, ctx) {
+function actionDepartCollaborateur_(data, ctx) {
   requireUser_(data.email_cible);
 
   // Destinations : le manager sert de valeur par défaut pour les transferts.
@@ -60,7 +60,7 @@ function actionDepartCollaborateur(data, ctx) {
       nom: 'TRANSFERT_EMAILS',
       si: function () { return !!destTransfert; },
       fn: function (d, c) {
-        return actionTransfererEmails({
+        return actionTransfererEmails_({
           email_cible: d.email_cible,
           email_destination: destTransfert,
           conserver_copie: d.conserver_copie
@@ -71,7 +71,7 @@ function actionDepartCollaborateur(data, ctx) {
       nom: 'DELEGATION_EMAIL',
       si: function (d) { return !!d.email_manager; },
       fn: function (d, c) {
-        return actionDeleguerEmail({
+        return actionDeleguerEmail_({
           email_cible: d.email_cible,
           email_delegue: d.email_manager
         }, c);
@@ -81,7 +81,7 @@ function actionDepartCollaborateur(data, ctx) {
       nom: 'TRANSFERT_DRIVE',
       si: function () { return !!destDrive; },
       fn: function (d, c) {
-        return actionTransfererDrive({
+        return actionTransfererDrive_({
           email_source: d.email_cible,
           email_destination: destDrive,
           inclure_prives: d.inclure_prives
@@ -91,7 +91,7 @@ function actionDepartCollaborateur(data, ctx) {
     {
       nom: 'RETRAIT_TOUS_GROUPES',
       fn: function (d, c) {
-        return actionRetirerTousGroupes({ email_cible: d.email_cible }, c);
+        return actionRetirerTousGroupes_({ email_cible: d.email_cible }, c);
       }
     },
     {
@@ -99,7 +99,7 @@ function actionDepartCollaborateur(data, ctx) {
       // ne seraient plus applicables sur la cible.
       nom: 'SUSPENSION',
       fn: function (d, c) {
-        return actionSuspendreCompte({
+        return actionSuspendreCompte_({
           email_cible: d.email_cible,
           motif: d.motif || 'Départ du collaborateur'
         }, c);
@@ -111,7 +111,7 @@ function actionDepartCollaborateur(data, ctx) {
       nom: 'RETRAIT_LICENCE',
       si: function (d) { return !!(d.sku_id || getProp_('LICENSE_SKU_ID')); },
       fn: function (d, c) {
-        return actionRetirerLicence({
+        return actionRetirerLicence_({
           email_cible: d.email_cible,
           product_id: d.product_id,
           sku_id: d.sku_id

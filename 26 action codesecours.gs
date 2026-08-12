@@ -6,7 +6,7 @@
  *
  * Champs attendus dans `data` : email_cible, [manager_email]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -19,7 +19,7 @@ function SPEC_GENERATION_CODES_SECOURS() {
     // pour interdire l'envoi du secret vers une adresse hors du domaine.
     emails: ['email_cible', 'manager_email'],
     fenetre: 'STANDARD',
-    handler: actionGenererCodesSecours
+    handler: actionGenererCodesSecours_
   };
 }
 
@@ -33,7 +33,7 @@ function SPEC_GENERATION_CODES_SECOURS() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionGenererCodesSecours(data, ctx) {
+function actionGenererCodesSecours_(data, ctx) {
   requireUser_(data.email_cible);
 
   // Contrôle du destinataire AVANT de révoquer les anciens codes : sinon on

@@ -6,7 +6,7 @@
  *
  * Champs attendus dans `data` : email_cible, email_groupe
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -26,7 +26,7 @@ function SPEC_RETRAIT_GROUPE() {
     required: ['email_cible', 'email_groupe'],
     emails: ['email_cible', 'email_groupe'],
     fenetre: 'PERMANENTE',   // retrait d'accès : jamais différé
-    handler: actionRetirerGroupe
+    handler: actionRetirerGroupe_
   };
 }
 
@@ -39,7 +39,7 @@ function SPEC_RETRAIT_GROUPE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionRetirerGroupe(data, ctx) {
+function actionRetirerGroupe_(data, ctx) {
   if (!isMember_(data.email_groupe, data.email_cible)) {
     return {
       idempotent: true,

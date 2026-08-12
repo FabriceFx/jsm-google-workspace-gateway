@@ -4,7 +4,7 @@
 * Points d'entrée doPost (webhook Jira) et doGet (supervision), plus
 * l'exécuteur partagé entre traitement synchrone et traitement différé.
 *
-* Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+* Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
 * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
 */
 
@@ -173,16 +173,17 @@ function doGet(e) {
         const ouvert = estOuvert_(maintenant, planningStandard);
         const prochaine = ouvert ? maintenant : prochaineOuverture_(maintenant, planningStandard);
 
+        // Réponse volontairement MINIMALE : ce point est public (non
+        // authentifié). On ne divulgue ni l'inventaire des actions, ni l'état
+        // de configuration, ni le contenu de la file — informations utiles à un
+        // attaquant. Le diagnostic complet passe par setup_verifierConfiguration().
         return jsonResponse_({
             status: 'success',
             http_status: 200,
             service: 'Passerelle Jira → Google Workspace',
             version: CONFIG.VERSION,
-            actions: listerActions_(),
-            configured: !!getProp_('SECRET_TOKEN'),
             fenetre_ouverte: ouvert,
             prochaine_ouverture: prochaine ? prochaine.toISOString() : null,
-            file_attente: compterEnAttente_(),
             timestamp: maintenant.toISOString()
         });
     }

@@ -5,7 +5,7 @@
  *
  * Champs attendus dans `data` : email_cible, [device_id]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -16,7 +16,7 @@ function SPEC_APPROBATION_APPAREIL() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
-    handler: actionApprouverAppareil
+    handler: actionApprouverAppareil_
   };
 }
 
@@ -27,7 +27,7 @@ function SPEC_APPROBATION_APPAREIL() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionApprouverAppareil(data, ctx) {
+function actionApprouverAppareil_(data, ctx) {
   var resultat = actionSurAppareils_(data.email_cible, 'approve', data.device_id);
 
   return {

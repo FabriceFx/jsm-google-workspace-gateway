@@ -10,7 +10,7 @@
  *
  * Champs attendus dans `data` : email_cible
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -21,7 +21,7 @@ function SPEC_DESACTIVATION_REPONSE_ABSENCE() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
-    handler: actionDesactiverReponseAbsence
+    handler: actionDesactiverReponseAbsence_
   };
 }
 
@@ -35,7 +35,7 @@ function SPEC_DESACTIVATION_REPONSE_ABSENCE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionDesactiverReponseAbsence(data, ctx) {
+function actionDesactiverReponseAbsence_(data, ctx) {
   var SCOPE = 'https://www.googleapis.com/auth/gmail.settings.basic';
 
   requireUser_(data.email_cible);

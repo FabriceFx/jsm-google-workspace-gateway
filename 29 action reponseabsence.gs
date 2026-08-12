@@ -11,7 +11,7 @@
  * Champs attendus dans `data` : email_cible, message_absence,
  *   [date_debut], [date_fin], [objet]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -22,7 +22,7 @@ function SPEC_REPONSE_ABSENCE() {
     required: ['email_cible', 'message_absence'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
-    handler: actionReponseAbsence
+    handler: actionReponseAbsence_
   };
 }
 
@@ -33,7 +33,7 @@ function SPEC_REPONSE_ABSENCE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionReponseAbsence(data, ctx) {
+function actionReponseAbsence_(data, ctx) {
   var SCOPE = 'https://www.googleapis.com/auth/gmail.settings.basic';
 
   requireUser_(data.email_cible);
@@ -58,7 +58,10 @@ function actionReponseAbsence(data, ctx) {
       data.date_debut + ").");
   }
   if (debut) vacation.startTime = debut.getTime();
-  if (fin) vacation.endTime = fin.getTime();
+  // La date de fin est saisie « incluse » : parseDateIso_ renvoie minuit, donc
+  // couper à cet instant arrêterait l'absence un jour trop tôt. On étend jusqu'à
+  // la fin de la journée (minuit du lendemain) pour couvrir le jour saisi.
+  if (fin) vacation.endTime = fin.getTime() + 86400000;
 
   appelGmailApi_(data.email_cible,
     'settings/vacation',

@@ -5,7 +5,7 @@
  *
  * Champs attendus dans `data` : email_cible, unite_organisationnelle
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -16,7 +16,7 @@ function SPEC_CHANGEMENT_OU() {
     required: ['email_cible', 'unite_organisationnelle'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
-    handler: actionChangerOU
+    handler: actionChangerOU_
   };
 }
 
@@ -29,7 +29,7 @@ function SPEC_CHANGEMENT_OU() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionChangerOU(data, ctx) {
+function actionChangerOU_(data, ctx) {
   var utilisateur = requireUser_(data.email_cible);
 
   var ancienneOU = utilisateur.orgUnitPath || '/';

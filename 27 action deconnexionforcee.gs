@@ -10,7 +10,7 @@
  *
  * Champs attendus dans `data` : email_cible, [motif]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -21,7 +21,7 @@ function SPEC_DECONNEXION_FORCEE() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',
-    handler: actionDeconnexionForcee
+    handler: actionDeconnexionForcee_
   };
 }
 
@@ -32,7 +32,7 @@ function SPEC_DECONNEXION_FORCEE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionDeconnexionForcee(data, ctx) {
+function actionDeconnexionForcee_(data, ctx) {
   requireUser_(data.email_cible);
 
   AdminDirectory.Users.signOut(data.email_cible);

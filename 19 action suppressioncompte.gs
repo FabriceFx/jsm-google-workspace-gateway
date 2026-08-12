@@ -8,7 +8,7 @@
  *
  * Champs attendus dans `data` : email_cible, confirmation, [motif]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -19,7 +19,7 @@ function SPEC_SUPPRESSION_COMPTE() {
     required: ['email_cible', 'confirmation'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
-    handler: actionSupprimerCompte
+    handler: actionSupprimerCompte_
   };
 }
 
@@ -32,7 +32,7 @@ function SPEC_SUPPRESSION_COMPTE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionSupprimerCompte(data, ctx) {
+function actionSupprimerCompte_(data, ctx) {
   if (data.confirmation !== 'CONFIRMER_SUPPRESSION') {
     throw new AppError_('CONFIRMATION_REQUISE',
       'Suppression refusée : le champ \'confirmation\' doit contenir ' +

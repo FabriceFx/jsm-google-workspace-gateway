@@ -11,7 +11,7 @@
  *  2. DIAGNOSTICS MANUELS — scénarios à observer à l'œil (rendu d'e-mail,
  *     planning, registre). Certains ont des effets réels : ils sont signalés.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -106,6 +106,8 @@ function test_unitaires() {
     groupe_('echapper_ / nettoyerHtml_', testEchapper_);
     groupe_('normaliserUrlImage_', testNormaliserUrlImage_);
     groupe_('sanitizeData_', testSanitizeData_);
+    groupe_('construireProfilPatch_', testConstruireProfilPatch_);
+    groupe_('traduireErreurAdmin_', testTraduireErreurAdmin_);
 
     const s = SUITE_COURANTE;
     const total = s.reussis + s.echecs.length;
@@ -270,6 +272,62 @@ function testSanitizeData_() {
     }, 'INVALID_OU', 'OU sans slash refusée');
 }
 
+function testConstruireProfilPatch_() {
+    // Non-régression DATA-1 : mettre à jour UN attribut de schéma ne doit pas
+    // effacer les autres (exige que l'existant soit lu en projection 'full').
+    var existant = {
+        organizations: [{ primary: true, title: 'Dev', department: 'DSI', costCenter: 'CC1' }],
+        phones: [{ type: 'work', value: '01' }, { type: 'mobile', value: '06' }],
+        relations: [{ type: 'manager', value: 'old@x.fr' }, { type: 'assistant', value: 'a@x.fr' }],
+        customSchemas: { RH: { Matricule: 42, Statut: 'Cadre' } }
+    };
+
+    // 1. Fusion schéma : on ne change que Statut, Matricule doit survivre.
+    var r1 = construireProfilPatch_({ custom_schemas: '{"RH":{"Statut":"ETAM"}}' }, existant);
+    assertEquals_(r1.patch.customSchemas.RH.Statut, 'ETAM', 'schéma : Statut mis à jour');
+    assertEquals_(r1.patch.customSchemas.RH.Matricule, 42, 'schéma : Matricule PRÉSERVÉ (anti DATA-1)');
+
+    // 2. Organisation : changer le poste préserve département et centre de coûts.
+    var r2 = construireProfilPatch_({ intitule_poste: 'Lead' }, existant);
+    var org = r2.patch.organizations[0];
+    assertEquals_(org.title, 'Lead', 'org : titre mis à jour');
+    assertEquals_(org.department, 'DSI', 'org : département préservé');
+    assertEquals_(org.costCenter, 'CC1', 'org : centre de coûts préservé');
+
+    // 3. Téléphones : changer le pro préserve le mobile.
+    var r3 = construireProfilPatch_({ telephone_pro: '02' }, existant);
+    var work = r3.patch.phones.filter(function (p) { return p.type === 'work'; })[0];
+    var mob = r3.patch.phones.filter(function (p) { return p.type === 'mobile'; })[0];
+    assertEquals_(work.value, '02', 'tél : pro mis à jour');
+    assertEquals_(mob.value, '06', 'tél : mobile préservé');
+
+    // 4. Relations : changer le manager préserve l'assistant.
+    var r4 = construireProfilPatch_({ manager_email: 'new@x.fr' }, existant);
+    assertEquals_(r4.patch.relations.length, 2, 'relations : les deux conservées');
+
+    // 5. Coercition de type + JSON invalide.
+    var r5 = construireProfilPatch_({ rh_matricule: '99', acces_jira: 'oui' }, {});
+    assertEquals_(r5.patch.customSchemas.Ressources_humaines.Matricule, 99, 'matricule → number');
+    assertEquals_(r5.patch.customSchemas.Atlassian.JIRA, true, 'accès → bool');
+    assertThrows_(function () {
+        construireProfilPatch_({ custom_schemas: '{pas du json' }, {});
+    }, 'INVALID_SCHEMA', 'JSON invalide rejeté');
+}
+
+function testTraduireErreurAdmin_() {
+    // L'ordre des motifs est volontaire (le plus spécifique d'abord).
+    assertEquals_(traduireErreurAdmin_({ message: 'Domain not found' }).code,
+        'INVALID_DOMAIN', 'domaine avant not-found générique');
+    assertEquals_(traduireErreurAdmin_({ message: 'Resource Not Found' }).code,
+        'NOT_FOUND', 'not found générique');
+    assertEquals_(traduireErreurAdmin_({ message: 'Cannot modify dynamic group' }).code,
+        'GROUPE_DYNAMIQUE', 'groupe dynamique');
+    assertEquals_(traduireErreurAdmin_({ message: 'Invalid Input: INVALID_OU_ID' }).code,
+        'INVALID_OU', 'OU invalide');
+    assert_(traduireErreurAdmin_({ message: 'quelque chose d\'inconnu' }) === null,
+        'motif inconnu → null');
+}
+
 // ---------------------------------------------------------------------------
 //  DIAGNOSTICS MANUELS  (observation à l'œil ; effets réels signalés)
 // ---------------------------------------------------------------------------
@@ -351,6 +409,7 @@ function test_verifierRegistre() {
  * donnée réelle utilisée, aucun compte créé.
  */
 function test_apercuEmails() {
+    assertAdminUI_();   // effet réel (envoi d'e-mails) : réservé à l'admin
     const moi = Session.getActiveUser().getEmail();
     if (!moi) { console.log('Adresse de l\'utilisateur indisponible.'); return; }
 
@@ -437,6 +496,7 @@ function test_casDErreur() {
  * ensuite (action SUPPRESSION_COMPTE ou console d'administration).
  */
 function test_simulerCreationCompteReelle() {
+    assertAdminUI_();   // effet réel (crée un vrai compte) : réservé à l'admin
     if (!testsPretsAExecuter_()) return;
 
     const AUTORISER_CREATION = false;   // ⚠️ passer à true en connaissance de cause

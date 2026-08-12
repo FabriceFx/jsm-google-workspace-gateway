@@ -4,7 +4,7 @@
  * Authentification par secret partagé, validation des payloads, typage des
  * erreurs applicatives et formatage des réponses HTTP.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

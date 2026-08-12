@@ -8,7 +8,7 @@
  *
  * Champs attendus dans `data` : email_groupe, confirmation
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -19,7 +19,7 @@ function SPEC_SUPPRESSION_GROUPE() {
     required: ['email_groupe', 'confirmation'],
     emails: ['email_groupe'],
     fenetre: 'STANDARD',
-    handler: actionSupprimerGroupe
+    handler: actionSupprimerGroupe_
   };
 }
 
@@ -32,7 +32,7 @@ function SPEC_SUPPRESSION_GROUPE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionSupprimerGroupe(data, ctx) {
+function actionSupprimerGroupe_(data, ctx) {
   if (data.confirmation !== 'CONFIRMER_SUPPRESSION') {
     throw new AppError_('CONFIRMATION_REQUISE',
       'Suppression refusée : le champ \'confirmation\' doit contenir ' +

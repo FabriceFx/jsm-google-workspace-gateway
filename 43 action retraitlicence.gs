@@ -9,7 +9,7 @@
  *
  * Champs attendus dans `data` : email_cible, [product_id], [sku_id]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -20,7 +20,7 @@ function SPEC_RETRAIT_LICENCE() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
-    handler: actionRetirerLicence
+    handler: actionRetirerLicence_
   };
 }
 
@@ -34,7 +34,7 @@ function SPEC_RETRAIT_LICENCE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionRetirerLicence(data, ctx) {
+function actionRetirerLicence_(data, ctx) {
   var lic = resoudreLicence_(data);
 
   try {

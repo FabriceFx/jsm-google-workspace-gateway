@@ -5,7 +5,7 @@
  *
  * Champs attendus dans `data` : email_cible, email_groupe, [role] ∈ {MEMBER, MANAGER, OWNER}
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -25,7 +25,7 @@ function SPEC_AJOUT_GROUPE() {
     required: ['email_cible', 'email_groupe'],
     emails: ['email_cible', 'email_groupe'],
     fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
-    handler: actionAjouterGroupe
+    handler: actionAjouterGroupe_
   };
 }
 
@@ -38,7 +38,7 @@ function SPEC_AJOUT_GROUPE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionAjouterGroupe(data, ctx) {
+function actionAjouterGroupe_(data, ctx) {
   const role = String(data.role || 'MEMBER').toUpperCase();
   if (['MEMBER', 'MANAGER', 'OWNER'].indexOf(role) === -1) {
     throw new AppError_('INVALID_ROLE',

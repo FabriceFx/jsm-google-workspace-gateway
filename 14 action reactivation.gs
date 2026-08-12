@@ -5,7 +5,7 @@
  *
  * Champs attendus dans `data` : email_cible
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -25,7 +25,7 @@ function SPEC_REACTIVATION() {
         required: ['email_cible'],
         emails: ['email_cible'],
         fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
-        handler: actionReactiverCompte
+        handler: actionReactiverCompte_
     };
 }
 
@@ -38,7 +38,7 @@ function SPEC_REACTIVATION() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionReactiverCompte(data, ctx) {
+function actionReactiverCompte_(data, ctx) {
     const utilisateur = requireUser_(data.email_cible);
     if (!utilisateur.suspended) {
         return {

@@ -10,7 +10,7 @@
  * telephone_mobile, adresse, batiment, etage, bureau, tel_recuperation,
  * custom_schemas.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -32,7 +32,7 @@ function SPEC_CREATION_COMPTE() {
     // son domaine : il reçoit le mot de passe provisoire, jamais vers l'externe.
     emails: ['email_souhaite', 'email_perso', 'manager_email', 'email_recuperation'],
     fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
-    handler: actionCreerUtilisateur
+    handler: actionCreerUtilisateur_
   };
 }
 
@@ -46,7 +46,7 @@ function SPEC_CREATION_COMPTE() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object} Résultat structuré.
  */
-function actionCreerUtilisateur(data, ctx) {
+function actionCreerUtilisateur_(data, ctx) {
   const email = data.email_souhaite;
 
   // Idempotence : si Jira rejoue la requête, on ne recrée pas le compte.

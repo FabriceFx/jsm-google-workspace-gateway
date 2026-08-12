@@ -8,7 +8,7 @@
  *   Si client_id est fourni, seule cette application est révoquée.
  *   Sinon, TOUTES les applications tierces sont révoquées.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -19,7 +19,7 @@ function SPEC_REVOCATION_TOKENS_APPS() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',
-    handler: actionRevoquerTokens
+    handler: actionRevoquerTokens_
   };
 }
 
@@ -30,7 +30,7 @@ function SPEC_REVOCATION_TOKENS_APPS() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionRevoquerTokens(data, ctx) {
+function actionRevoquerTokens_(data, ctx) {
   requireUser_(data.email_cible);
 
   var reponse = AdminDirectory.Tokens.list(data.email_cible);

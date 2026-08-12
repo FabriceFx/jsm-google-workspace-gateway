@@ -7,7 +7,7 @@
  *
  * Champs attendus dans `data` : email_cible, [motif]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -27,7 +27,7 @@ function SPEC_SUSPENSION() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',   // retrait d'accès : jamais différé
-    handler: actionSuspendreCompte
+    handler: actionSuspendreCompte_
   };
 }
 
@@ -45,7 +45,7 @@ function SPEC_SUSPENSION() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionSuspendreCompte(data, ctx) {
+function actionSuspendreCompte_(data, ctx) {
   const utilisateur = requireUser_(data.email_cible);
   if (utilisateur.suspended) {
     return {

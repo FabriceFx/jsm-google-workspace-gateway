@@ -5,7 +5,7 @@
  *
  * Champs attendus dans `data` : email_cible, alias
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -16,7 +16,7 @@ function SPEC_AJOUT_ALIAS() {
     required: ['email_cible', 'alias'],
     emails: ['email_cible', 'alias'],
     fenetre: 'STANDARD',
-    handler: actionAjouterAlias
+    handler: actionAjouterAlias_
   };
 }
 
@@ -29,7 +29,7 @@ function SPEC_AJOUT_ALIAS() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionAjouterAlias(data, ctx) {
+function actionAjouterAlias_(data, ctx) {
   var utilisateur = requireUser_(data.email_cible);
 
   // Vérifier si l'alias existe déjà (idempotence).

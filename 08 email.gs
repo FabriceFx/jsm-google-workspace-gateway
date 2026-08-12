@@ -15,7 +15,7 @@
  *  - Couleurs de fond posées à la fois en attribut bgcolor et en style, faute
  *    de quoi le mode sombre de Gmail les recalcule.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

@@ -18,7 +18,7 @@
  * lus. En plaçant les références dans le corps d'une fonction, elles ne sont
  * résolues qu'à la première invocation — après chargement complet du projet.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

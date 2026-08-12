@@ -4,7 +4,7 @@
  * Fonctions à exécuter depuis l'éditeur Apps Script pour installer,
  * diagnostiquer et piloter la file d'attente.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -23,7 +23,11 @@ function setup_genererToken() {
     }
     const token = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, '');
     props.setProperty('SECRET_TOKEN', token);
-    console.log('SECRET_TOKEN généré. À copier dans Jira :\n' + token);
+    // On NE journalise JAMAIS le token : avec exceptionLogging STACKDRIVER, il
+    // serait persisté en clair dans Cloud Logging. On le lit dans les Propriétés.
+    console.log('SECRET_TOKEN généré (' + token.length + ' caractères) et enregistré. ' +
+        'Le copier dans Jira depuis : Paramètres du projet → Propriétés du script ' +
+        '→ SECRET_TOKEN. (Non affiché ici pour ne pas le journaliser.)');
 }
 
 /**

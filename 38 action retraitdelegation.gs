@@ -10,7 +10,7 @@
  *
  * Champs attendus dans `data` : email_cible, email_delegue
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -21,7 +21,7 @@ function SPEC_RETRAIT_DELEGATION_EMAIL() {
     required: ['email_cible', 'email_delegue'],
     emails: ['email_cible', 'email_delegue'],
     fenetre: 'STANDARD',
-    handler: actionRetirerDelegationEmail
+    handler: actionRetirerDelegationEmail_
   };
 }
 
@@ -32,7 +32,7 @@ function SPEC_RETRAIT_DELEGATION_EMAIL() {
  * @param {!Object} ctx Contexte d'exécution.
  * @return {!Object}
  */
-function actionRetirerDelegationEmail(data, ctx) {
+function actionRetirerDelegationEmail_(data, ctx) {
   var SCOPE = 'https://www.googleapis.com/auth/gmail.settings.sharing';
 
   requireUser_(data.email_cible, 'cible');
