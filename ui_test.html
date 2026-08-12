@@ -917,7 +917,7 @@
           <div class="guide-step-grid">
             <div class="step-card">
               <h4>✓ Le script est déployé</h4>
-              <p>La webapp Google Apps Script est déployée en « Application Web ». Vous disposez de son <strong>URL de déploiement</strong> (voir section 2).</p>
+              <p>La webapp Google Apps Script est déployée en « Application Web ». Vous disposez de son <strong>URL de déploiement</strong> (voir section 3).</p>
             </div>
             <div class="step-card">
               <h4>✓ Le jeton secret</h4>
@@ -961,11 +961,88 @@
           <p style="margin-top: 12px;"><strong>À retenir :</strong> une <em>action</em> = une opération (ex. <code>CREATION_COMPTE</code>). Un <em>groupe d'action</em> (ex. <code>ARRIVEE_COLLABORATEUR</code>) en enchaîne plusieurs dans le bon ordre — pratique pour une arrivée ou un départ en un seul ticket.</p>
         </div>
 
-        <!-- Section 2 : Créer la règle Jira -->
+        <!-- Section 2 : Créer le formulaire JSM -->
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined" aria-hidden="true">dynamic_form</span>
+            <span>2. Créer le formulaire JSM et ses champs</span>
+          </h2>
+          <p>
+            C'est l'étape <strong>en amont</strong> de la règle : elle définit ce que l'agent (ou le demandeur) remplit. Le point crucial est le lien <em>formulaire → champ Jira → smart value</em> : sans lui, la règle enverra des champs vides et l'action échouera en <code>MISSING_FIELDS</code>.
+          </p>
+
+          <div class="guide-step-grid">
+            <div class="step-card">
+              <h4>① Créer le type de demande</h4>
+              <p><strong>Paramètres du projet → Types de demande → Créer un type de demande</strong>. Donnez-lui un nom parlant (ex. « Création de compte Workspace »). Un formulaire vide lui est associé.</p>
+            </div>
+            <div class="step-card">
+              <h4>② Ajouter les champs au formulaire</h4>
+              <p>Dans l'éditeur du type de demande, glissez les champs nécessaires depuis la bibliothèque (Prénom, Nom, E-mail…). Pour un besoin spécifique, créez un <strong>champ personnalisé</strong>.</p>
+            </div>
+            <div class="step-card">
+              <h4>③ Publier</h4>
+              <p>Enregistrez et publiez le type de demande. Il devient utilisable par les agents (et, si voulu, visible dans le portail client).</p>
+            </div>
+          </div>
+
+          <div style="background: #fff8e1; border-left: 4px solid #f57f17; padding: 12px 16px; border-radius: 6px; margin-top: 14px; font-size: 14px;">
+            <strong>Le piège n°1 des débutants — le champ « décoratif ».</strong>
+            <p style="margin: 6px 0 0;">Si vous utilisez le générateur de <em>Formulaires</em> JSM (Forms/ProForma), un champ de formulaire n'est réutilisable dans l'automation <strong>que s'il est relié à un champ Jira</strong>. Dans les propriétés du champ de formulaire, activez le lien vers un champ Jira (« Connect to a Jira field » / associer à un champ). Un champ non relié reste dans le formulaire mais <strong>n'apparaît pas</strong> dans les smart values <code>{{issue.…}}</code> — la cause la plus fréquente d'un <code>data</code> vide.</p>
+          </div>
+
+          <div style="background: #f0f7f9; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 6px; margin-top: 12px; font-size: 14px;">
+            <strong>Trouver l'identifiant d'un champ (<code>customfield_XXXXX</code>).</strong>
+            <p style="margin: 6px 0 0;">Deux méthodes : (a) dans la règle d'automation, cliquez sur <em>« Insérer une smart value »</em> et cherchez le champ — Jira insère la bonne référence ; (b) côté admin, <em>Paramètres → Champs → Champs personnalisés</em>, ouvrez le champ : son numéro figure dans l'URL (<code>…customFieldId=10001</code> → <code>customfield_10001</code>). Les champs système (Résumé, Rapporteur…) s'écrivent par leur nom (<code>{{issue.summary}}</code>).</p>
+          </div>
+
+          <h4 style="margin: 18px 0 8px;">Exemple bout-en-bout — action <code>CREATION_COMPTE</code></h4>
+          <p style="font-size: 14px;">Le catalogue (section 6) indique que cette action attend <code>prenom</code>, <code>nom</code>, <code>email_souhaite</code> (+ champs optionnels). On crée donc un champ de formulaire pour chacun, relié à un champ Jira, puis on les mappe dans le payload :</p>
+
+          <div style="overflow-x: auto; margin-top: 10px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <thead>
+                <tr style="text-align: left; border-bottom: 2px solid var(--border, #e2e8f0);">
+                  <th style="padding: 8px;">Champ du formulaire JSM</th>
+                  <th style="padding: 8px;">Champ Jira relié</th>
+                  <th style="padding: 8px;">Clé <code>data</code> de l'action</th>
+                  <th style="padding: 8px;">Smart value dans le payload</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;">Prénom</td>
+                  <td style="padding: 8px;"><code>customfield_10101</code></td>
+                  <td style="padding: 8px;"><code>prenom</code></td>
+                  <td style="padding: 8px;"><code>{{issue.customfield_10101}}</code></td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;">Nom</td>
+                  <td style="padding: 8px;"><code>customfield_10102</code></td>
+                  <td style="padding: 8px;"><code>nom</code></td>
+                  <td style="padding: 8px;"><code>{{issue.customfield_10102}}</code></td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;">E-mail souhaité</td>
+                  <td style="padding: 8px;"><code>customfield_10103</code></td>
+                  <td style="padding: 8px;"><code>email_souhaite</code></td>
+                  <td style="padding: 8px;"><code>{{issue.customfield_10103}}</code></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 8px;">Les identifiants <code>10101…</code> ci-dessus sont des exemples : remplacez-les par ceux de votre instance. Le <code>data</code> final ressemblera alors à celui pré-généré pour vous en section 6.</p>
+
+          <div style="background: #f0f7f9; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 6px; margin-top: 12px; font-size: 14px;">
+            <strong>Le chaînon complet :</strong> Formulaire JSM (ce que l'humain remplit) → Champ Jira (<code>customfield_XXXXX</code>) → Smart value <code>{{issue.…}}</code> → clé <code>data</code> du payload → action de la passerelle. Une fois ce lien en place pour chaque champ, la règle (section 3) n'a plus qu'à transporter le tout.
+          </div>
+        </div>
+
+        <!-- Section 3 : Créer la règle Jira -->
         <div class="guide-section">
           <h2>
             <span class="material-symbols-outlined" aria-hidden="true">build</span>
-            <span>2. Créer la règle dans Jira Automation</span>
+            <span>3. Créer la règle dans Jira Automation</span>
           </h2>
           <p>Dans votre projet Jira : <strong>Paramètres du projet → Automation → Créer une règle</strong>. Puis configurez les trois briques suivantes.</p>
 
@@ -980,7 +1057,7 @@
             </div>
             <div class="step-card">
               <h4>③ Le corps (Web request body)</h4>
-              <p>Choisissez « Custom data » et collez le payload JSON (section 3). C'est là que vous mettez le jeton, le nom de l'action et les champs.</p>
+              <p>Choisissez « Custom data » et collez le payload JSON (section 4). C'est là que vous mettez le jeton, le nom de l'action et les champs.</p>
             </div>
           </div>
 
@@ -1001,7 +1078,7 @@
         <div class="guide-section">
           <h2>
             <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
-            <span>3. Le message à envoyer (payload JSON)</span>
+            <span>4. Le message à envoyer (payload JSON)</span>
           </h2>
           <p>Le corps de la requête est un objet JSON à quatre parties. Voici le modèle&nbsp;; adaptez les valeurs entre accolades.</p>
 
@@ -1029,7 +1106,7 @@
             </div>
             <div class="step-card">
               <h4><code>action</code></h4>
-              <p>Le nom exact de l'opération, en MAJUSCULES (ex. <code>CREATION_COMPTE</code>). La liste complète est en section 5.</p>
+              <p>Le nom exact de l'opération, en MAJUSCULES (ex. <code>CREATION_COMPTE</code>). La liste complète est en section 6.</p>
             </div>
             <div class="step-card">
               <h4><code>ticket_key</code> / <code>request_id</code></h4>
@@ -1037,7 +1114,7 @@
             </div>
             <div class="step-card">
               <h4><code>data</code></h4>
-              <p>Les informations métier (e-mails, nom, groupe…). Chaque action a ses propres champs : voir la section 5, qui génère le bon <code>data</code> pour vous.</p>
+              <p>Les informations métier (e-mails, nom, groupe…). Chaque action a ses propres champs : voir la section 6, qui génère le bon <code>data</code> pour vous.</p>
             </div>
           </div>
 
@@ -1051,7 +1128,7 @@
         <div class="guide-section">
           <h2>
             <span class="material-symbols-outlined" aria-hidden="true">call_split</span>
-            <span>4. Que faire de la réponse de Google</span>
+            <span>5. Que faire de la réponse de Google</span>
           </h2>
           <p>Après l'action web, ajoutez dans la règle des branches selon <code>{{webResponse.body.status}}</code> pour informer l'agent sur le ticket.</p>
 
@@ -1078,7 +1155,7 @@
         <div class="guide-section">
           <h2>
             <span class="material-symbols-outlined" aria-hidden="true">view_list</span>
-            <span>5. Catalogue des actions & payloads prêts à copier</span>
+            <span>6. Catalogue des actions & payloads prêts à copier</span>
           </h2>
           <p>
             Cliquez sur une action pour voir ses champs et copier son payload JSON déjà pré-rempli avec les bons noms de champs. Il ne vous restera qu'à remplacer les valeurs par vos smart values Jira.
@@ -1100,7 +1177,7 @@
         <div class="guide-section">
           <h2>
             <span class="material-symbols-outlined" aria-hidden="true">healing</span>
-            <span>6. En cas de problème (dépannage)</span>
+            <span>7. En cas de problème (dépannage)</span>
           </h2>
           <p>Le code d'erreur renvoyé (<code>error_code</code>) indique précisément la cause. Les plus fréquents :</p>
           <div style="overflow-x: auto; margin-top: 12px;">
@@ -1136,7 +1213,7 @@
                 <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
                   <td style="padding: 8px;"><code>UNKNOWN_ACTION</code></td>
                   <td style="padding: 8px;">Nom d'action inconnu.</td>
-                  <td style="padding: 8px;">Vérifier l'orthographe exacte (MAJUSCULES) du champ <code>action</code>. Liste en section 5.</td>
+                  <td style="padding: 8px;">Vérifier l'orthographe exacte (MAJUSCULES) du champ <code>action</code>. Liste en section 6.</td>
                 </tr>
                 <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
                   <td style="padding: 8px;"><code>NOT_FOUND</code></td>
