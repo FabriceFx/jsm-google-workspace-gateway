@@ -19,6 +19,7 @@ function SPEC_GENERATION_CODES_SECOURS() {
     // pour interdire l'envoi du secret vers une adresse hors du domaine.
     emails: ['email_cible', 'manager_email'],
     fenetre: 'STANDARD',
+    destructive: true,
     handler: actionGenererCodesSecours_
   };
 }

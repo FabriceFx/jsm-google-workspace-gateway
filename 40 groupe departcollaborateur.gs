@@ -37,6 +37,7 @@ function SPEC_DEPART_COLLABORATEUR() {
     required: ['email_cible'],
     emails: ['email_cible', 'email_manager', 'email_transfert', 'email_drive'],
     fenetre: 'PERMANENTE',   // contient une suspension : jamais différé
+    destructive: true,
     handler: actionDepartCollaborateur_
   };
 }

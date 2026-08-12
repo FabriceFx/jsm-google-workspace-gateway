@@ -756,7 +756,7 @@
         <div class="brand-logo">C</div>
         <div class="brand-title">
           <h1>Passerelle Jira Service Management → Google Workspace</h1>
-          <p>Console de test & Guide d'intégration Jira Automation</p>
+          <p>Console d'administration & Guide d'intégration Jira Automation</p>
         </div>
       </div>
       <div class="header-actions">
@@ -770,7 +770,7 @@
     <div class="nav-tabs-content" role="tablist" aria-label="Sections de la console">
       <button class="tab-btn active" role="tab" id="tab-btn-console" aria-selected="true" aria-controls="tab-console" onclick="switchTab('console')">
         <span class="material-symbols-outlined" aria-hidden="true">science</span>
-        <span>Console de Test Interactive</span>
+        <span>Console d'administration</span>
       </button>
       <button class="tab-btn" role="tab" id="tab-btn-guide" aria-selected="false" aria-controls="tab-guide" onclick="switchTab('guide')">
         <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
@@ -780,8 +780,12 @@
   </nav>
 
   <main>
-    <!-- TAB 1 : CONSOLE DE TEST -->
+    <!-- TAB 1 : CONSOLE D'ADMINISTRATION -->
     <div class="tab-pane active" id="tab-console" role="tabpanel" aria-labelledby="tab-btn-console">
+      <div role="alert" style="display:flex; align-items:center; gap:10px; margin-bottom:18px; padding:12px 16px; background:#fff4e5; border:1px solid #ffcf99; border-left:4px solid #f57f17; border-radius:8px; color:#8a5200; font-size:14px;">
+        <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+        <span><strong>Console d'exécution réelle.</strong> Les actions lancées ici s'appliquent immédiatement à Google Workspace (création, suppression, effacement…), exactement comme via Jira. Les actions destructives demandent une confirmation.</span>
+      </div>
       <div class="console-grid">
         <!-- Colonne gauche : Liste des actions -->
         <aside class="card">
@@ -812,7 +816,7 @@
             </div>
 
             <p id="form-description" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
-              Choisissez une action dans la liste de gauche pour configurer les paramètres et simuler une exécution.
+              Choisissez une action dans la liste de gauche pour configurer les paramètres et l'exécuter réellement sur Google Workspace.
             </p>
 
             <form id="action-form" onsubmit="soumettreFormulaire(event)" style="display: none;">
@@ -867,7 +871,7 @@
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="remplirExemple()">
                   <span class="material-symbols-outlined" aria-hidden="true">auto_fix_high</span>
-                  <span>Remplir avec des données de test</span>
+                  <span>Remplir avec un exemple</span>
                 </button>
               </div>
             </form>
@@ -909,7 +913,7 @@
             Ce guide vous accompagne, même sans expérience de Jira Automation, pour connecter un formulaire Jira Service Management à Google Workspace. Suivez les sections dans l'ordre : <strong>vérifier les prérequis</strong>, <strong>comprendre le principe</strong>, <strong>créer la règle Jira</strong>, puis <strong>tester</strong>. Comptez 15 à 20 minutes pour votre première action.
           </p>
           <div style="background: #f0f7f9; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 6px; margin-top: 12px; font-size: 14px;">
-            <strong>Bon réflexe :</strong> avant de toucher à Jira, testez l'action depuis l'onglet <em>Console de Test Interactive</em> (en haut). Si elle fonctionne ici, il ne restera qu'à recopier le payload dans Jira.
+            <strong>Bon réflexe :</strong> vous pouvez exécuter une action manuellement depuis l'onglet <em>Console d'administration</em> (en haut) — utile pour traiter une demande sans attendre l'intégration Jira. <strong>Attention : la console agit réellement sur Google Workspace</strong> (les actions destructives demandent une confirmation).
           </div>
         </div>
 
@@ -1240,7 +1244,7 @@
             </table>
           </div>
           <div style="background: #f0f7f9; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 6px; margin-top: 14px; font-size: 14px;">
-            <strong>Méthode conseillée :</strong> reproduisez d'abord l'erreur dans l'onglet <em>Console de Test Interactive</em> avec les mêmes valeurs. Vous verrez le code d'erreur immédiatement, sans dépendre du délai de Jira.
+            <strong>Méthode conseillée :</strong> reproduisez l'erreur depuis l'onglet <em>Console d'administration</em> avec les mêmes valeurs. Vous verrez le code d'erreur immédiatement, sans dépendre du délai de Jira (rappel : la console exécute réellement).
           </div>
         </div>
 
@@ -1270,6 +1274,26 @@
   <div class="toast" id="toast-notif" role="status" aria-live="polite">
     <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
     <span id="toast-text">Code copié dans le presse-papier !</span>
+  </div>
+
+  <!-- Modale de confirmation (actions destructives) -->
+  <div id="confirm-overlay" role="dialog" aria-modal="true" aria-labelledby="confirm-title"
+       onclick="if(event.target===this) fermerConfirmation()"
+       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#ffffff; max-width:470px; width:100%; border-radius:12px; box-shadow:0 20px 50px rgba(0,0,0,0.3); overflow:hidden;">
+      <div style="padding:20px 24px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; gap:12px;">
+        <span class="material-symbols-outlined" aria-hidden="true" style="color:#c62828; font-size:28px;">warning</span>
+        <h3 id="confirm-title" style="margin:0; font-size:18px; color:#1c2b33;">Confirmer une action sensible</h3>
+      </div>
+      <div style="padding:20px 24px; font-size:15px; color:#1c2b33;">
+        <p id="confirm-message" style="margin:0;"></p>
+        <p style="margin:12px 0 0; font-size:13px; color:#5a6a73;">Cette opération s'applique <strong>réellement et immédiatement</strong> à Google Workspace, et peut être irréversible.</p>
+      </div>
+      <div style="padding:16px 24px; display:flex; justify-content:flex-end; gap:12px; background:#f7f9fa;">
+        <button type="button" class="btn btn-secondary" onclick="fermerConfirmation()">Annuler</button>
+        <button type="button" id="confirm-ok" class="btn btn-primary" style="background:#c62828;" onclick="validerConfirmation()">Confirmer l'exécution</button>
+      </div>
+    </div>
   </div>
 
   <footer>
@@ -1388,7 +1412,7 @@
         // Mode simulation hors Apps Script
         afficherCatalogue([
           { action: 'CREATION_COMPTE', description: 'Crée un compte utilisateur Workspace.', required: ['prenom', 'nom', 'email_souhaite'], emails: ['email_souhaite', 'email_perso'], fenetre: 'STANDARD' },
-          { action: 'SUSPENSION', description: 'Suspend un compte et révoque ses sessions.', required: ['email_cible'], emails: ['email_cible'], fenetre: 'PERMANENTE' },
+          { action: 'SUSPENSION', description: 'Suspend un compte et révoque ses sessions.', required: ['email_cible'], emails: ['email_cible'], fenetre: 'PERMANENTE', destructive: true },
           { action: 'CHANGEMENT_OU', description: 'Déplace un compte dans une autre OU.', required: ['email_cible', 'unite_organisationnelle'], emails: ['email_cible'], fenetre: 'STANDARD' }
         ]);
       }
@@ -1915,13 +1939,26 @@
         if (motifUrgence) payload.motif_urgence = motifUrgence;
       }
 
+      // Action destructive / à fort impact : confirmation explicite avant
+      // l'exécution réelle (le flag vient du serveur, spec.destructive).
+      if (actionSelectionnee.destructive) {
+        const cible = data.email_cible || data.email_souhaite || data.email_source
+          || data.email_groupe || data.email_delegue || '(voir le détail)';
+        demanderConfirmation(actionSelectionnee.action, cible, function() { executerPayload(payload); });
+      } else {
+        executerPayload(payload);
+      }
+    }
+
+    function executerPayload(payload) {
       const btn = document.getElementById('btn-submit');
       btn.disabled = true;
       btn.innerHTML = '<div class="spinner"></div> Traitement en cours...';
 
       const resultBox = document.getElementById('result-box');
       resultBox.classList.add('active');
-      
+      resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
       const banner = document.getElementById('status-banner');
       banner.className = 'status-banner queued';
       document.getElementById('status-icon').innerText = 'sync';
@@ -2079,6 +2116,33 @@
         card.style.display = txt.includes(q) ? 'block' : 'none';
       });
     }
+
+    // Modale de confirmation pour les actions destructives.
+    let confirmCallback = null;
+    function demanderConfirmation(action, cible, onConfirm) {
+      confirmCallback = onConfirm;
+      document.getElementById('confirm-message').innerHTML =
+        'Vous êtes sur le point d\'exécuter <strong>' + escapeHtml(action) +
+        '</strong> sur <strong>' + escapeHtml(cible) + '</strong>.';
+      const overlay = document.getElementById('confirm-overlay');
+      overlay.style.display = 'flex';
+      document.getElementById('confirm-ok').focus();
+    }
+    function fermerConfirmation() {
+      document.getElementById('confirm-overlay').style.display = 'none';
+      confirmCallback = null;
+    }
+    function validerConfirmation() {
+      const cb = confirmCallback;
+      fermerConfirmation();
+      if (cb) cb();
+    }
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' &&
+          document.getElementById('confirm-overlay').style.display === 'flex') {
+        fermerConfirmation();
+      }
+    });
 
     function copierCode(elementId) {
       const code = document.getElementById(elementId).innerText;

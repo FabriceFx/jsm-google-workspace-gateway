@@ -22,6 +22,7 @@ function SPEC_TRANSFERT_DRIVE() {
     required: ['email_source', 'email_destination'],
     emails: ['email_source', 'email_destination'],
     fenetre: 'STANDARD',
+    destructive: true,
     handler: actionTransfererDrive_
   };
 }

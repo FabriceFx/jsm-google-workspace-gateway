@@ -19,6 +19,7 @@ function SPEC_SUPPRESSION_GROUPE() {
     required: ['email_groupe', 'confirmation'],
     emails: ['email_groupe'],
     fenetre: 'STANDARD',
+    destructive: true,
     handler: actionSupprimerGroupe_
   };
 }

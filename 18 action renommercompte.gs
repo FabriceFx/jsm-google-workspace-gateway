@@ -17,6 +17,7 @@ function SPEC_RENOMMER_COMPTE() {
     required: ['email_cible', 'nouvel_email'],
     emails: ['email_cible', 'nouvel_email'],
     fenetre: 'STANDARD',
+    destructive: true,
     handler: actionRenommerCompte_
   };
 }

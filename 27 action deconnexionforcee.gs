@@ -21,6 +21,7 @@ function SPEC_DECONNEXION_FORCEE() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',
+    destructive: true,
     handler: actionDeconnexionForcee_
   };
 }

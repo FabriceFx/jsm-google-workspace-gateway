@@ -26,6 +26,7 @@ function SPEC_RETRAIT_GROUPE() {
     required: ['email_cible', 'email_groupe'],
     emails: ['email_cible', 'email_groupe'],
     fenetre: 'PERMANENTE',   // retrait d'accès : jamais différé
+    destructive: true,
     handler: actionRetirerGroupe_
   };
 }

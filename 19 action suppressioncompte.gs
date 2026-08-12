@@ -19,6 +19,7 @@ function SPEC_SUPPRESSION_COMPTE() {
     required: ['email_cible', 'confirmation'],
     emails: ['email_cible'],
     fenetre: 'STANDARD',
+    destructive: true,
     handler: actionSupprimerCompte_
   };
 }

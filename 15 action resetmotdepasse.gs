@@ -27,6 +27,7 @@ function SPEC_RESET_MOT_DE_PASSE() {
     // interdire l'envoi du secret vers une adresse hors du domaine.
     emails: ['email_cible', 'manager_email'],
     fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
+    destructive: true,
     handler: actionReinitialiserMotDePasse_
   };
 }

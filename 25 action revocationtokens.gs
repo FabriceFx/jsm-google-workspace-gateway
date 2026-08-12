@@ -19,6 +19,7 @@ function SPEC_REVOCATION_TOKENS_APPS() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',
+    destructive: true,
     handler: actionRevoquerTokens_
   };
 }

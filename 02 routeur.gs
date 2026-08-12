@@ -192,7 +192,7 @@ function doGet(e) {
     // actions d'administration, elle ne doit pas être encadrable par un site
     // tiers (protection anti-clickjacking).
     return HtmlService.createHtmlOutputFromFile('ui_test')
-        .setTitle('Passerelle JSM → Google Workspace — Console de Test')
+        .setTitle('Passerelle JSM → Google Workspace — Console d\'administration')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
@@ -268,7 +268,8 @@ function getSpecsCatalogue() {
       description: s.description,
       required: s.required || [],
       emails: s.emails || [],
-      fenetre: s.fenetre
+      fenetre: s.fenetre,
+      destructive: !!s.destructive
     };
   });
 }

@@ -27,6 +27,7 @@ function SPEC_SUSPENSION() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',   // retrait d'accès : jamais différé
+    destructive: true,
     handler: actionSuspendreCompte_
   };
 }

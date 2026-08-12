@@ -17,6 +17,7 @@ function SPEC_BLOCAGE_APPAREIL() {
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',
+    destructive: true,
     handler: actionBloquerAppareil_
   };
 }

@@ -38,6 +38,15 @@ Correctifs issus d'une revue d'expert de maturité (sécurité, correction, robu
   préservation des tableaux et des schémas) et sur l'ordre des motifs de
   `traduireErreurAdmin_`.
 
+### Interface (UX‑1)
+
+- **Recadrage sémantique** : la « Console de Test » devient la **Console
+  d'administration** (le vocabulaire « simuler / tester » est retiré), avec une
+  **bannière d'avertissement** rappelant que les actions s'exécutent réellement.
+- **Confirmation modale** avant toute action destructive : la SPEC porte un flag
+  `destructive` (exposé au catalogue), et la console demande une confirmation
+  explicite rappelant l'action et la cible avant exécution.
+
 ## [2.7.0] — 2026-08-12
 
 ### Sécurité (correctifs critiques)
