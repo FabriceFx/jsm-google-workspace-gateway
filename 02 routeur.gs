@@ -187,8 +187,7 @@ function doGet(e) {
         });
     }
 
-    return HtmlService.createTemplateFromFile('ui_test')
-        .evaluate()
+    return HtmlService.createHtmlOutputFromFile('ui_test')
         .setTitle('Passerelle JSM → Google Workspace — Console de Test')
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
