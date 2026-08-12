@@ -281,3 +281,19 @@ function executerActionDepuisUI(payload) {
   const textOutput = doPost({ postData: { contents: JSON.stringify(payload) } });
   return JSON.parse(textOutput.getContent());
 }
+
+/**
+ * Retourne l'URL publique canonique de la WebApp.
+ * Utilise ScriptApp.getService().getUrl() qui renvoie l'URL officielle du webhook.
+ *
+ * @return {string} URL officielle de la WebApp.
+ */
+function getWebhookUrl() {
+  try {
+    const url = ScriptApp.getService().getUrl();
+    if (url) return url;
+  } catch (err) {
+    console.warn('Impossible de lire ScriptApp.getService().getUrl() : ' + err.message);
+  }
+  return 'https://script.google.com/macros/s/1DMpAcsU2wpS4qZtvSq6BI5XaksEZwk34D9oUkP0fuu5nL4NjvjoVeXdU/exec';
+}

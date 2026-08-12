@@ -1042,7 +1042,15 @@
 
     function afficherUrlWebhook() {
       const el = document.getElementById('url-webhook-display');
-      if (el && window.location.href) {
+      if (!el) return;
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(url) {
+            if (url) el.innerText = url;
+          })
+          .getWebhookUrl();
+      } else if (window.location.href) {
         el.innerText = window.location.href.split('?')[0];
       }
     }
