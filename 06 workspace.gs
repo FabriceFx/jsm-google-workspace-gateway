@@ -238,7 +238,7 @@ function getGroupOrNull_(email) {
  *
  * Champs `data` reconnus (tous optionnels) :
  *   prenom, nom, intitule_poste, departement, societe, centre_cout,
- *   manager_email, telephone_pro (ou telephone), telephone_mobile,
+ *   org_description, manager_email, telephone_pro (ou telephone), telephone_mobile,
  *   adresse, batiment, etage, bureau,
  *   email_recuperation (ou email_perso), tel_recuperation,
  *   visible_annuaire, custom_schemas (objet ou chaîne JSON).
@@ -263,7 +263,8 @@ function construireProfilPatch_(data, existant) {
   }
 
   // --- Organisation principale : poste, service, société, centre de coûts ---
-  if (data.intitule_poste || data.departement || data.societe || data.centre_cout) {
+  if (data.intitule_poste || data.departement || data.societe ||
+      data.centre_cout || data.org_description) {
     var orgs = (existant.organizations || []).map(function (o) {
       return Object.assign({}, o);
     });
@@ -276,6 +277,7 @@ function construireProfilPatch_(data, existant) {
     if (data.departement) { principale.department = data.departement; mods.push('service : ' + data.departement); }
     if (data.societe) { principale.name = data.societe; mods.push('société : ' + data.societe); }
     if (data.centre_cout) { principale.costCenter = data.centre_cout; mods.push('centre de coûts : ' + data.centre_cout); }
+    if (data.org_description) { principale.description = data.org_description; mods.push('description : ' + data.org_description); }
     patch.organizations = orgs;
   }
 
@@ -747,6 +749,7 @@ const SOURCES_SUGGESTIONS = Object.freeze({
   societe:               { champ: 'organizations', sous: 'name' },
   departement:           { champ: 'organizations', sous: 'department' },
   centre_cout:           { champ: 'organizations', sous: 'costCenter' },
+  org_description:       { champ: 'organizations', sous: 'description' },
   statut:                { schema: 'Ressources_humaines', attr: 'Statut' },
   cse:                   { schema: 'Ressources_humaines', attr: 'CSE' },
   fonction_transversale: { schema: 'Ressources_humaines', attr: 'Fonction_transversale' }

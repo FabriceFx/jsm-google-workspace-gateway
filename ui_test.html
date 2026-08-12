@@ -1592,6 +1592,7 @@
       societe:               [{ val: '', txt: '— choisir —' },
                               { val: 'COOPERL ARC ATLANTIQUE', txt: 'COOPERL ARC ATLANTIQUE' }],
       centre_cout:           [],   // ex. { val: 'DSI-001', txt: 'DSI-001' } — [] = saisie libre
+      org_description:       [],   // ex. { val: 'Equipé', txt: 'Equipé' } — [] = autocomplétion annuaire
       statut:                [{ val: '', txt: '— choisir — ' },
                               { val: 'Cadre', txt: 'Cadre' },
                               { val: 'Agent de maîtrise', txt: 'Agent de maîtrise' },
@@ -1630,6 +1631,7 @@
           { id: 'departement', label: 'Service / département', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
           { id: 'societe', label: 'Société', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
           { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
+          { id: 'org_description', label: 'Description (poste)', options: LISTES.org_description, suggestSource: 'org_description', placeholder: 'Equipé' },
           { id: 'telephone_pro', label: 'Téléphone professionnel', placeholder: '+33 2 96 00 00 00' },
           { id: 'telephone_mobile', label: 'Téléphone mobile', placeholder: '+33 6 00 00 00 00' },
           { id: 'adresse', label: 'Adresse professionnelle', placeholder: '2Ter Rue Sébastien Coupé, 22403 Lamballe-Armor' },
@@ -1652,6 +1654,7 @@
           { id: 'departement', label: 'Service / département', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
           { id: 'societe', label: 'Société', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
           { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
+          { id: 'org_description', label: 'Description (poste)', options: LISTES.org_description, suggestSource: 'org_description', placeholder: 'Equipé' },
           { id: 'telephone_pro', label: 'Téléphone professionnel', placeholder: '+33 2 96 00 00 00' },
           { id: 'telephone_mobile', label: 'Téléphone mobile', placeholder: '+33 6 00 00 00 00' },
           { id: 'manager_email', label: 'E-mail du Manager', type: 'email', placeholder: 'directeur@cooperl.com' },
@@ -1793,6 +1796,7 @@
           { id: 'departement', label: 'Service / département (optionnel)', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
           { id: 'societe', label: 'Société (optionnel)', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
           { id: 'centre_cout', label: 'Centre de coûts (optionnel)', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
+          { id: 'org_description', label: 'Description poste (optionnel)', options: LISTES.org_description, suggestSource: 'org_description', placeholder: 'Equipé' },
           { id: 'telephone_pro', label: 'Téléphone pro (optionnel)', placeholder: '+33 2 96 00 00 00' },
           { id: 'telephone_mobile', label: 'Téléphone mobile (optionnel)', placeholder: '+33 6 00 00 00 00' },
           { id: 'adresse', label: 'Adresse professionnelle (optionnel)', placeholder: '2Ter Rue Sébastien Coupé, 22403 Lamballe-Armor' },
