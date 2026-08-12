@@ -227,6 +227,42 @@ function admin_genererSignatureEmail() {
   console.log(signature);
 }
 
+/**
+ * Affiche les licences (SKU) souscrites par le domaine et leur usage.
+ *
+ * À exécuter avant de renseigner LICENSE_SKU_ID : le SKU identifie l'édition
+ * exacte (Business Starter/Standard/Plus…) et conditionne les actions
+ * ATTRIBUTION_LICENCE / RETRAIT_LICENCE.
+ */
+function admin_listerLicences() {
+  assertAdminUI_();
+  var productId = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
+  try {
+    var reponse = appelLicensingApi_('GET',
+      'product/' + encodeURIComponent(productId) + '/users?maxResults=1', null);
+    // L'endpoint /users liste les assignations ; le champ skuId y figure.
+    var skus = {};
+    (reponse && reponse.items || []).forEach(function (a) {
+      skus[a.skuId] = (skus[a.skuId] || 0) + 1;
+    });
+    var lignes = ['Produit interrogé : ' + productId,
+      'SKU rencontrés (échantillon) :'];
+    Object.keys(skus).forEach(function (s) {
+      lignes.push('  - ' + s + ' (' + skus[s] + ' assignation(s) vues)');
+    });
+    if (!Object.keys(skus).length) {
+      lignes.push('  (aucune assignation lue — vérifier le scope apps.licensing ' +
+        'et le productId)');
+    }
+    lignes.push('\nRenseigner LICENSE_SKU_ID avec le SKU de l\'édition à gérer.');
+    console.log(lignes.join('\n'));
+  } catch (err) {
+    console.error('Lecture des licences impossible : ' + err.message +
+      '\n  → Vérifier le scope apps.licensing (réautoriser après mise à jour ' +
+      'du manifeste) et les droits d\'administration.');
+  }
+}
+
 /** Affiche dans les logs les demandes actuellement en attente. */
 function admin_listerFileAttente() {
   assertAdminUI_();

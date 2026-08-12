@@ -544,3 +544,72 @@ function appelGmailApi_(emailCible, endpoint, methode, payload, scopes) {
   if (code === 204 || !reponse.getContentText()) return null;
   return JSON.parse(reponse.getContentText());
 }
+
+// ---------------------------------------------------------------------------
+//  LICENCES WORKSPACE — Enterprise License Manager API
+// ---------------------------------------------------------------------------
+
+/**
+ * Résout le couple (produit, SKU) de licence à utiliser.
+ *
+ * Priorité : champ du ticket (product_id / sku_id) puis propriétés du script
+ * (LICENSE_PRODUCT_ID / LICENSE_SKU_ID). Le SKU identifie l'édition précise
+ * (ex. Business Standard) et dépend de l'abonnement du domaine : il n'a donc pas
+ * de valeur codée en dur. Le produit vaut 'Google-Apps' pour Workspace par
+ * défaut.
+ *
+ * @param {!Object} data Données validées de l'action.
+ * @return {!{productId: string, skuId: string}}
+ * @throws {AppError_} 500 si le SKU n'est pas déterminable.
+ */
+function resoudreLicence_(data) {
+  var productId = data.product_id || getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
+  var skuId = data.sku_id || getProp_('LICENSE_SKU_ID');
+  if (!skuId) {
+    throw new AppError_('NOT_CONFIGURED',
+      "Aucun SKU de licence défini. Renseigner la propriété LICENSE_SKU_ID " +
+      "(identifiant de l'édition, ex. Business Standard) ou passer 'sku_id' " +
+      'dans le ticket. Voir admin_listerLicences() pour les SKU du domaine.', 500);
+  }
+  return { productId: productId, skuId: skuId };
+}
+
+/**
+ * Appelle l'Enterprise License Manager API en REST.
+ *
+ * Utilise le jeton OAuth du script (droits d'administration du déployeur),
+ * comme le transfert Drive : pas d'impersonation ici, c'est une opération
+ * d'administration du domaine. Scope requis : apps.licensing.
+ *
+ * @param {string} methode 'GET' | 'POST' | 'PUT' | 'DELETE'.
+ * @param {string} chemin Chemin après /apps/licensing/v1/.
+ * @param {?Object} payload Corps de la requête (null si GET/DELETE).
+ * @return {?Object} Réponse JSON, ou null si vide.
+ * @throws {AppError_} En cas d'erreur API.
+ */
+function appelLicensingApi_(methode, chemin, payload) {
+  var url = 'https://licensing.googleapis.com/apps/licensing/v1/' + chemin;
+  var options = {
+    method: methode,
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    muteHttpExceptions: true
+  };
+  if (payload) {
+    options.contentType = 'application/json';
+    options.payload = JSON.stringify(payload);
+  }
+
+  var reponse = UrlFetchApp.fetch(url, options);
+  var code = reponse.getResponseCode();
+
+  if (code >= 400) {
+    var message = '';
+    try { message = JSON.parse(reponse.getContentText()).error.message; }
+    catch (e) { message = reponse.getContentText(); }
+    throw new AppError_('LICENSING_API_ERROR',
+      'API Licences : ' + message, code >= 500 ? 502 : code);
+  }
+
+  if (code === 204 || !reponse.getContentText()) return null;
+  return JSON.parse(reponse.getContentText());
+}

@@ -43,6 +43,7 @@ function declarationsFormulaires_() {
     // --- Groupes -------------------------------------------------------------
     SPEC_AJOUT_GROUPE,
     SPEC_RETRAIT_GROUPE,
+    SPEC_RETRAIT_TOUS_GROUPES,
     SPEC_CREATION_GROUPE,
     SPEC_SUPPRESSION_GROUPE,
     SPEC_LISTE_MEMBRES_GROUPE,
@@ -66,11 +67,23 @@ function declarationsFormulaires_() {
 
     // --- Messagerie (nécessitent un compte de service + DWD) -----------------
     SPEC_DELEGATION_EMAIL,
+    SPEC_RETRAIT_DELEGATION_EMAIL,
     SPEC_REPONSE_ABSENCE,
+    SPEC_DESACTIVATION_REPONSE_ABSENCE,
     SPEC_TRANSFERT_EMAILS,
+    SPEC_ARRET_TRANSFERT_EMAILS,
 
     // --- Drive ---------------------------------------------------------------
-    SPEC_TRANSFERT_DRIVE
+    SPEC_TRANSFERT_DRIVE,
+
+    // --- Licences ------------------------------------------------------------
+    SPEC_ATTRIBUTION_LICENCE,
+    SPEC_RETRAIT_LICENCE,
+
+    // --- Groupes d'action (séquences orchestrées) ----------------------------
+    SPEC_ARRIVEE_COLLABORATEUR,
+    SPEC_DEPART_COLLABORATEUR,
+    SPEC_RETOUR_ABSENCE
   ];
 }
 

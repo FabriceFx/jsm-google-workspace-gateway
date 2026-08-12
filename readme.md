@@ -28,6 +28,7 @@ l'Admin SDK — le tout sans intervention manuelle.
 | **Groupes** | | |
 | `AJOUT_GROUPE` | Ajoute un utilisateur à un groupe (MEMBER, MANAGER, OWNER) | Standard |
 | `RETRAIT_GROUPE` | Retire un utilisateur d'un groupe | Permanente |
+| `RETRAIT_TOUS_GROUPES` | Retire un utilisateur de tous ses groupes directs | Permanente |
 | `CREATION_GROUPE` | Crée un nouveau groupe Google | Standard |
 | `SUPPRESSION_GROUPE` | Supprime un groupe (confirmation obligatoire) | Standard |
 | `LISTE_MEMBRES_GROUPE` | Liste les membres d'un groupe (lecture seule) | Permanente |
@@ -47,10 +48,20 @@ l'Admin SDK — le tout sans intervention manuelle.
 | `APPROBATION_APPAREIL` | Approuve un nouvel appareil en attente | Standard |
 | **Messagerie** ⚙️ | | |
 | `DELEGATION_EMAIL` | Donne accès à la boîte mail d'un utilisateur à un délégué | Standard |
+| `RETRAIT_DELEGATION_EMAIL` | Retire l'accès d'un délégué à une boîte mail | Standard |
 | `REPONSE_ABSENCE` | Active la réponse d'absence automatique | Standard |
+| `DESACTIVATION_REPONSE_ABSENCE` | Désactive la réponse d'absence automatique | Standard |
 | `TRANSFERT_EMAILS` | Redirige les e-mails entrants vers une autre adresse | Standard |
+| `ARRET_TRANSFERT_EMAILS` | Désactive la redirection automatique des e-mails | Standard |
 | **Drive** | | |
 | `TRANSFERT_DRIVE` | Transfère la propriété des fichiers Drive à un autre utilisateur | Standard |
+| **Licences** | | |
+| `ATTRIBUTION_LICENCE` | Attribue une licence Workspace à un utilisateur | Standard |
+| `RETRAIT_LICENCE` | Libère la licence d'un utilisateur (facturée tant qu'assignée) | Standard |
+| **Groupes d'action** (séquences orchestrées) | | |
+| `ARRIVEE_COLLABORATEUR` | Onboarding : création du compte + licence + groupes + alias, dans l'ordre | Standard |
+| `DEPART_COLLABORATEUR` | Offboarding : transferts + délégation + retrait groupes + suspension + retrait licence | Permanente |
+| `RETOUR_ABSENCE` | Coupe réponse d'absence, transfert et délégation posés au départ | Standard |
 
 > ⚙️ Les actions **Messagerie** nécessitent un compte de service avec
 > délégation de domaine (voir section « Actions Gmail »).
@@ -62,6 +73,24 @@ est mise en file d'attente pour exécution automatique au prochain créneau.
 **Fenêtre Permanente** : exécution immédiate 24 h/24, 7 j/7. Réservée aux
 actions de sécurité (suspension, retrait d'accès) et aux lectures qui ne
 doivent jamais être différées.
+
+### Groupes d'action
+
+Un **groupe d'action** enchaîne plusieurs actions atomiques dans le bon ordre,
+en un seul ticket. Sa valeur n'est pas seulement d'économiser des tickets :
+c'est d'**encoder la séquence correcte** que l'agent devrait sinon connaître de
+tête (par exemple, sur un départ, poser transferts et délégation *pendant que le
+compte est actif*, et suspendre *en dernier*).
+
+- Les groupes **réutilisent** les handlers atomiques : aucune logique dupliquée.
+- Ils héritent de leur **idempotence** — rejouer un groupe est sûr (les étapes
+  déjà faites se signalent, les étapes en échec sont réessayées).
+- Politique **continue-on-error avec rapport** : on fait le maximum ; le détail
+  étape par étape figure dans `details.etapes`, et toute étape en échec fait
+  remonter un statut d'erreur récapitulatif à Jira (pour relance).
+
+Groupes disponibles : `ARRIVEE_COLLABORATEUR` (onboarding),
+`DEPART_COLLABORATEUR` (offboarding), `RETOUR_ABSENCE`.
 
 ## Prérequis
 
@@ -96,6 +125,8 @@ doivent jamais être différées.
    | `ALLOWED_DOMAINS` | ✅ | Domaines autorisés, séparés par des virgules |
    | `ADMIN_UI_EMAILS` | ✅ (console) | Adresses admin autorisées à utiliser la console de test, séparées par des virgules |
    | `NOTIFY_EMAIL` | Recommandé | Adresse de notification (anomalies, mots de passe) |
+   | `LICENSE_SKU_ID` | Optionnel | SKU de licence par défaut (actions de licence). Voir `admin_listerLicences()` |
+   | `LICENSE_PRODUCT_ID` | Optionnel | Produit de licence (défaut `Google-Apps`) |
    | `DEFAULT_OU` | Optionnel | Unité organisationnelle par défaut (ex. `/Collaborateurs`) |
    | `LOGO_URL` | Optionnel | URL publique du logo Cooperl pour les e-mails |
    | `LOGO_VARIANTE` | Optionnel | `BLANC` (défaut) ou `BLEU` selon le fichier hébergé |
@@ -170,7 +201,7 @@ Vous pouvez tester l'ensemble du système **avant même de configurer Jira** :
 
 ### 1. Console de Test WebApp HTML (Interface graphique)
 En ouvrant l'URL du déploiement WebApp (`https://script.google.com/macros/s/.../exec`) directement dans votre navigateur web, vous accédez à la **Console de test interactive** :
-- Sélection graphique de l'action parmi les 25 disponibles
+- Sélection graphique de l'action parmi les 34 disponibles
 - Génération automatique des champs avec exemples pré-remplis
 - Simulation de dérogations d'urgence (`force_immediat`)
 - Visualisation en temps réel des réponses JSON, statuts HTTP et journaux
@@ -246,8 +277,18 @@ Toutes les autres actions fonctionnent uniquement avec l'Admin SDK.
 32 action creationgroupe     Création de groupe
 33 action suppressiongroupe  Suppression de groupe
 34 action listemembregroupe  Liste des membres d'un groupe
+35 action retraittousgroupes Retrait de tous les groupes (offboarding)
+36 action arretreponseabsence Désactivation de la réponse d'absence
+37 action arrettransfertemails Arrêt de la redirection d'e-mails
+38 action retraitdelegation  Retrait d'une délégation de boîte mail
+39 orchestration.gs          Helper des groupes d'action (executerEtapes_)
+40 groupe departcollaborateur Groupe d'action : offboarding complet
+41 groupe retourabsence      Groupe d'action : retour d'absence
+42 action attributionlicence Attribution d'une licence Workspace
+43 action retraitlicence     Libération d'une licence Workspace
+44 groupe arriveecollaborateur Groupe d'action : onboarding complet
 90 administration.gs         Fonctions de pilotage manuel
-91 tests.gs                  Tests manuels
+91 tests.gs                  Tests (unitaires + diagnostics manuels)
 ```
 
 ## Sécurité

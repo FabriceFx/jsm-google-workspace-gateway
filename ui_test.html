@@ -787,7 +787,7 @@
         <aside class="card">
           <div class="card-title">
             <span class="material-symbols-outlined" aria-hidden="true">widgets</span>
-            <span>Actions disponibles (<span id="action-count">25</span>)</span>
+            <span>Actions disponibles (<span id="action-count">34</span>)</span>
           </div>
 
           <div class="search-box">
@@ -893,51 +893,117 @@
     <div class="tab-pane" id="tab-guide" role="tabpanel" aria-labelledby="tab-btn-guide" aria-hidden="true">
       <div class="card">
         
+        <!-- Intro : à qui s'adresse ce guide -->
         <div class="guide-section">
           <h2>
-            <span class="material-symbols-outlined" aria-hidden="true">settings_ethernet</span>
-            <span>1. Architecture de connexion Jira Automation</span>
+            <span class="material-symbols-outlined" aria-hidden="true">rocket_launch</span>
+            <span>Guide d'intégration pas à pas</span>
           </h2>
           <p>
-            Pour chaque formulaire JSM (Création de compte, Demande d'accès, Départ, Réinitialisation de mot de passe...), l'intégrateur doit créer une règle dans <strong>Jira Automation</strong> (Paramètres du projet > Automation > Create Rule).
+            Ce guide vous accompagne, même sans expérience de Jira Automation, pour connecter un formulaire Jira Service Management à Google Workspace. Suivez les sections dans l'ordre : <strong>vérifier les prérequis</strong>, <strong>comprendre le principe</strong>, <strong>créer la règle Jira</strong>, puis <strong>tester</strong>. Comptez 15 à 20 minutes pour votre première action.
           </p>
+          <div style="background: #f0f7f9; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 6px; margin-top: 12px; font-size: 14px;">
+            <strong>Bon réflexe :</strong> avant de toucher à Jira, testez l'action depuis l'onglet <em>Console de Test Interactive</em> (en haut). Si elle fonctionne ici, il ne restera qu'à recopier le payload dans Jira.
+          </div>
+        </div>
 
+        <!-- Section 0 : Prérequis -->
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined" aria-hidden="true">checklist</span>
+            <span>0. Avant de commencer — la checklist</span>
+          </h2>
+          <p>Vérifiez ces points auprès de l'administrateur du script. Sans eux, l'intégration échouera avec un message d'erreur explicite (voir le dépannage plus bas).</p>
           <div class="guide-step-grid">
             <div class="step-card">
-              <h4>1. Déclencheur (Trigger)</h4>
-              <p>Issue Transition (ex: passage à "En cours" ou "Approuvé") ou Component / Issue Created.</p>
+              <h4>✓ Le script est déployé</h4>
+              <p>La webapp Google Apps Script est déployée en « Application Web ». Vous disposez de son <strong>URL de déploiement</strong> (voir section 2).</p>
             </div>
             <div class="step-card">
-              <h4>2. Action Webhook</h4>
-              <p>Ajouter une action <strong>"Send web request"</strong> configurée en <strong>POST</strong>.</p>
-            </div>
-            <div class="step-card" style="grid-column: 1 / -1; background: #f0f7f9; border-left-color: var(--primary);">
-              <h4>3. Webhook URL (URL de déploiement de la WebApp)</h4>
-              <p style="margin-bottom: 10px;">Copiez cette URL exacte et collez-la dans le champ <strong>Webhook URL</strong> de Jira Automation :</p>
-              
-              <div class="code-block-container" style="margin: 8px 0 0;">
-                <button class="btn-copy-code" onclick="copierCode('url-webhook-display')" style="background: var(--primary); border: none;">
-                  <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
-                  <span>Copier l'URL Webhook</span>
-                </button>
-                <pre id="url-webhook-display" style="white-space: pre-wrap; word-break: break-all; font-size: 13px; color: #38bdf8; padding-right: 140px;">https://script.google.com/macros/s/.../exec</pre>
-              </div>
+              <h4>✓ Le jeton secret</h4>
+              <p>Un <code>SECRET_TOKEN</code> a été généré et vous a été communiqué. Il authentifie chaque appel Jira. <strong>À ne jamais publier</strong> dans un ticket.</p>
             </div>
             <div class="step-card">
-              <h4>4. Content-Type</h4>
-              <p>Régler l'en-tête HTTP sur <code>application/json</code>.</p>
+              <h4>✓ Les domaines autorisés</h4>
+              <p>La propriété <code>ALLOWED_DOMAINS</code> contient vos domaines (ex. <code>cooperl.com</code>). Une adresse hors de cette liste sera refusée.</p>
+            </div>
+            <div class="step-card">
+              <h4>✓ Droits & administrateurs</h4>
+              <p>Le compte qui exécute le script est administrateur Workspace, et votre adresse figure dans <code>ADMIN_UI_EMAILS</code> pour utiliser cette console.</p>
+            </div>
+            <div class="step-card">
+              <h4>✓ Un projet Jira avec Automation</h4>
+              <p>Vous avez accès à <em>Paramètres du projet → Automation</em> dans Jira, avec le droit de créer des règles.</p>
+            </div>
+            <div class="step-card">
+              <h4>⚙️ Actions e-mail (optionnel)</h4>
+              <p>Les actions Gmail (délégation, absence, transfert) exigent un <strong>compte de service</strong> configuré. Non requis pour les autres actions.</p>
             </div>
           </div>
         </div>
 
+        <!-- Section 1 : Le principe -->
         <div class="guide-section">
           <h2>
-            <span class="material-symbols-outlined" aria-hidden="true">code</span>
-            <span>2. Structure standard du Payload JSON Jira</span>
+            <span class="material-symbols-outlined" aria-hidden="true">insights</span>
+            <span>1. Le principe en une image</span>
           </h2>
-          <p>
-            Chaque requête envoyée par Jira Automation doit respecter le schéma JSON canonique suivant :
-          </p>
+          <p>À chaque fois qu'un agent fait avancer un ticket, Jira envoie automatiquement un message (un « webhook ») à Google, qui exécute l'action et répond. Vous n'avez rien à faire manuellement dans la console Google Admin.</p>
+          <div style="background: var(--bg-secondary, #f7f9fa); border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 18px; margin-top: 12px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-size: 14px; line-height: 1.4;">
+            <span style="background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 8px 12px;"><strong>1.</strong> Un agent JSM valide un ticket</span>
+            <span class="material-symbols-outlined" aria-hidden="true" style="color: var(--primary);">arrow_forward</span>
+            <span style="background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 8px 12px;"><strong>2.</strong> La règle Jira envoie un webhook (POST)</span>
+            <span class="material-symbols-outlined" aria-hidden="true" style="color: var(--primary);">arrow_forward</span>
+            <span style="background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 8px 12px;"><strong>3.</strong> La passerelle vérifie et exécute</span>
+            <span class="material-symbols-outlined" aria-hidden="true" style="color: var(--primary);">arrow_forward</span>
+            <span style="background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 6px; padding: 8px 12px;"><strong>4.</strong> Google répond, Jira commente le ticket</span>
+          </div>
+          <p style="margin-top: 12px;"><strong>À retenir :</strong> une <em>action</em> = une opération (ex. <code>CREATION_COMPTE</code>). Un <em>groupe d'action</em> (ex. <code>ARRIVEE_COLLABORATEUR</code>) en enchaîne plusieurs dans le bon ordre — pratique pour une arrivée ou un départ en un seul ticket.</p>
+        </div>
+
+        <!-- Section 2 : Créer la règle Jira -->
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined" aria-hidden="true">build</span>
+            <span>2. Créer la règle dans Jira Automation</span>
+          </h2>
+          <p>Dans votre projet Jira : <strong>Paramètres du projet → Automation → Créer une règle</strong>. Puis configurez les trois briques suivantes.</p>
+
+          <div class="guide-step-grid">
+            <div class="step-card">
+              <h4>① Le déclencheur (Trigger)</h4>
+              <p>Ce qui lance la règle. Choisissez <strong>« Transition de ticket »</strong> (ex. passage à « Approuvé ») ou <strong>« Ticket créé »</strong>. C'est le moment où l'action doit partir.</p>
+            </div>
+            <div class="step-card">
+              <h4>② L'action « Send web request »</h4>
+              <p>Ajoutez une action <strong>« Envoyer une requête web »</strong>. Méthode : <strong>POST</strong>. En-tête : ajoutez <code>Content-Type</code> = <code>application/json</code>. Cochez « Attendre la réponse » pour pouvoir commenter le ticket ensuite.</p>
+            </div>
+            <div class="step-card">
+              <h4>③ Le corps (Web request body)</h4>
+              <p>Choisissez « Custom data » et collez le payload JSON (section 3). C'est là que vous mettez le jeton, le nom de l'action et les champs.</p>
+            </div>
+          </div>
+
+          <div class="step-card" style="grid-column: 1 / -1; background: #f0f7f9; border-left-color: var(--primary); margin-top: 12px;">
+            <h4>L'URL à coller dans « Webhook URL / URL »</h4>
+            <p style="margin-bottom: 10px;">Copiez cette URL exacte (c'est l'adresse de la passerelle) et collez-la dans le champ URL de l'action web :</p>
+            <div class="code-block-container" style="margin: 8px 0 0;">
+              <button class="btn-copy-code" onclick="copierCode('url-webhook-display')" style="background: var(--primary); border: none;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+                <span>Copier l'URL Webhook</span>
+              </button>
+              <pre id="url-webhook-display" style="white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; color: #38bdf8; padding-right: 140px;">Ouvrez ce guide depuis l'URL du déploiement pour afficher l'adresse exacte.</pre>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3 : Le payload -->
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined" aria-hidden="true">data_object</span>
+            <span>3. Le message à envoyer (payload JSON)</span>
+          </h2>
+          <p>Le corps de la requête est un objet JSON à quatre parties. Voici le modèle&nbsp;; adaptez les valeurs entre accolades.</p>
 
           <div class="code-block-container">
             <button class="btn-copy-code" onclick="copierCode('code-schema-jira')">
@@ -945,7 +1011,7 @@
               <span>Copier le template JSON</span>
             </button>
 <pre id="code-schema-jira">{
-  "secret_token": "VOTRE_SECRET_TOKEN_PROPERTIES",
+  "secret_token": "VOTRE_SECRET_TOKEN",
   "action": "NOM_DE_L_ACTION",
   "ticket_key": "{{issue.key}}",
   "request_id": "{{issue.key}}-{{now.epochMillis}}",
@@ -955,42 +1021,67 @@
   }
 }</pre>
           </div>
-        </div>
 
-        <div class="guide-section">
-          <h2>
-            <span class="material-symbols-outlined" aria-hidden="true">call_split</span>
-            <span>3. Traitement des réponses dans Jira Automation</span>
-          </h2>
-          <p>
-            Après l'action <em>Send web request</em>, ajoutez des conditions basées sur <code>{{webResponse.status}}</code> :
-          </p>
-
-          <div class="guide-step-grid">
-            <div class="step-card" style="border-left-color: #2e7d32;">
-              <h4 style="color: #2e7d32;">Statut 200 (Succès immédiat)</h4>
-              <p>L'action a été exécutée sur Google Workspace. Ajouter un commentaire public sur le ticket : <code>{{webResponse.body.message}}</code> et passer le ticket à "Résolu".</p>
+          <div class="guide-step-grid" style="margin-top: 14px;">
+            <div class="step-card">
+              <h4><code>secret_token</code></h4>
+              <p>Le jeton fourni par l'administrateur. Il prouve que la requête vient bien de Jira. Sans lui : erreur <code>FORBIDDEN</code>.</p>
             </div>
-
-            <div class="step-card" style="border-left-color: #f57f17;">
-              <h4 style="color: #f57f17;">Statut 202 (Mis en file d'attente)</h4>
-              <p>Demande effectuée hors créneau d'administration. Ajouter un commentaire d'information : <i>"Demande enregistrée pour exécution automatique au prochain créneau ({{webResponse.body.scheduled_for}})."</i></p>
+            <div class="step-card">
+              <h4><code>action</code></h4>
+              <p>Le nom exact de l'opération, en MAJUSCULES (ex. <code>CREATION_COMPTE</code>). La liste complète est en section 5.</p>
             </div>
-
-            <div class="step-card" style="border-left-color: #c62828;">
-              <h4 style="color: #c62828;">Statut 400 / 403 / 404 / 500 (Erreur)</h4>
-              <p>Une anomalie a empêché l'exécution. Ajouter un commentaire interne d'erreur : <code>{{webResponse.body.message}}</code> et assigner le ticket au support N2.</p>
+            <div class="step-card">
+              <h4><code>ticket_key</code> / <code>request_id</code></h4>
+              <p>Laissez <code>{{issue.key}}</code> tel quel : Jira le remplace par la référence du ticket. Le <code>request_id</code> évite les doublons si Jira réessaie.</p>
             </div>
+            <div class="step-card">
+              <h4><code>data</code></h4>
+              <p>Les informations métier (e-mails, nom, groupe…). Chaque action a ses propres champs : voir la section 5, qui génère le bon <code>data</code> pour vous.</p>
+            </div>
+          </div>
+
+          <div style="background: #fff8e1; border-left: 4px solid #f57f17; padding: 12px 16px; border-radius: 6px; margin-top: 14px; font-size: 14px;">
+            <strong>Qu'est-ce qu'un « smart value » comme <code>{{issue.customfield_10001}}</code> ?</strong>
+            <p style="margin: 6px 0 0;">C'est un espace réservé que Jira remplace, au moment de l'envoi, par la valeur du champ du ticket. Pour trouver l'identifiant d'un champ personnalisé : dans la règle Jira, cliquez sur <em>« Insérer une smart value »</em>, ou consultez <em>Paramètres → Champs personnalisés</em>. <strong>N'utilisez pas le libellé français du champ</strong> (« Prénom ») mais bien sa référence technique (<code>customfield_XXXXX</code>).</p>
           </div>
         </div>
 
+        <!-- Section 4 : Traiter la réponse -->
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined" aria-hidden="true">call_split</span>
+            <span>4. Que faire de la réponse de Google</span>
+          </h2>
+          <p>Après l'action web, ajoutez dans la règle des branches selon <code>{{webResponse.body.status}}</code> pour informer l'agent sur le ticket.</p>
+
+          <div class="guide-step-grid">
+            <div class="step-card" style="border-left-color: #2e7d32;">
+              <h4 style="color: #2e7d32;">status = "success" (HTTP 200)</h4>
+              <p>Action exécutée. Ajoutez un commentaire public au ticket avec <code>{{webResponse.body.message}}</code>, puis passez le ticket à « Résolu ».</p>
+            </div>
+            <div class="step-card" style="border-left-color: #f57f17;">
+              <h4 style="color: #f57f17;">status = "queued" (HTTP 202)</h4>
+              <p>Demandé hors créneau : la passerelle l'exécutera automatiquement au prochain créneau. Commentaire d'info : <code>{{webResponse.body.message}}</code> (contient la date prévue).</p>
+            </div>
+            <div class="step-card" style="border-left-color: #c62828;">
+              <h4 style="color: #c62828;">status = "error"</h4>
+              <p>Une anomalie a empêché l'exécution. Commentaire interne avec <code>{{webResponse.body.error_code}}</code> et <code>{{webResponse.body.message}}</code>, puis assignez au support N2. Voir le dépannage ci-dessous.</p>
+            </div>
+          </div>
+          <div style="background: #f0f7f9; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 6px; margin-top: 12px; font-size: 14px;">
+            <strong>Astuce :</strong> le champ <code>trace_id</code> de la réponse identifie l'exécution côté Google. Reportez-le dans le commentaire d'erreur : il permet à l'IT de retrouver la trace exacte dans le journal.
+          </div>
+        </div>
+
+        <!-- Section 5 : Catalogue -->
         <div class="guide-section">
           <h2>
             <span class="material-symbols-outlined" aria-hidden="true">view_list</span>
-            <span>4. Cartographie complète des 25 actions & Payloads Jira</span>
+            <span>5. Catalogue des actions & payloads prêts à copier</span>
           </h2>
           <p>
-            Cliquez sur l'action de votre choix ci-dessous pour afficher et copier directement son payload JSON pré-configuré pour Jira Automation :
+            Cliquez sur une action pour voir ses champs et copier son payload JSON déjà pré-rempli avec les bons noms de champs. Il ne vous restera qu'à remplacer les valeurs par vos smart values Jira.
           </p>
 
           <div style="margin-top: 16px;">
@@ -1002,6 +1093,89 @@
             <div id="guide-actions-accordion" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
               <!-- Rempli dynamiquement par JS -->
             </div>
+          </div>
+        </div>
+
+        <!-- Section 6 : Dépannage -->
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined" aria-hidden="true">healing</span>
+            <span>6. En cas de problème (dépannage)</span>
+          </h2>
+          <p>Le code d'erreur renvoyé (<code>error_code</code>) indique précisément la cause. Les plus fréquents :</p>
+          <div style="overflow-x: auto; margin-top: 12px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+              <thead>
+                <tr style="text-align: left; border-bottom: 2px solid var(--border, #e2e8f0);">
+                  <th style="padding: 8px;">Code</th>
+                  <th style="padding: 8px;">Cause probable</th>
+                  <th style="padding: 8px;">Que faire</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;"><code>FORBIDDEN</code></td>
+                  <td style="padding: 8px;">Jeton absent ou incorrect.</td>
+                  <td style="padding: 8px;">Vérifier que <code>secret_token</code> du payload correspond exactement au jeton fourni.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;"><code>MISSING_FIELDS</code></td>
+                  <td style="padding: 8px;">Un champ obligatoire est vide.</td>
+                  <td style="padding: 8px;">Le message liste les champs manquants. Vérifier le mapping des smart values dans la règle Jira (champ vide côté ticket ?).</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;"><code>INVALID_EMAIL</code></td>
+                  <td style="padding: 8px;">Une adresse est mal formée.</td>
+                  <td style="padding: 8px;">Souvent un champ Jira vide ou contenant autre chose qu'une adresse. Vérifier la valeur envoyée.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;"><code>DOMAIN_NOT_ALLOWED</code></td>
+                  <td style="padding: 8px;">Domaine hors liste blanche.</td>
+                  <td style="padding: 8px;">L'adresse n'est pas dans <code>ALLOWED_DOMAINS</code>. Corriger l'adresse ou demander l'ajout du domaine à l'IT.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;"><code>UNKNOWN_ACTION</code></td>
+                  <td style="padding: 8px;">Nom d'action inconnu.</td>
+                  <td style="padding: 8px;">Vérifier l'orthographe exacte (MAJUSCULES) du champ <code>action</code>. Liste en section 5.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;"><code>NOT_FOUND</code></td>
+                  <td style="padding: 8px;">Compte ou groupe introuvable.</td>
+                  <td style="padding: 8px;">Vérifier l'adresse cible : orthographe et domaine exacts tels qu'en console Admin.</td>
+                </tr>
+                <tr style="border-bottom: 1px solid var(--border, #e2e8f0);">
+                  <td style="padding: 8px;"><code>NOT_CONFIGURED</code></td>
+                  <td style="padding: 8px;">Prérequis manquant côté script.</td>
+                  <td style="padding: 8px;">Typiquement une action Gmail sans compte de service, ou une licence sans <code>LICENSE_SKU_ID</code>. À traiter par l'IT.</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px;"><code>GROUPE_PARTIEL</code></td>
+                  <td style="padding: 8px;">Un groupe d'action a partiellement échoué.</td>
+                  <td style="padding: 8px;">Le message détaille chaque étape (OK / ÉCHEC). Relancer la règle réessaiera les étapes en échec (les réussies sont ignorées).</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="background: #f0f7f9; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 6px; margin-top: 14px; font-size: 14px;">
+            <strong>Méthode conseillée :</strong> reproduisez d'abord l'erreur dans l'onglet <em>Console de Test Interactive</em> avec les mêmes valeurs. Vous verrez le code d'erreur immédiatement, sans dépendre du délai de Jira.
+          </div>
+        </div>
+
+        <!-- Glossaire -->
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
+            <span>Glossaire express</span>
+          </h2>
+          <div class="guide-step-grid">
+            <div class="step-card"><h4>Webhook</h4><p>Un message HTTP envoyé automatiquement d'un système à un autre. Ici : de Jira vers Google.</p></div>
+            <div class="step-card"><h4>Payload</h4><p>Le contenu (JSON) du message envoyé : jeton, action et données.</p></div>
+            <div class="step-card"><h4>Smart value</h4><p>Espace réservé <code>{{...}}</code> que Jira remplace par une vraie valeur du ticket à l'envoi.</p></div>
+            <div class="step-card"><h4>Champ personnalisé</h4><p>Champ propre à votre projet Jira, identifié par <code>customfield_XXXXX</code>.</p></div>
+            <div class="step-card"><h4>OU (unité organisationnelle)</h4><p>Dossier de classement des comptes dans Google Admin. Commence toujours par <code>/</code>.</p></div>
+            <div class="step-card"><h4>Fenêtre Standard / Permanente</h4><p>« Standard » = exécuté aux heures ouvrables (sinon mis en file). « Permanente » = 24/7, pour la sécurité.</p></div>
+            <div class="step-card"><h4>SKU de licence</h4><p>Identifiant d'une édition Workspace (ex. Business Standard), pour attribuer/retirer une licence.</p></div>
+            <div class="step-card"><h4>trace_id</h4><p>Identifiant unique d'une exécution, à communiquer à l'IT pour retrouver la trace côté Google.</p></div>
           </div>
         </div>
 
@@ -1069,7 +1243,9 @@
             if (url) el.innerText = url;
           })
           .getWebhookUrl();
-      } else if (window.location.href) {
+      } else if (/^https?:\/\//.test(window.location.href)) {
+        // Repli uniquement pour une vraie URL http(s) : évite d'afficher une
+        // gigantesque URL data: quand le fichier est ouvert en local.
         el.innerText = window.location.href.split('?')[0];
       }
     }
@@ -1273,6 +1449,9 @@
           { id: 'email_cible', label: 'E-mail à retirer', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
           { id: 'email_groupe', label: 'E-mail du groupe', type: 'email', placeholder: 'projet-it@cooperl.com' }
         ],
+        'RETRAIT_TOUS_GROUPES': [
+          { id: 'email_cible', label: 'E-mail du compte à retirer de tous ses groupes', type: 'email', placeholder: 'jean.dupont@cooperl.com' }
+        ],
         'CREATION_GROUPE': [
           { id: 'email_groupe', label: 'E-mail du nouveau groupe', type: 'email', placeholder: 'nouveau-projet@cooperl.com' },
           { id: 'nom_groupe', label: 'Nom d\'affichage du groupe', placeholder: 'Projet Innovation' },
@@ -1334,6 +1513,16 @@
           { id: 'email_cible', label: 'Boîte e-mail concernée', type: 'email', placeholder: 'absent@cooperl.com' },
           { id: 'email_delegue', label: 'E-mail du délégué', type: 'email', placeholder: 'remplacant@cooperl.com' }
         ],
+        'RETRAIT_DELEGATION_EMAIL': [
+          { id: 'email_cible', label: 'Boîte e-mail concernée', type: 'email', placeholder: 'absent@cooperl.com' },
+          { id: 'email_delegue', label: 'E-mail du délégué à retirer', type: 'email', placeholder: 'remplacant@cooperl.com' }
+        ],
+        'DESACTIVATION_REPONSE_ABSENCE': [
+          { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'retour@cooperl.com' }
+        ],
+        'ARRET_TRANSFERT_EMAILS': [
+          { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'retour@cooperl.com' }
+        ],
         'REPONSE_ABSENCE': [
           { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'absent@cooperl.com' },
           { id: 'message_absence', label: 'Message d\'absence', placeholder: 'Je suis actuellement absent du bureau...' },
@@ -1350,6 +1539,42 @@
           { id: 'email_source', label: 'E-mail du propriétaire actuel', type: 'email', placeholder: 'partant@cooperl.com' },
           { id: 'email_destination', label: 'E-mail du nouveau propriétaire', type: 'email', placeholder: 'successeur@cooperl.com' },
           { id: 'inclure_prives', label: 'Transférer aussi les fichiers privés ?', type: 'select', options: [{val: 'true', txt: 'Oui (partagés et privés)'}, {val: 'false', txt: 'Non (fichiers partagés uniquement)'}] }
+        ],
+        'ATTRIBUTION_LICENCE': [
+          { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
+          { id: 'sku_id', label: 'SKU de licence (optionnel si LICENSE_SKU_ID configuré)', placeholder: 'ex. 1010020028' },
+          { id: 'product_id', label: 'Product ID (optionnel)', placeholder: 'Google-Apps' }
+        ],
+        'RETRAIT_LICENCE': [
+          { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'partant@cooperl.com' },
+          { id: 'sku_id', label: 'SKU de licence (optionnel si LICENSE_SKU_ID configuré)', placeholder: 'ex. 1010020028' },
+          { id: 'product_id', label: 'Product ID (optionnel)', placeholder: 'Google-Apps' }
+        ],
+        'ARRIVEE_COLLABORATEUR': [
+          { id: 'prenom', label: 'Prénom', placeholder: 'Jean' },
+          { id: 'nom', label: 'Nom', placeholder: 'Dupont' },
+          { id: 'email_souhaite', label: 'E-mail souhaité', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
+          { id: 'unite_organisationnelle', label: 'Unité Organisationnelle (optionnel)', placeholder: '/Collaborateurs' },
+          { id: 'manager_email', label: 'E-mail du Manager (reçoit le mot de passe)', type: 'email', placeholder: 'manager@cooperl.com' },
+          { id: 'intitule_poste', label: 'Intitulé de poste (optionnel)', placeholder: 'Chef de projet' },
+          { id: 'telephone', label: 'Téléphone (optionnel)', placeholder: '+33 2 96 00 00 00' },
+          { id: 'email_perso', label: 'E-mail de récupération (optionnel)', type: 'email', placeholder: 'jean.dupont@gmail.com' },
+          { id: 'groupes', label: 'Groupes à rejoindre (adresses séparées par des virgules)', placeholder: 'equipe-it@cooperl.com, tous@cooperl.com' },
+          { id: 'alias', label: 'Alias e-mail (optionnel)', type: 'email', placeholder: 'j.dupont@cooperl.com' },
+          { id: 'sku_id', label: 'SKU de licence (optionnel)', placeholder: 'ex. 1010020028' }
+        ],
+        'DEPART_COLLABORATEUR': [
+          { id: 'email_cible', label: 'E-mail du partant', type: 'email', placeholder: 'partant@cooperl.com' },
+          { id: 'email_manager', label: 'E-mail du manager (délégation + destination par défaut)', type: 'email', placeholder: 'manager@cooperl.com' },
+          { id: 'email_transfert', label: 'Destination du transfert d\'e-mails (optionnel)', type: 'email', placeholder: 'Défaut : le manager' },
+          { id: 'email_drive', label: 'Nouveau propriétaire Drive (optionnel)', type: 'email', placeholder: 'Défaut : le manager' },
+          { id: 'conserver_copie', label: 'Conserver copie des e-mails dans la boîte source ?', type: 'select', options: [{val: 'true', txt: 'Oui (conserver copie)'}, {val: 'false', txt: 'Non (archiver directement)'}] },
+          { id: 'inclure_prives', label: 'Transférer aussi les fichiers Drive privés ?', type: 'select', options: [{val: 'false', txt: 'Non (fichiers partagés uniquement)'}, {val: 'true', txt: 'Oui (partagés et privés)'}] },
+          { id: 'motif', label: 'Motif du départ', placeholder: 'Fin de contrat' }
+        ],
+        'RETOUR_ABSENCE': [
+          { id: 'email_cible', label: 'E-mail du compte de retour', type: 'email', placeholder: 'retour@cooperl.com' },
+          { id: 'email_delegue', label: 'Délégué à retirer (optionnel)', type: 'email', placeholder: 'remplacant@cooperl.com' }
         ]
       };
 
