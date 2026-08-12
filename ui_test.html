@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Passerelle JSM → Google Workspace — Console de Test</title>
+  <title>Passerelle JSM → Google Workspace — Console & Guide d'Intégration</title>
   
   <!-- Fonts Google : Outfit & Source Sans 3 -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -130,6 +130,48 @@
       border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
+    /* Top Navigation Tabs */
+    .nav-tabs-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-tabs-content {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 32px;
+      display: flex;
+      gap: 8px;
+    }
+
+    .tab-btn {
+      padding: 16px 24px;
+      border: none;
+      background: none;
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 3px solid transparent;
+      transition: var(--transition);
+    }
+
+    .tab-btn:hover {
+      color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .tab-btn.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+      background: rgba(13, 89, 115, 0.04);
+    }
+
     /* Layout principal */
     main {
       max-width: 1280px;
@@ -137,13 +179,25 @@
       margin: 24px auto;
       padding: 0 24px;
       flex: 1;
+    }
+
+    .tab-pane {
+      display: none;
+    }
+
+    .tab-pane.active {
+      display: block;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .console-grid {
       display: grid;
       grid-template-columns: 340px 1fr;
       gap: 24px;
     }
 
     @media (max-width: 900px) {
-      main {
+      .console-grid {
         grid-template-columns: 1fr;
       }
     }
@@ -545,6 +599,120 @@
       word-break: break-all;
     }
 
+    /* Code block container for Guide tab */
+    .code-block-container {
+      position: relative;
+      margin: 12px 0 20px;
+    }
+
+    .code-block-container pre {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 18px;
+      border-radius: var(--radius-sm);
+      font-family: 'Consolas', 'Menlo', monospace;
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-x: auto;
+    }
+
+    .btn-copy-code {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .btn-copy-code:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Guide Sections & Cards */
+    .guide-section {
+      margin-bottom: 32px;
+    }
+
+    .guide-section h2 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 20px;
+      color: var(--primary-dark);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .guide-section p {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+
+    .guide-step-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+
+    .step-card {
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      border-left: 4px solid var(--primary);
+    }
+
+    .step-card h4 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 15px;
+      color: var(--primary-dark);
+      margin-bottom: 6px;
+    }
+
+    .step-card p {
+      font-size: 13px;
+      margin: 0;
+      color: var(--text-secondary);
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #323232;
+      color: white;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      box-shadow: var(--shadow-md);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 1000;
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s ease;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
     /* Spinner */
     .spinner {
       width: 20px;
@@ -587,8 +755,8 @@
       <div class="brand">
         <div class="brand-logo">C</div>
         <div class="brand-title">
-          <h1>Passerelle JSM → Google Workspace</h1>
-          <p>Console de test interactive des formulaires</p>
+          <h1>Passerelle Jira Service Management → Google Workspace</h1>
+          <p>Console de test & Guide d'intégration Jira Automation</p>
         </div>
       </div>
       <div class="header-actions">
@@ -597,111 +765,247 @@
     </div>
   </header>
 
+  <!-- Navigation Tabs -->
+  <nav class="nav-tabs-bar">
+    <div class="nav-tabs-content">
+      <button class="tab-btn active" onclick="switchTab('console')">
+        <span class="material-symbols-outlined">science</span>
+        <span>Console de Test Interactive</span>
+      </button>
+      <button class="tab-btn" onclick="switchTab('guide')">
+        <span class="material-symbols-outlined">menu_book</span>
+        <span>Guide d'Intégration JSM</span>
+      </button>
+    </div>
+  </nav>
+
   <main>
-    <!-- Colonne gauche : Liste des actions -->
-    <aside class="card">
-      <div class="card-title">
-        <span class="material-symbols-outlined">widgets</span>
-        <span>Actions disponibles (25)</span>
-      </div>
+    <!-- TAB 1 : CONSOLE DE TEST -->
+    <div class="tab-pane active" id="tab-console">
+      <div class="console-grid">
+        <!-- Colonne gauche : Liste des actions -->
+        <aside class="card">
+          <div class="card-title">
+            <span class="material-symbols-outlined">widgets</span>
+            <span>Actions disponibles (25)</span>
+          </div>
 
-      <div class="search-box">
-        <span class="material-symbols-outlined">search</span>
-        <input type="text" id="search-input" placeholder="Filtrer une action..." oninput="filtrerActions()" />
-      </div>
+          <div class="search-box">
+            <span class="material-symbols-outlined">search</span>
+            <input type="text" id="search-input" placeholder="Filtrer une action..." oninput="filtrerActions()" />
+          </div>
 
-      <div class="action-list" id="action-list">
-        <div style="text-align: center; padding: 24px; color: var(--text-secondary);">
-          <div class="spinner" style="border-top-color: var(--primary); margin: 0 auto 12px;"></div>
-          Chargement du catalogue...
-        </div>
-      </div>
-    </aside>
+          <div class="action-list" id="action-list">
+            <div style="text-align: center; padding: 24px; color: var(--text-secondary);">
+              <div class="spinner" style="border-top-color: var(--primary); margin: 0 auto 12px;"></div>
+              Chargement du catalogue...
+            </div>
+          </div>
+        </aside>
 
-    <!-- Colonne droite : Formulaire dynamique & Exécution -->
-    <section>
+        <!-- Colonne droite : Formulaire dynamique & Exécution -->
+        <section>
+          <div class="card">
+            <div class="card-title" id="form-title-container">
+              <span class="material-symbols-outlined">edit_note</span>
+              <span id="form-title">Sélectionnez une action</span>
+            </div>
+
+            <p id="form-description" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+              Choisissez une action dans la liste de gauche pour configurer les paramètres et simuler une exécution.
+            </p>
+
+            <form id="action-form" onsubmit="soumettreFormulaire(event)" style="display: none;">
+              <div class="form-section-title">En-tête de la requête (Jira Webhook)</div>
+
+              <div class="form-grid">
+                <div class="md-field">
+                  <label>Clé du Ticket (ticket_key) <span class="req">*</span></label>
+                  <input type="text" id="ticket_key" value="ITSM-1001" required />
+                </div>
+
+                <div class="md-field">
+                  <label>ID de Requête (request_id)</label>
+                  <input type="text" id="request_id" placeholder="Généré automatiquement si vide" />
+                </div>
+              </div>
+
+              <div class="form-section-title">Paramètres métier (data)</div>
+              
+              <div class="form-grid" id="dynamic-fields">
+                <!-- Champs générés dynamiquement ici -->
+              </div>
+
+              <div class="form-section-title">Options de dérogation hors créneau</div>
+
+              <div class="switch-container">
+                <div>
+                  <div class="switch-label">Forcer l'exécution immédiate (force_immediat)</div>
+                  <div class="switch-desc">Ignore les créneaux d'administration en cas d'urgence</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="force_immediat" onchange="toggleUrgenceMotif()" />
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="md-field" id="motif-urgence-container" style="display: none; margin-top: 16px;">
+                <label>Motif de l'urgence (motif_urgence) <span class="req">*</span></label>
+                <input type="text" id="motif_urgence" placeholder="Ex: Panne bloquante sur site de production" />
+              </div>
+
+              <div class="btn-group">
+                <button type="submit" class="btn btn-primary" id="btn-submit">
+                  <span class="material-symbols-outlined">play_arrow</span>
+                  <span>Exécuter l'action</span>
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="remplirExemple()">
+                  <span class="material-symbols-outlined">auto_fix_high</span>
+                  <span>Remplir avec des données de test</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Zone de résultat -->
+            <div class="result-box" id="result-box">
+              <div class="card-title" style="margin-top: 24px;">
+                <span class="material-symbols-outlined">terminal</span>
+                <span>Résultat de l'exécution</span>
+              </div>
+
+              <div class="status-banner" id="status-banner">
+                <span class="material-symbols-outlined status-icon" id="status-icon">info</span>
+                <div class="status-info">
+                  <h4 id="status-title">Traitement en cours...</h4>
+                  <p id="status-message">Veuillez patienter.</p>
+                </div>
+              </div>
+
+              <div class="json-preview" id="json-preview">{}</div>
+            </div>
+
+          </div>
+        </section>
+      </div>
+    </div>
+
+    <!-- TAB 2 : GUIDE D'INTÉGRATION JSM -->
+    <div class="tab-pane" id="tab-guide">
       <div class="card">
-        <div class="card-title" id="form-title-container">
-          <span class="material-symbols-outlined">edit_note</span>
-          <span id="form-title">Sélectionnez une action</span>
+        
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined">settings_ethernet</span>
+            <span>1. Architecture de connexion Jira Automation</span>
+          </h2>
+          <p>
+            Pour chaque formulaire JSM (Création de compte, Demande d'accès, Départ, Réinitialisation de mot de passe...), l'intégrateur doit créer une règle dans <strong>Jira Automation</strong> (Paramètres du projet > Automation > Create Rule).
+          </p>
+
+          <div class="guide-step-grid">
+            <div class="step-card">
+              <h4>1. Déclencheur (Trigger)</h4>
+              <p>Issue Transition (ex: passage à "En cours" ou "Approuvé") ou Component / Issue Created.</p>
+            </div>
+            <div class="step-card">
+              <h4>2. Action Webhook</h4>
+              <p>Ajouter une action <strong>"Send web request"</strong> configurée en <strong>POST</strong>.</p>
+            </div>
+            <div class="step-card">
+              <h4>3. Webhook URL</h4>
+              <p>L'URL de déploiement de cette WebApp (ex: <code>https://script.google.com/macros/s/.../exec</code>).</p>
+            </div>
+            <div class="step-card">
+              <h4>4. Content-Type</h4>
+              <p>Régler l'en-tête HTTP sur <code>application/json</code>.</p>
+            </div>
+          </div>
         </div>
 
-        <p id="form-description" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
-          Choisissez une action dans la liste de gauche pour configurer les paramètres et simuler une exécution.
-        </p>
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined">code</span>
+            <span>2. Structure standard du Payload JSON Jira</span>
+          </h2>
+          <p>
+            Chaque requête envoyée par Jira Automation doit respecter le schéma JSON canonique suivant :
+          </p>
 
-        <form id="action-form" onsubmit="soumettreFormulaire(event)" style="display: none;">
-          <div class="form-section-title">En-tête de la requête (Jira Webhook)</div>
-
-          <div class="form-grid">
-            <div class="md-field">
-              <label>Clé du Ticket (ticket_key) <span class="req">*</span></label>
-              <input type="text" id="ticket_key" value="ITSM-1001" required />
-            </div>
-
-            <div class="md-field">
-              <label>ID de Requête (request_id)</label>
-              <input type="text" id="request_id" placeholder="Généré automatiquement si vide" />
-            </div>
-          </div>
-
-          <div class="form-section-title">Paramètres métier (data)</div>
-          
-          <div class="form-grid" id="dynamic-fields">
-            <!-- Champs générés dynamiquement ici -->
-          </div>
-
-          <div class="form-section-title">Options de dérogation hors créneau</div>
-
-          <div class="switch-container">
-            <div>
-              <div class="switch-label">Forcer l'exécution immédiate (force_immediat)</div>
-              <div class="switch-desc">Ignore les créneaux d'administration en cas d'urgence</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="force_immediat" onchange="toggleUrgenceMotif()" />
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <div class="md-field" id="motif-urgence-container" style="display: none; margin-top: 16px;">
-            <label>Motif de l'urgence (motif_urgence) <span class="req">*</span></label>
-            <input type="text" id="motif_urgence" placeholder="Ex: Panne bloquante sur site de production" />
-          </div>
-
-          <div class="btn-group">
-            <button type="submit" class="btn btn-primary" id="btn-submit">
-              <span class="material-symbols-outlined">play_arrow</span>
-              <span>Exécuter l'action</span>
+          <div class="code-block-container">
+            <button class="btn-copy-code" onclick="copierCode('code-schema-jira')">
+              <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+              <span>Copier le template JSON</span>
             </button>
-            <button type="button" class="btn btn-secondary" onclick="remplirExemple()">
-              <span class="material-symbols-outlined">auto_fix_high</span>
-              <span>Remplir avec des données de test</span>
-            </button>
+<pre id="code-schema-jira">{
+  "secret_token": "VOTRE_SECRET_TOKEN_PROPERTIES",
+  "action": "NOM_DE_L_ACTION",
+  "ticket_key": "{{issue.key}}",
+  "request_id": "{{issue.key}}-{{now.epochMillis}}",
+  "data": {
+    "champ_1": "{{issue.customfield_10001}}",
+    "champ_2": "{{issue.customfield_10002}}"
+  }
+}</pre>
           </div>
-        </form>
+        </div>
 
-        <!-- Zone de résultat -->
-        <div class="result-box" id="result-box">
-          <div class="card-title" style="margin-top: 24px;">
-            <span class="material-symbols-outlined">terminal</span>
-            <span>Résultat de l'exécution</span>
-          </div>
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined">call_split</span>
+            <span>3. Traitement des réponses dans Jira Automation</span>
+          </h2>
+          <p>
+            Après l'action <em>Send web request</em>, ajoutez des conditions basées sur <code>{{webResponse.status}}</code> :
+          </p>
 
-          <div class="status-banner" id="status-banner">
-            <span class="material-symbols-outlined status-icon" id="status-icon">info</span>
-            <div class="status-info">
-              <h4 id="status-title">Traitement en cours...</h4>
-              <p id="status-message">Veuillez patienter.</p>
+          <div class="guide-step-grid">
+            <div class="step-card" style="border-left-color: #2e7d32;">
+              <h4 style="color: #2e7d32;">Statut 200 (Succès immédiat)</h4>
+              <p>L'action a été exécutée sur Google Workspace. Ajouter un commentaire public sur le ticket : <code>{{webResponse.body.message}}</code> et passer le ticket à "Résolu".</p>
+            </div>
+
+            <div class="step-card" style="border-left-color: #f57f17;">
+              <h4 style="color: #f57f17;">Statut 202 (Mis en file d'attente)</h4>
+              <p>Demande effectuée hors créneau d'administration. Ajouter un commentaire d'information : <i>"Demande enregistrée pour exécution automatique au prochain créneau ({{webResponse.body.scheduled_for}})."</i></p>
+            </div>
+
+            <div class="step-card" style="border-left-color: #c62828;">
+              <h4 style="color: #c62828;">Statut 400 / 403 / 404 / 500 (Erreur)</h4>
+              <p>Une anomalie a empêché l'exécution. Ajouter un commentaire interne d'erreur : <code>{{webResponse.body.message}}</code> et assigner le ticket au support N2.</p>
             </div>
           </div>
+        </div>
 
-          <div class="json-preview" id="json-preview">{}</div>
+        <div class="guide-section">
+          <h2>
+            <span class="material-symbols-outlined">view_list</span>
+            <span>4. Cartographie complète des 25 actions & Payloads Jira</span>
+          </h2>
+          <p>
+            Cliquez sur l'action de votre choix ci-dessous pour afficher et copier directement son payload JSON pré-configuré pour Jira Automation :
+          </p>
+
+          <div style="margin-top: 16px;">
+            <div class="search-box">
+              <span class="material-symbols-outlined">search</span>
+              <input type="text" id="search-guide-input" placeholder="Filtrer une action dans le guide..." oninput="filtrerGuideActions()" />
+            </div>
+
+            <div id="guide-actions-accordion" style="display: flex; flex-direction: column; gap: 12px; margin-top: 16px;">
+              <!-- Rempli dynamiquement par JS -->
+            </div>
+          </div>
         </div>
 
       </div>
-    </section>
+    </div>
   </main>
+
+  <!-- Toast Container -->
+  <div class="toast" id="toast-notif">
+    <span class="material-symbols-outlined">check_circle</span>
+    <span id="toast-text">Code copié dans le presse-papier !</span>
+  </div>
 
   <footer>
     Passerelle Jira Service Management → Google Workspace (v2.6.0) — Développé par 
@@ -711,6 +1015,21 @@
   <script>
     let catalogueActions = [];
     let actionSelectionnee = null;
+
+    // Gestion des onglets
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+
+      if (tabId === 'console') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('tab-console').classList.add('active');
+      } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('tab-guide').classList.add('active');
+        genererGuideActions();
+      }
+    }
 
     // Chargement initial du catalogue
     window.addEventListener('DOMContentLoaded', function() {
@@ -837,10 +1156,6 @@
       const container = document.getElementById('dynamic-fields');
       container.innerHTML = '';
 
-      // Rassembler tous les champs uniques (requis et optionnels selon l'action)
-      const tousChamps = Array.from(new Set([...(actionSelectionnee.required || []), ...(actionSelectionnee.emails || [])]));
-      
-      // Ajouter les champs connus selon l'action
       const champsFormulaire = ObtenirChampsPourAction(actionSelectionnee);
 
       champsFormulaire.forEach(field => {
@@ -992,7 +1307,6 @@
 
       if (defs[spec.action]) return defs[spec.action];
 
-      // Génération automatique par défaut pour les nouvelles actions
       return (spec.required || []).map(r => ({
         id: r,
         label: r.replace(/_/g, ' ').toUpperCase(),
@@ -1033,7 +1347,6 @@
       const forceImmediat = document.getElementById('force_immediat').checked;
       const motifUrgence = document.getElementById('motif_urgence').value;
 
-      // Construction de l'objet data
       const data = {};
       const fields = ObtenirChampsPourAction(actionSelectionnee);
       fields.forEach(f => {
@@ -1055,7 +1368,6 @@
         if (motifUrgence) payload.motif_urgence = motifUrgence;
       }
 
-      // UI Loading state
       const btn = document.getElementById('btn-submit');
       btn.disabled = true;
       btn.innerHTML = '<div class="spinner"></div> Traitement en cours...';
@@ -1089,7 +1401,6 @@
           })
           .executerActionDepuisUI(payload);
       } else {
-        // Mode simulation locale
         setTimeout(() => {
           renvoyerResultat({
             status: 'success',
@@ -1132,6 +1443,112 @@
         title.innerText = `Erreur — ${res.error_code || 'ERROR'} (${res.http_status || 400})`;
         msg.innerText = res.message || 'L\'opération a échoué.';
       }
+    }
+
+    // GENERATION DU GUIDE D'INTEGRATION JSM
+    function genererGuideActions() {
+      const container = document.getElementById('guide-actions-accordion');
+      if (container.children.length > 0) return; // Déjà généré
+
+      const actions = catalogueActions.length > 0 ? catalogueActions : [
+        { action: 'CREATION_COMPTE', description: 'Crée un compte utilisateur Workspace.', required: ['prenom', 'nom', 'email_souhaite'], fenetre: 'STANDARD' },
+        { action: 'SUSPENSION', description: 'Suspend un compte et révoque ses sessions.', required: ['email_cible'], fenetre: 'PERMANENTE' }
+      ];
+
+      actions.forEach(a => {
+        const champs = ObtenirChampsPourAction(a);
+        const sampleData = {};
+        champs.forEach(f => {
+          sampleData[f.id] = `{{issue.${f.label.replace(/\*/g,'').trim()}}}`;
+        });
+
+        const templateJson = {
+          secret_token: "VOTRE_SECRET_TOKEN",
+          action: a.action,
+          ticket_key: "{{issue.key}}",
+          request_id: "{{issue.key}}-{{now.epochMillis}}",
+          data: sampleData
+        };
+
+        const jsonStr = JSON.stringify(templateJson, null, 2);
+        const card = document.createElement('div');
+        card.className = 'card guide-action-card';
+        card.style.padding = '18px';
+
+        const badgeClass = a.fenetre === 'PERMANENTE' ? 'badge-permanente' : 'badge-standard';
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleGuideCard('${a.action}')">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="material-symbols-outlined" style="color: var(--primary);">terminal</span>
+              <strong style="font-family: 'Outfit'; font-size: 16px;">${a.action}</strong>
+              <span class="badge-fenetre ${badgeClass}">${a.fenetre}</span>
+            </div>
+            <span class="material-symbols-outlined" id="icon-toggle-${a.action}">expand_more</span>
+          </div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 6px 0 0;">${a.description}</p>
+
+          <div id="body-guide-${a.action}" style="display: none; margin-top: 16px;">
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">Champs attendus dans 'data' :</div>
+            <ul style="font-size: 13px; margin-left: 20px; color: var(--text); margin-bottom: 12px;">
+              ${champs.map(f => `<li><code>${f.id}</code> ${a.required && a.required.includes(f.id) ? '<strong style="color: #c62828;">(Requis)</strong>' : '(Optionnel)'} — ${f.label}</li>`).join('')}
+            </ul>
+
+            <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">Payload JSON à coller dans Jira Automation :</div>
+            <div class="code-block-container" style="margin-bottom: 0;">
+              <button class="btn-copy-code" onclick="copierTexte(\`${jsonStr.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)">
+                <span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span>
+                <span>Copier JSON Jira</span>
+              </button>
+              <pre>${jsonStr}</pre>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function toggleGuideCard(nomAction) {
+      const body = document.getElementById('body-guide-' + nomAction);
+      const icon = document.getElementById('icon-toggle-' + nomAction);
+      if (body.style.display === 'none') {
+        body.style.display = 'block';
+        icon.innerText = 'expand_less';
+      } else {
+        body.style.display = 'none';
+        icon.innerText = 'expand_more';
+      }
+    }
+
+    function filtrerGuideActions() {
+      const q = document.getElementById('search-guide-input').value.toLowerCase();
+      document.querySelectorAll('#guide-actions-accordion .guide-action-card').forEach(card => {
+        const txt = card.innerText.toLowerCase();
+        card.style.display = txt.includes(q) ? 'block' : 'none';
+      });
+    }
+
+    function copierCode(elementId) {
+      const code = document.getElementById(elementId).innerText;
+      copierTexte(code);
+    }
+
+    function copierTexte(texte) {
+      navigator.clipboard.writeText(texte).then(() => {
+        afficherToast('Payload JSON copié dans le presse-papier !');
+      }).catch(err => {
+        afficherToast('Erreur lors de la copie.');
+      });
+    }
+
+    function afficherToast(msg) {
+      const toast = document.getElementById('toast-notif');
+      document.getElementById('toast-text').innerText = msg;
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
     }
   </script>
 </body>
