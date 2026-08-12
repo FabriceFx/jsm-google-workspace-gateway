@@ -36,6 +36,8 @@ function SPEC_REPONSE_ABSENCE() {
 function actionReponseAbsence(data, ctx) {
   var SCOPE = 'https://www.googleapis.com/auth/gmail.settings.basic';
 
+  requireUser_(data.email_cible);
+
   var vacation = {
     enableAutoReply: true,
     responseSubject: data.objet || 'Absence',
@@ -45,13 +47,18 @@ function actionReponseAbsence(data, ctx) {
     restrictToDomain: false
   };
 
-  // Dates optionnelles au format ISO (yyyy-MM-dd).
-  if (data.date_debut) {
-    vacation.startTime = new Date(data.date_debut).getTime();
+  // Dates optionnelles au format ISO strict yyyy-MM-dd. On refuse tout autre
+  // format : « 05/03/2026 » serait interprété à l'américaine (3 mai) et poserait
+  // une période d'absence silencieusement fausse.
+  var debut = data.date_debut ? parseDateIso_(data.date_debut, 'date_debut') : null;
+  var fin = data.date_fin ? parseDateIso_(data.date_fin, 'date_fin') : null;
+  if (debut && fin && fin.getTime() < debut.getTime()) {
+    throw new AppError_('INVALID_DATE',
+      "La date de fin (" + data.date_fin + ") précède la date de début (" +
+      data.date_debut + ").");
   }
-  if (data.date_fin) {
-    vacation.endTime = new Date(data.date_fin).getTime();
-  }
+  if (debut) vacation.startTime = debut.getTime();
+  if (fin) vacation.endTime = fin.getTime();
 
   appelGmailApi_(data.email_cible,
     'settings/vacation',

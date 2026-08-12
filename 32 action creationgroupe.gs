@@ -31,22 +31,14 @@ function SPEC_CREATION_GROUPE() {
  */
 function actionCreerGroupe(data, ctx) {
   // Idempotence : vérifier si le groupe existe déjà.
-  try {
-    var existant = AdminDirectory.Groups.get(data.email_groupe);
-    if (existant) {
-      return {
-        idempotent: true,
-        target: data.email_groupe,
-        message: 'Le groupe ' + data.email_groupe + ' existe déjà (' +
-          (existant.directMembersCount || 0) + ' membre(s)).'
-      };
-    }
-  } catch (err) {
-    // 404 = groupe inexistant, on continue la création.
-    if (String(err.message).indexOf('Resource Not Found') === -1 &&
-        String(err.message).indexOf('notFound') === -1) {
-      throw err;
-    }
+  var existant = getGroupOrNull_(data.email_groupe);
+  if (existant) {
+    return {
+      idempotent: true,
+      target: data.email_groupe,
+      message: 'Le groupe ' + data.email_groupe + ' existe déjà (' +
+        (existant.directMembersCount || 0) + ' membre(s)).'
+    };
   }
 
   var groupe = {

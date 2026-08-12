@@ -4,9 +4,12 @@
  * Formulaire JSM : perte ou vol de téléphone, départ d'un salarié.
  * Fenêtre PERMANENTE : un vol n'attend pas les heures de bureau.
  *
- * Champs attendus dans `data` : email_cible, [device_id], [type_effacement]
+ * Champs attendus dans `data` : email_cible, [device_id], [type_effacement],
+ *   [confirmation]
  *   type_effacement : 'COMPLET' (réinitialisation usine) ou 'COMPTE' (retire
  *   le compte pro, laisse les données perso). Défaut : 'COMPTE'.
+ *   confirmation : requis (= 'CONFIRMER_EFFACEMENT') uniquement pour un wipe
+ *   'COMPLET' visant TOUS les appareils (aucun device_id fourni).
  *
  * Projet : Passerelle Jira Service Management → Google Workspace (v2.6.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
@@ -32,6 +35,28 @@ function SPEC_EFFACEMENT_APPAREIL() {
  */
 function actionEffacerAppareil(data, ctx) {
   var type = String(data.type_effacement || 'COMPTE').toUpperCase();
+
+  // Enum validée explicitement : une valeur inattendue ne doit pas retomber
+  // silencieusement sur le wipe partiel (un agent croirait avoir réinitialisé
+  // un téléphone volé alors que seules les données pro auraient été retirées).
+  if (type !== 'COMPLET' && type !== 'COMPTE') {
+    throw new AppError_('INVALID_TYPE',
+      "type_effacement '" + data.type_effacement + "' invalide. Valeurs admises : " +
+      "COMPLET (réinitialisation usine) ou COMPTE (compte pro uniquement).");
+  }
+
+  // Garde-fou : une réinitialisation usine SANS device_id efface TOUS les
+  // appareils de l'utilisateur, y compris personnels (BYOD). On exige alors une
+  // confirmation explicite, comme pour les suppressions de compte.
+  if (type === 'COMPLET' && !data.device_id &&
+      data.confirmation !== 'CONFIRMER_EFFACEMENT') {
+    throw new AppError_('CONFIRMATION_REQUISE',
+      "Réinitialisation usine de TOUS les appareils de " + data.email_cible +
+      " demandée. Pour éviter un effacement accidentel (appareils personnels " +
+      "inclus), renseigner 'confirmation' = 'CONFIRMER_EFFACEMENT', ou cibler " +
+      "un seul appareil via 'device_id'.", 400);
+  }
+
   var action = (type === 'COMPLET') ? 'admin_remote_wipe' : 'admin_account_wipe';
   var libelle = (type === 'COMPLET')
     ? 'réinitialisé en configuration usine'

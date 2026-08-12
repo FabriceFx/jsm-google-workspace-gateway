@@ -15,7 +15,9 @@ function SPEC_GENERATION_CODES_SECOURS() {
     action: 'GENERATION_CODES_SECOURS',
     description: 'Génère de nouveaux codes de secours 2FA (les anciens sont révoqués).',
     required: ['email_cible'],
-    emails: ['email_cible'],
+    // manager_email reçoit les codes de secours : validé (format + domaine) ici
+    // pour interdire l'envoi du secret vers une adresse hors du domaine.
+    emails: ['email_cible', 'manager_email'],
     fenetre: 'STANDARD',
     handler: actionGenererCodesSecours
   };
@@ -32,11 +34,12 @@ function SPEC_GENERATION_CODES_SECOURS() {
  * @return {!Object}
  */
 function actionGenererCodesSecours(data, ctx) {
-  var utilisateur = getUserOrNull_(data.email_cible);
-  if (!utilisateur) {
-    throw new AppError_('NOT_FOUND',
-      'Compte ' + data.email_cible + ' introuvable.', 404);
-  }
+  requireUser_(data.email_cible);
+
+  // Contrôle du destinataire AVANT de révoquer les anciens codes : sinon on
+  // détruirait irréversiblement les codes en place sans pouvoir livrer les
+  // nouveaux. Le format/domaine de manager_email est déjà validé (spec.emails).
+  var destinataire = requireDestinataireSecret_(data);
 
   // Générer de nouveaux codes (révoque les anciens).
   AdminDirectory.VerificationCodes.generate(data.email_cible);
@@ -52,14 +55,13 @@ function actionGenererCodesSecours(data, ctx) {
   }
 
   // Envoi par canal séparé (même logique que les mots de passe).
-  var destinataire = data.manager_email || getProp_('NOTIFY_EMAIL');
   var envoye = envoyerCodesSecours_(
     destinataire, data.email_cible, codes, ctx.ticketKey);
 
   if (!envoye) {
     throw new AppError_('NOTIFY_FAILED',
-      'Codes de secours générés mais non transmissibles : aucun destinataire ' +
-      'valide. Consulter la console d\'administration.', 500);
+      'Codes de secours générés mais leur envoi à ' + destinataire +
+      ' a échoué. Consulter la console d\'administration.', 500);
   }
 
   return {

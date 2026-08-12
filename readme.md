@@ -94,6 +94,7 @@ doivent jamais être différées.
    | `SECRET_TOKEN` | ✅ | Généré à l'étape 4 |
    | `AUDIT_SHEET_ID` | ✅ | ID du classeur Google Sheets d'audit |
    | `ALLOWED_DOMAINS` | ✅ | Domaines autorisés, séparés par des virgules |
+   | `ADMIN_UI_EMAILS` | ✅ (console) | Adresses admin autorisées à utiliser la console de test, séparées par des virgules |
    | `NOTIFY_EMAIL` | Recommandé | Adresse de notification (anomalies, mots de passe) |
    | `DEFAULT_OU` | Optionnel | Unité organisationnelle par défaut (ex. `/Collaborateurs`) |
    | `LOGO_URL` | Optionnel | URL publique du logo Cooperl pour les e-mails |
@@ -110,6 +111,17 @@ doivent jamais être différées.
 7. **Déployer la webapp**
    Déployer → Nouveau déploiement → Application Web.
    Exécuter en tant que : *vous-même*. Accès : *tout le monde*.
+
+   > ⚠️ **Sécurité de la console.** L'accès *tout le monde* est requis par le
+   > webhook : Jira appelle `doPost` sans session Google, l'authentification y
+   > reposant sur le `SECRET_TOKEN`. La **même URL** sert aussi la console
+   > d'administration (`doGet` + fonctions `google.script.run`), qui s'exécutent
+   > avec **vos droits d'administration**. Ces fonctions sont donc protégées par
+   > un contrôle d'identité (`assertAdminUI_`) : seul le propriétaire du script
+   > (depuis l'éditeur) et les adresses listées dans **`ADMIN_UI_EMAILS`**
+   > peuvent les invoquer. **Renseignez `ADMIN_UI_EMAILS`** avec les adresses
+   > des administrateurs habilités, sans quoi la console reste inutilisable
+   > depuis le navigateur (par sécurité).
 
 8. **Configurer Jira Automation**
    Créer une règle avec l'action « Send web request » pointant vers l'URL
@@ -169,12 +181,13 @@ En ouvrant l'URL du déploiement WebApp (`https://script.google.com/macros/s/...
 
 | Fonction | Rôle |
 |---|---|
+| `test_unitaires()` | **Suite de tests automatiques** (assertions, aucun effet réel) |
 | `setup_verifierConfiguration()` | Diagnostic complet de la configuration |
 | `test_verifierRegistre()` | Validation du catalogue des actions |
 | `test_verifierPlanning()` | Simulation des créneaux sur 7 jours |
-| `test_apercuEmails()` | Envoi d'e-mails de test à votre adresse |
-| `test_simulerAppelJira()` | Simulation de bout en bout (**⚠️ crée un vrai compte**) |
-| `test_casDErreur()` | Vérifie les garde-fous (token, action, champs) |
+| `test_casDErreur()` | Vérifie les garde-fous (token, action, champs) par assertions |
+| `test_apercuEmails()` | Envoi d'e-mails de test à votre adresse (**⚠️ effet réel**) |
+| `test_simulerCreationCompteReelle()` | Simulation de bout en bout (**⚠️ crée un vrai compte** ; désactivée par défaut) |
 
 ## Actions Gmail (configuration avancée)
 

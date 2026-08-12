@@ -152,6 +152,24 @@ function traduireErreurAdmin_(err) {
 }
 
 /**
+ * Indique si une erreur de l'Admin SDK correspond à une ressource inexistante.
+ *
+ * Point unique de reconnaissance du « 404 » : les libellés varient d'un point
+ * d'API à l'autre ('Resource Not Found', 'notFound', 'Not Found'), et les
+ * répartir inline dans chaque action a déjà produit des divergences. Toute
+ * erreur qui n'est PAS un not-found doit continuer à remonter.
+ *
+ * @param {!Error} err Erreur levée par l'Admin SDK.
+ * @return {boolean} true si l'erreur signale une ressource inexistante.
+ */
+function estNotFound_(err) {
+    const m = String((err && err.message) || err).toLowerCase();
+    return m.indexOf('resource not found') !== -1 ||
+        m.indexOf('notfound') !== -1 ||
+        m.indexOf('not found') !== -1;
+}
+
+/**
  * Récupère un utilisateur Workspace, ou null s'il n'existe pas.
  * Sert de brique d'idempotence : Jira Automation peut rejouer une requête
  * (timeout réseau, relance manuelle) sans qu'on doive créer un doublon.
@@ -164,27 +182,116 @@ function getUserOrNull_(email) {
         return AdminDirectory.Users.get(email);
     } catch (err) {
         // 404 = utilisateur inexistant, cas nominal. Toute autre erreur remonte.
-        if (String(err.message).indexOf('Resource Not Found') !== -1 ||
-            String(err.message).indexOf('notFound') !== -1) {
-            return null;
-        }
+        if (estNotFound_(err)) return null;
         throw err;
     }
 }
 
 /**
+ * Récupère un groupe Workspace, ou null s'il n'existe pas.
+ * Symétrique de getUserOrNull_ : évite de dupliquer le try/catch autour de
+ * AdminDirectory.Groups.get dans les actions de gestion de groupes.
+ *
+ * @param {string} email Adresse du groupe.
+ * @return {?Object} Ressource Group de l'Admin SDK, ou null.
+ */
+function getGroupOrNull_(email) {
+    try {
+        return AdminDirectory.Groups.get(email);
+    } catch (err) {
+        if (estNotFound_(err)) return null;
+        throw err;
+    }
+}
+
+/**
+ * Récupère un utilisateur, ou lève une erreur NOT_FOUND explicite et uniforme.
+ * Factorise le préambule « compte introuvable » répété dans une douzaine
+ * d'actions et garantit un message identique côté ticket.
+ *
+ * @param {string} email Adresse du compte.
+ * @param {string=} libelle Qualificatif du compte (ex. 'source', 'délégué').
+ * @return {!Object} Ressource User de l'Admin SDK.
+ * @throws {AppError_} 404 si le compte n'existe pas.
+ */
+function requireUser_(email, libelle) {
+    const utilisateur = getUserOrNull_(email);
+    if (!utilisateur) {
+        throw new AppError_('NOT_FOUND',
+            'Compte ' + (libelle ? libelle + ' ' : '') + email + ' introuvable.', 404);
+    }
+    return utilisateur;
+}
+
+/**
  * Indique si un utilisateur est déjà membre d'un groupe.
+ *
+ * ⚠️ Ne renvoie `false` QUE lorsque l'appartenance est réellement absente
+ * (404). Une erreur transitoire (quota, permission, réseau) est propagée :
+ * la traiter comme « pas membre » ferait remonter un faux succès sur un
+ * RETRAIT_GROUPE dont l'accès n'aurait en réalité pas été révoqué.
+ *
  * @param {string} groupEmail Adresse du groupe.
  * @param {string} memberEmail Adresse du membre.
  * @return {boolean}
+ * @throws {!Error} Toute erreur autre qu'un 404.
  */
 function isMember_(groupEmail, memberEmail) {
     try {
         AdminDirectory.Members.get(groupEmail, memberEmail);
         return true;
     } catch (err) {
-        return false;
+        if (estNotFound_(err)) return false;
+        throw err;
     }
+}
+
+/**
+ * Interprète une valeur booléenne issue d'un formulaire Jira.
+ *
+ * Les champs de formulaire arrivent en texte : un helper unique évite les
+ * conventions contradictoires (un fichier lisant 'false', un autre 'true').
+ * Sont considérés comme vrais : true, 'true', 'oui', 'yes', '1', 'on' ;
+ * comme faux : false, 'false', 'non', 'no', '0', 'off'. Toute autre valeur
+ * (y compris vide ou absente) retombe sur `defaut`.
+ *
+ * @param {*} valeur Valeur brute du champ.
+ * @param {boolean} defaut Valeur si le champ est absent ou non reconnu.
+ * @return {boolean}
+ */
+function boolDeFormulaire_(valeur, defaut) {
+    if (valeur === true || valeur === false) return valeur;
+    const v = String(valeur === null || valeur === undefined ? '' : valeur)
+        .trim().toLowerCase();
+    if (['true', 'oui', 'yes', '1', 'on'].indexOf(v) !== -1) return true;
+    if (['false', 'non', 'no', '0', 'off'].indexOf(v) !== -1) return false;
+    return defaut;
+}
+
+/**
+ * Détermine le destinataire d'un secret (mot de passe, codes 2FA) et échoue
+ * AVANT tout effet irréversible s'il n'y en a pas.
+ *
+ * Les actions qui écrasent un identifiant (reset de mot de passe, génération de
+ * codes de secours) doivent appeler ce contrôle avant l'appel Admin SDK : sans
+ * lui, on révoque l'accès existant puis on découvre qu'aucun destinataire n'est
+ * configuré — l'utilisateur se retrouve verrouillé et personne ne détient le
+ * nouveau secret. Le format et le domaine de `data.manager_email` sont déjà
+ * validés en amont par sanitizeData_ (champ déclaré dans spec.emails).
+ *
+ * @param {!Object} data Données validées de l'action.
+ * @return {string} Adresse du destinataire.
+ * @throws {AppError_} 500 si aucun destinataire n'est disponible.
+ */
+function requireDestinataireSecret_(data) {
+    const destinataire = data.manager_email || getProp_('NOTIFY_EMAIL');
+    if (!destinataire) {
+        throw new AppError_('NOTIFY_FAILED',
+            "Aucun destinataire pour transmettre le secret : renseigner " +
+            "'manager_email' dans le ticket ou configurer la propriété " +
+            'NOTIFY_EMAIL. Opération interrompue avant toute modification.', 500);
+    }
+    return destinataire;
 }
 
 /**

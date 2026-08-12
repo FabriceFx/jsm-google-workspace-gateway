@@ -200,6 +200,38 @@ function estJourFerie_(date) {
 }
 
 /**
+ * Analyse une date au format ISO strict 'yyyy-MM-dd' (heure locale, minuit).
+ *
+ * Refuse tout autre format : un « 05/03/2026 » passé à `new Date()` serait lu à
+ * l'américaine et produirait une date fausse mais plausible. On valide donc le
+ * motif ET la cohérence des composantes (mois 1-12, jour existant du mois).
+ *
+ * @param {string} valeur Chaîne à analyser.
+ * @param {string=} champ Nom du champ, pour le message d'erreur.
+ * @return {!Date} Date à minuit, heure locale.
+ * @throws {AppError_} Si la valeur n'est pas une date ISO valide.
+ */
+function parseDateIso_(valeur, champ) {
+  var s = String(valeur).trim();
+  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
+  var libelle = champ ? " (champ '" + champ + "')" : '';
+  if (!m) {
+    throw new AppError_('INVALID_DATE',
+      "Date invalide" + libelle + " : '" + valeur + "'. Format attendu : " +
+      'yyyy-MM-dd (ex. 2026-08-15).');
+  }
+  var annee = Number(m[1]), mois = Number(m[2]), jour = Number(m[3]);
+  var d = new Date(annee, mois - 1, jour);
+  // Un jour hors borne (ex. 2026-02-31) est « recalé » par Date : on le détecte
+  // en vérifiant que les composantes n'ont pas changé.
+  if (d.getFullYear() !== annee || d.getMonth() !== mois - 1 || d.getDate() !== jour) {
+    throw new AppError_('INVALID_DATE',
+      "Date inexistante" + libelle + " : '" + valeur + "'.");
+  }
+  return d;
+}
+
+/**
  * Formate une date pour affichage dans un ticket Jira.
  * @param {?Date} date Date à formater.
  * @return {string} 'dd/MM/yyyy à HH:mm', ou 'date indéterminée'.

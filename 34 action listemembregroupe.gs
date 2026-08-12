@@ -32,15 +32,9 @@ function SPEC_LISTE_MEMBRES_GROUPE() {
  */
 function actionListerMembresGroupe(data, ctx) {
   // Vérifier que le groupe existe.
-  try {
-    AdminDirectory.Groups.get(data.email_groupe);
-  } catch (err) {
-    if (String(err.message).indexOf('Resource Not Found') !== -1 ||
-        String(err.message).indexOf('notFound') !== -1) {
-      throw new AppError_('NOT_FOUND',
-        'Groupe ' + data.email_groupe + ' introuvable.', 404);
-    }
-    throw err;
+  if (!getGroupOrNull_(data.email_groupe)) {
+    throw new AppError_('NOT_FOUND',
+      'Groupe ' + data.email_groupe + ' introuvable.', 404);
   }
 
   // Paginer les membres.
@@ -63,14 +57,23 @@ function actionListerMembresGroupe(data, ctx) {
     pageToken = reponse.nextPageToken;
   } while (pageToken);
 
-  var resume = membres.map(function (m) {
+  // Le message part dans un commentaire Jira : on borne l'aperçu pour ne pas
+  // produire un commentaire démesuré sur un groupe de plusieurs milliers de
+  // membres. La liste complète reste disponible dans `details.membres`.
+  var MAX_APERCU = 50;
+  var resume = membres.slice(0, MAX_APERCU).map(function (m) {
     return m.email + ' (' + m.role + ')';
   });
+  var apercu = resume.join(', ');
+  if (membres.length > MAX_APERCU) {
+    apercu += ', … (+' + (membres.length - MAX_APERCU) + ' — liste complète ' +
+      'dans les détails)';
+  }
 
   return {
     target: data.email_groupe,
     message: data.email_groupe + ' : ' + membres.length + ' membre(s)' +
-      (membres.length ? ' — ' + resume.join(', ') : '') + '.',
+      (membres.length ? ' — ' + apercu : '') + '.',
     details: { total: membres.length, membres: membres }
   };
 }

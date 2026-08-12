@@ -31,11 +31,7 @@ function SPEC_MISE_A_JOUR_PROFIL() {
  * @return {!Object}
  */
 function actionMettreAJourProfil(data, ctx) {
-  var utilisateur = getUserOrNull_(data.email_cible);
-  if (!utilisateur) {
-    throw new AppError_('NOT_FOUND',
-      'Compte ' + data.email_cible + ' introuvable.', 404);
-  }
+  var utilisateur = requireUser_(data.email_cible);
 
   var patch = {};
   var modifications = [];
@@ -49,22 +45,48 @@ function actionMettreAJourProfil(data, ctx) {
     modifications.push('nom : ' + patch.name.givenName + ' ' + patch.name.familyName);
   }
 
-  if (data.intitule_poste) {
-    patch.organizations = [{ title: data.intitule_poste, primary: true }];
-    if (data.departement) patch.organizations[0].department = data.departement;
-    modifications.push('poste : ' + data.intitule_poste);
-  } else if (data.departement) {
-    patch.organizations = [{ department: data.departement, primary: true }];
-    modifications.push('département : ' + data.departement);
+  // Les champs tableau (organizations, phones, relations) sont REMPLACÉS en bloc
+  // par Users.patch. On repart donc de l'existant et on ne touche qu'à l'entrée
+  // concernée, pour ne pas effacer département, centre de coûts, autres numéros
+  // ou autres relations déjà en place.
+  if (data.intitule_poste || data.departement) {
+    var orgs = (utilisateur.organizations || []).map(function (o) {
+      return Object.assign({}, o);
+    });
+    var orgPrincipale = null;
+    for (var i = 0; i < orgs.length; i++) {
+      if (orgs[i].primary) { orgPrincipale = orgs[i]; break; }
+    }
+    if (!orgPrincipale) {
+      orgPrincipale = { primary: true };
+      orgs.push(orgPrincipale);
+    }
+    if (data.intitule_poste) {
+      orgPrincipale.title = data.intitule_poste;
+      modifications.push('poste : ' + data.intitule_poste);
+    }
+    if (data.departement) {
+      orgPrincipale.department = data.departement;
+      modifications.push('département : ' + data.departement);
+    }
+    patch.organizations = orgs;
   }
 
   if (data.telephone) {
-    patch.phones = [{ value: data.telephone, type: 'work' }];
+    var phones = (utilisateur.phones || []).filter(function (p) {
+      return p.type !== 'work';   // on ne remplace que le numéro professionnel
+    });
+    phones.push({ value: data.telephone, type: 'work' });
+    patch.phones = phones;
     modifications.push('téléphone : ' + data.telephone);
   }
 
   if (data.manager_email) {
-    patch.relations = [{ value: data.manager_email, type: 'manager' }];
+    var relations = (utilisateur.relations || []).filter(function (r) {
+      return r.type !== 'manager'; // on ne remplace que la relation manager
+    });
+    relations.push({ value: data.manager_email, type: 'manager' });
+    patch.relations = relations;
     modifications.push('manager : ' + data.manager_email);
   }
 

@@ -39,11 +39,7 @@ function SPEC_REACTIVATION() {
  * @return {!Object}
  */
 function actionReactiverCompte(data, ctx) {
-    const utilisateur = getUserOrNull_(data.email_cible);
-    if (!utilisateur) {
-        throw new AppError_('NOT_FOUND',
-            'Compte ' + data.email_cible + ' introuvable.', 404);
-    }
+    const utilisateur = requireUser_(data.email_cible);
     if (!utilisateur.suspended) {
         return {
             idempotent: true,

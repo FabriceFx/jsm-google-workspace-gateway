@@ -1,15 +1,283 @@
 /**
- * TESTS MANUELS
+ * TESTS
  * -----------------------------------------------------------------------------
- * Scénarios à lancer depuis l'éditeur. Aucun n'est appelé en production.
+ * Deux familles, à lancer depuis l'éditeur Apps Script :
+ *
+ *  1. TESTS UNITAIRES (test_unitaires) — assertions automatiques sur les
+ *     fonctions déterministes. AUCUNE écriture sur l'annuaire, aucun e-mail,
+ *     aucune dépendance réseau. C'est la suite à relancer après chaque
+ *     modification : elle affiche un bilan RÉUSSITE/ÉCHEC exploitable.
+ *
+ *  2. DIAGNOSTICS MANUELS — scénarios à observer à l'œil (rendu d'e-mail,
+ *     planning, registre). Certains ont des effets réels : ils sont signalés.
  *
  * Projet : Passerelle Jira Service Management → Google Workspace (v2.6.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
+// ---------------------------------------------------------------------------
+//  HARNAIS D'ASSERTIONS
+// ---------------------------------------------------------------------------
+
+/**
+ * Contexte de la suite en cours. Volontairement une variable de fonction (pas
+ * de premier niveau) : rien ne s'exécute au chargement.
+ * @type {?{reussis: number, echecs: !Array<string>}}
+ */
+let SUITE_COURANTE = null;
+
+/**
+ * Vérifie une condition. Enregistre un succès ou un échec dans la suite.
+ * @param {boolean} condition Résultat attendu vrai.
+ * @param {string} message Description de ce qui est vérifié.
+ */
+function assert_(condition, message) {
+  if (!SUITE_COURANTE) SUITE_COURANTE = { reussis: 0, echecs: [] };
+  if (condition) {
+    SUITE_COURANTE.reussis++;
+  } else {
+    SUITE_COURANTE.echecs.push(message);
+  }
+}
+
+/**
+ * Vérifie une égalité stricte, avec un message montrant attendu vs obtenu.
+ * @param {*} obtenu Valeur produite.
+ * @param {*} attendu Valeur attendue.
+ * @param {string} message Description.
+ */
+function assertEquals_(obtenu, attendu, message) {
+  assert_(obtenu === attendu,
+    message + ' — attendu ' + JSON.stringify(attendu) +
+    ', obtenu ' + JSON.stringify(obtenu));
+}
+
+/**
+ * Vérifie que `fn` lève une AppError_ portant le code attendu.
+ * @param {function()} fn Fonction censée lever.
+ * @param {string} codeAttendu Code d'erreur attendu.
+ * @param {string} message Description.
+ */
+function assertThrows_(fn, codeAttendu, message) {
+  try {
+    fn();
+    assert_(false, message + ' — aucune erreur levée (attendu ' + codeAttendu + ')');
+  } catch (err) {
+    assert_(err instanceof AppError_ && err.code === codeAttendu,
+      message + ' — attendu code ' + codeAttendu + ', obtenu ' +
+      (err && err.code ? err.code : err.message));
+  }
+}
+
+/**
+ * Exécute une fonction de test dans un bloc protégé : une exception inattendue
+ * devient un échec au lieu d'interrompre toute la suite.
+ * @param {string} nom Nom du groupe de tests.
+ * @param {function()} fn Corps du test.
+ */
+function groupe_(nom, fn) {
+  try {
+    fn();
+  } catch (err) {
+    assert_(false, nom + ' — exception inattendue : ' + err.message);
+  }
+}
+
+// ---------------------------------------------------------------------------
+//  SUITE DE TESTS UNITAIRES  (point d'entrée : test_unitaires)
+// ---------------------------------------------------------------------------
+
+/**
+ * Lance toutes les vérifications automatiques et affiche le bilan.
+ * À exécuter depuis l'éditeur après toute modification du code.
+ */
+function test_unitaires() {
+  SUITE_COURANTE = { reussis: 0, echecs: [] };
+
+  groupe_('safeEquals_', testSafeEquals_);
+  groupe_('boolDeFormulaire_', testBoolDeFormulaire_);
+  groupe_('estNotFound_', testEstNotFound_);
+  groupe_('parseHeure_', testParseHeure_);
+  groupe_('parseDateIso_', testParseDateIso_);
+  groupe_('estOuvert_', testEstOuvert_);
+  groupe_('prochaineOuverture_', testProchaineOuverture_);
+  groupe_('joursFeriesFrance_', testJoursFeries_);
+  groupe_('generatePassword_', testGeneratePassword_);
+  groupe_('echapper_ / nettoyerHtml_', testEchapper_);
+  groupe_('normaliserUrlImage_', testNormaliserUrlImage_);
+  groupe_('sanitizeData_', testSanitizeData_);
+
+  const s = SUITE_COURANTE;
+  const total = s.reussis + s.echecs.length;
+  const lignes = [
+    '════════════════════════════════════════',
+    s.echecs.length === 0
+      ? '✅ TOUS LES TESTS PASSENT (' + s.reussis + '/' + total + ')'
+      : '❌ ' + s.echecs.length + ' ÉCHEC(S) sur ' + total,
+    '════════════════════════════════════════'
+  ];
+  s.echecs.forEach(function (e) { lignes.push('  ✗ ' + e); });
+  console.log(lignes.join('\n'));
+  SUITE_COURANTE = null;
+}
+
+function testSafeEquals_() {
+  assert_(safeEquals_('abc', 'abc'), 'chaînes égales → true');
+  assert_(!safeEquals_('abc', 'abd'), 'même longueur, différentes → false');
+  assert_(!safeEquals_('abc', 'abcd'), 'longueurs différentes → false');
+  assert_(!safeEquals_('', 'x'), 'vide vs non vide → false');
+  assert_(safeEquals_('', ''), 'deux vides → true');
+}
+
+function testBoolDeFormulaire_() {
+  assert_(boolDeFormulaire_(true, false) === true, 'true natif');
+  assert_(boolDeFormulaire_(false, true) === false, 'false natif');
+  assert_(boolDeFormulaire_('true', false) === true, "'true'");
+  assert_(boolDeFormulaire_('oui', false) === true, "'oui'");
+  assert_(boolDeFormulaire_('NON', true) === false, "'NON' insensible à la casse");
+  assert_(boolDeFormulaire_('false', true) === false, "'false'");
+  assert_(boolDeFormulaire_('', true) === true, 'vide → défaut true');
+  assert_(boolDeFormulaire_('peut-être', false) === false, 'inconnu → défaut false');
+  assert_(boolDeFormulaire_(undefined, true) === true, 'absent → défaut');
+}
+
+function testEstNotFound_() {
+  assert_(estNotFound_({ message: 'Resource Not Found: userKey' }), 'Resource Not Found');
+  assert_(estNotFound_({ message: 'notFound' }), 'notFound');
+  assert_(estNotFound_(new Error('GoogleJsonResponseException: Not Found')), 'Not Found');
+  assert_(!estNotFound_({ message: 'Quota exceeded' }), 'quota → false');
+  assert_(!estNotFound_({ message: 'Insufficient Permission' }), 'permission → false');
+}
+
+function testParseHeure_() {
+  assertEquals_(parseHeure_('08:30'), 510, '08:30 → 510 min');
+  assertEquals_(parseHeure_('00:00'), 0, 'minuit → 0');
+  assertEquals_(parseHeure_('24:00'), 1440, '24:00 → 1440');
+  assertEquals_(parseHeure_('17'), 1020, "'17' sans minutes → 1020");
+}
+
+function testParseDateIso_() {
+  var d = parseDateIso_('2026-08-15', 'x');
+  assertEquals_(d.getFullYear(), 2026, 'année');
+  assertEquals_(d.getMonth(), 7, 'mois (0-based)');
+  assertEquals_(d.getDate(), 15, 'jour');
+  assertThrows_(function () { parseDateIso_('15/08/2026', 'x'); },
+    'INVALID_DATE', 'format FR refusé');
+  assertThrows_(function () { parseDateIso_('2026-02-31', 'x'); },
+    'INVALID_DATE', 'jour inexistant refusé');
+  assertThrows_(function () { parseDateIso_('pas une date', 'x'); },
+    'INVALID_DATE', 'texte refusé');
+}
+
+function testEstOuvert_() {
+  // Planning fictif : lundi (1) ouvert 09:00–12:00, fériés ignorés via planning null.
+  var planning = { '1': [['09:00', '12:00']] };
+  var lundi10h = new Date(2026, 0, 5, 10, 0);   // 5 janv. 2026 = lundi
+  var lundi13h = new Date(2026, 0, 5, 13, 0);
+  var mardi10h = new Date(2026, 0, 6, 10, 0);
+  assert_(estOuvert_(lundi10h, planning), 'lundi 10h dans le créneau');
+  assert_(!estOuvert_(lundi13h, planning), 'lundi 13h hors créneau');
+  assert_(!estOuvert_(mardi10h, planning), 'mardi absent du planning');
+  assert_(estOuvert_(mardi10h, null), 'planning null = toujours ouvert');
+  // Borne de fin exclue.
+  assert_(!estOuvert_(new Date(2026, 0, 5, 12, 0), planning), 'fin exclue (12:00)');
+  assert_(estOuvert_(new Date(2026, 0, 5, 11, 59), planning), '11:59 inclus');
+}
+
+function testProchaineOuverture_() {
+  var planning = { '1': [['09:00', '12:00']] };  // seulement le lundi
+  // Un mardi → prochaine ouverture = lundi suivant 09:00.
+  var mardi = new Date(2026, 0, 6, 15, 0);
+  var prochaine = prochaineOuverture_(mardi, planning);
+  assert_(prochaine !== null, 'une ouverture est trouvée');
+  assertEquals_(prochaine.getDay(), 1, 'tombe un lundi');
+  assertEquals_(prochaine.getHours(), 9, 'à 9h');
+  // Déjà ouvert → retourne l'instant lui-même.
+  var lundi10h = new Date(2026, 0, 5, 10, 0);
+  assertEquals_(prochaineOuverture_(lundi10h, planning).getTime(), lundi10h.getTime(),
+    'déjà ouvert → instant courant');
+  // Planning null → toujours ouvert.
+  assert_(prochaineOuverture_(mardi, null).getTime() === mardi.getTime(),
+    'null → instant courant');
+}
+
+function testJoursFeries_() {
+  var f2026 = joursFeriesFrance_(2026);
+  assert_(!!f2026['2026-01-01'], 'Jour de l\'An');
+  assert_(!!f2026['2026-07-14'], 'Fête nationale');
+  assert_(!!f2026['2026-12-25'], 'Noël');
+  // Pâques 2026 = 5 avril → Lundi de Pâques = 6 avril.
+  assert_(!!f2026['2026-04-06'], 'Lundi de Pâques 2026 (dérivé de Pâques)');
+  assert_(!f2026['2026-07-15'], 'un jour ouvré n\'est pas férié');
+}
+
+function testGeneratePassword_() {
+  var mdp = generatePassword_();
+  assertEquals_(mdp.length, CONFIG.PASSWORD_LENGTH, 'longueur = CONFIG.PASSWORD_LENGTH');
+  assert_(/[A-Z]/.test(mdp), 'contient une majuscule');
+  assert_(/[a-z]/.test(mdp), 'contient une minuscule');
+  assert_(/[0-9]/.test(mdp), 'contient un chiffre');
+  assert_(/[!@#$%*\-_=+?]/.test(mdp), 'contient un caractère spécial');
+  // Deux tirages successifs doivent différer (entropie réelle).
+  assert_(generatePassword_() !== generatePassword_(), 'deux mots de passe diffèrent');
+}
+
+function testEchapper_() {
+  assertEquals_(echapper_('<script>'), '&lt;script&gt;', 'balise échappée');
+  assertEquals_(echapper_('a & b'), 'a &amp; b', 'esperluette');
+  assertEquals_(echapper_(null), '', 'null → vide');
+  // Aller-retour HTML → texte.
+  assertEquals_(nettoyerHtml_('Ligne1<br />Ligne2'), 'Ligne1\nLigne2', 'br → retour ligne');
+  assertEquals_(nettoyerHtml_('<b>gras</b>'), 'gras', 'balises retirées');
+}
+
+function testNormaliserUrlImage_() {
+  // Un espace littéral doit être encodé.
+  assertEquals_(normaliserUrlImage_('https://ex.com/mon logo.png'),
+    'https://ex.com/mon%20logo.png', 'espace → %20');
+  // Idempotence : une URL déjà encodée n'est pas ré-encodée.
+  assertEquals_(normaliserUrlImage_('https://ex.com/mon%20logo.png'),
+    'https://ex.com/mon%20logo.png', 'déjà encodée : inchangée');
+}
+
+function testSanitizeData_() {
+  // Spec minimale factice ; sanitizeData_ ne dépend que de required/emails.
+  var spec = { required: ['email_cible'], emails: ['email_cible'] };
+
+  // Champ obligatoire manquant.
+  assertThrows_(function () { sanitizeData_({}, spec, 'TEST'); },
+    'MISSING_FIELDS', 'champ requis manquant');
+
+  // E-mail au format invalide (rejet indépendant de ALLOWED_DOMAINS).
+  assertThrows_(function () {
+    sanitizeData_({ email_cible: 'pas-un-email' }, spec, 'TEST');
+  }, 'INVALID_EMAIL', 'e-mail mal formé');
+
+  // Bloc data absent.
+  assertThrows_(function () { sanitizeData_(null, spec, 'TEST'); },
+    'BAD_REQUEST', 'data absent');
+
+  // Normalisation : trim + minuscules. On passe par email_perso, exempté de la
+  // liste blanche ALLOWED_DOMAINS, pour que le test ne dépende pas de la config.
+  var specPerso = { required: [], emails: ['email_perso'] };
+  var ok = sanitizeData_({ email_perso: '  JEAN.Dupont@Exemple.FR ' }, specPerso, 'TEST');
+  assertEquals_(ok.email_perso, 'jean.dupont@exemple.fr', 'e-mail normalisé');
+
+  // OU doit commencer par '/'.
+  var specOu = { required: [], emails: [] };
+  assertThrows_(function () {
+    sanitizeData_({ unite_organisationnelle: 'Sans slash' }, specOu, 'TEST');
+  }, 'INVALID_OU', 'OU sans slash refusée');
+}
+
+// ---------------------------------------------------------------------------
+//  DIAGNOSTICS MANUELS  (observation à l'œil ; effets réels signalés)
+// ---------------------------------------------------------------------------
+
 /**
  * Affiche le planning résolu et simule l'ouverture heure par heure sur 7 jours.
  * Utile pour valider une surcharge PLANNING_* avant mise en production.
+ * Lecture seule.
  */
 function test_verifierPlanning() {
   const planning = resoudrePlanning_('STANDARD', { fenetre: 'STANDARD' });
@@ -51,9 +319,7 @@ function test_verifierPlanning() {
  *
  * À exécuter après tout ajout ou modification d'un fichier 1x_Action_*.gs :
  * c'est le seul moyen de valider une déclaration hors d'une requête réelle.
- *
- * Détecte : entrée mal référencée, action déclarée deux fois, champ manquant,
- * incohérence entre le nom de la fonction et le champ `action`.
+ * Lecture seule.
  */
 function test_verifierRegistre() {
   let actions;
@@ -81,7 +347,8 @@ function test_verifierRegistre() {
  * Envoie un exemplaire de chaque gabarit d'email à l'adresse qui exécute le
  * script, afin de contrôler le rendu réel dans Gmail (et sur mobile).
  *
- * Aucune donnée réelle n'est utilisée et aucun compte n'est créé.
+ * ⚠️ EFFET RÉEL : envoie deux e-mails et consomme le quota Gmail. Aucune
+ * donnée réelle utilisée, aucun compte créé.
  */
 function test_apercuEmails() {
   const moi = Session.getActiveUser().getEmail();
@@ -100,9 +367,9 @@ function test_apercuEmails() {
 }
 
 /**
- * Vérifie que la configuration minimale est en place avant de lancer un test.
- * Sans cette garde, un test lancé sur un projet neuf échoue sur une pile
- * d'appels interne au lieu d'indiquer la marche à suivre.
+ * Vérifie que la configuration minimale est en place avant de lancer un test
+ * à effet réel. Sans cette garde, un test lancé sur un projet neuf échoue sur
+ * une pile d'appels interne au lieu d'indiquer la marche à suivre.
  *
  * @return {boolean} true si les tests peuvent être exécutés.
  */
@@ -117,14 +384,68 @@ function testsPretsAExecuter_() {
 }
 
 /**
- * Simule un appel Jira sans passer par le réseau. Modifier `payload` puis
- * exécuter depuis l'éditeur pour tester une action de bout en bout.
+ * Vérifie les garde-fous d'entrée par des assertions, SANS aucune écriture sur
+ * l'annuaire : token invalide, action inconnue, champ manquant, e-mail
+ * invalide, corps absent. Contrairement à la création de compte, ces cas
+ * échouent AVANT tout appel à l'Admin SDK.
  *
- * ⚠️ Ce test n'est PAS une simulation à vide : le compte est réellement créé
- * dans l'annuaire. Adapter le domaine et vérifier que l'OU existe.
+ * Affiche un bilan RÉUSSITE/ÉCHEC.
  */
-function test_simulerAppelJira() {
+function test_casDErreur() {
   if (!testsPretsAExecuter_()) return;
+  SUITE_COURANTE = { reussis: 0, echecs: [] };
+
+  const appel = function (payload) {
+    const e = payload ? { postData: { contents: JSON.stringify(payload) } } : {};
+    return JSON.parse(doPost(e).getContent());
+  };
+  const token = getProp_('SECRET_TOKEN');
+
+  var r;
+  r = appel({ secret_token: 'faux', action: 'SUSPENSION', data: {} });
+  assertEquals_(r.error_code, 'FORBIDDEN', 'token invalide → FORBIDDEN');
+
+  r = appel({ secret_token: token, action: 'INEXISTANTE', data: {} });
+  assertEquals_(r.error_code, 'UNKNOWN_ACTION', 'action inconnue → UNKNOWN_ACTION');
+
+  r = appel({ secret_token: token, action: 'SUSPENSION', data: {} });
+  assertEquals_(r.error_code, 'MISSING_FIELDS', 'champ manquant → MISSING_FIELDS');
+
+  r = appel({ secret_token: token, action: 'SUSPENSION', data: { email_cible: 'pas-un-email' } });
+  assertEquals_(r.error_code, 'INVALID_EMAIL', 'e-mail invalide → INVALID_EMAIL');
+
+  r = appel(null);
+  assertEquals_(r.error_code, 'BAD_REQUEST', 'corps absent → BAD_REQUEST');
+
+  const s = SUITE_COURANTE;
+  const total = s.reussis + s.echecs.length;
+  const lignes = [s.echecs.length === 0
+    ? '✅ Garde-fous OK (' + s.reussis + '/' + total + ')'
+    : '❌ ' + s.echecs.length + ' ÉCHEC(S) sur ' + total];
+  s.echecs.forEach(function (e) { lignes.push('  ✗ ' + e); });
+  console.log(lignes.join('\n'));
+  SUITE_COURANTE = null;
+}
+
+/**
+ * Simule un appel Jira de bout en bout pour l'action CREATION_COMPTE.
+ *
+ * ⚠️ EFFET RÉEL ET DESTRUCTIF : ce n'est PAS une simulation à vide — le compte
+ * est réellement créé dans l'annuaire. Pour éviter une exécution accidentelle,
+ * la garde ci-dessous exige de passer AUTORISER_CREATION à true après avoir
+ * adapté le domaine et vérifié l'OU. Pensez à supprimer le compte de test
+ * ensuite (action SUPPRESSION_COMPTE ou console d'administration).
+ */
+function test_simulerCreationCompteReelle() {
+  if (!testsPretsAExecuter_()) return;
+
+  const AUTORISER_CREATION = false;   // ⚠️ passer à true en connaissance de cause
+  if (!AUTORISER_CREATION) {
+    console.log('Test à effet réel désactivé. Ce test CRÉE un vrai compte dans ' +
+      'l\'annuaire.\n  → Adapter le domaine/OU dans le payload, puis passer ' +
+      'AUTORISER_CREATION à true pour l\'exécuter. Supprimer le compte ensuite.');
+    return;
+  }
 
   const payload = {
     secret_token: getProp_('SECRET_TOKEN'),
@@ -135,33 +456,10 @@ function test_simulerAppelJira() {
       prenom: 'Jean',
       nom: 'Dupont',
       email_souhaite: 'jean.dupont@exemple.fr',   // ADAPTER : domaine de votre annuaire
-      // unite_organisationnelle : laissée vide → DEFAULT_OU, sinon '/'.
-      // Chemins valides : voir admin_listerUnitesOrganisationnelles().
       manager_email: 'manager@exemple.fr'          // ADAPTER : reçoit le mot de passe
     }
   };
 
   const reponse = doPost({ postData: { contents: JSON.stringify(payload) } });
   console.log(reponse.getContent());
-}
-
-/**
- * Vérifie les garde-fous : token invalide, action inconnue, champs manquants.
- * N'effectue aucune écriture sur l'annuaire.
- */
-function test_casDErreur() {
-  if (!testsPretsAExecuter_()) return;
-
-  const cas = [
-    { libelle: 'Token invalide', payload: { secret_token: 'faux', action: 'SUSPENSION', data: {} } },
-    { libelle: 'Action inconnue', payload: { secret_token: getProp_('SECRET_TOKEN'), action: 'INEXISTANTE', data: {} } },
-    { libelle: 'Champ manquant', payload: { secret_token: getProp_('SECRET_TOKEN'), action: 'SUSPENSION', data: {} } },
-    { libelle: 'E-mail invalide', payload: { secret_token: getProp_('SECRET_TOKEN'), action: 'SUSPENSION', data: { email_cible: 'pas-un-email' } } },
-    { libelle: 'Corps absent', payload: null }
-  ];
-
-  cas.forEach(function (c) {
-    const e = c.payload ? { postData: { contents: JSON.stringify(c.payload) } } : {};
-    console.log('--- ' + c.libelle + ' ---\n' + doPost(e).getContent());
-  });
 }

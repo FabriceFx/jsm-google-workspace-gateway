@@ -187,9 +187,12 @@ function doGet(e) {
         });
     }
 
+    // XFrameOptionsMode.DEFAULT (et non ALLOWALL) : l'interface déclenche des
+    // actions d'administration, elle ne doit pas être encadrable par un site
+    // tiers (protection anti-clickjacking).
     return HtmlService.createHtmlOutputFromFile('ui_test')
         .setTitle('Passerelle JSM → Google Workspace — Console de Test')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
 }
 
 /**
@@ -251,9 +254,11 @@ function appelerHandler_(spec, data, ctx) {
 
 /**
  * Expose la liste des spécifications au client HTML.
+ * Réservé aux administrateurs autorisés (voir assertAdminUI_).
  * @return {!Array<!Object>}
  */
 function getSpecsCatalogue() {
+  assertAdminUI_();
   const actions = getActions_();
   return Object.keys(actions).sort().map(function (nom) {
     const s = actions[nom];
@@ -269,31 +274,41 @@ function getSpecsCatalogue() {
 
 /**
  * Exécute une action depuis la console de test WebApp.
- * Injecte le secret_token si non fourni pour simplifier les tests interactifs.
+ *
+ * L'appelant doit d'abord être authentifié comme administrateur (assertAdminUI_).
+ * Ce n'est qu'APRÈS cette vérification d'identité — plus forte que le simple
+ * secret partagé — qu'on injecte le SECRET_TOKEN pour le passage par doPost.
+ * Sans le garde, injecter le token neutraliserait toute l'authentification pour
+ * un visiteur anonyme (l'ancienne faille).
  *
  * @param {!Object} payload
  * @return {!Object}
  */
 function executerActionDepuisUI(payload) {
-  if (!payload.secret_token) {
-    payload.secret_token = getProp_('SECRET_TOKEN');
-  }
+  const admin = assertAdminUI_();
+  payload = payload || {};
+  payload.secret_token = getProp_('SECRET_TOKEN');
+  console.log("Exécution console par %s : %s / %s",
+    admin, payload.action, payload.ticket_key);
   const textOutput = doPost({ postData: { contents: JSON.stringify(payload) } });
   return JSON.parse(textOutput.getContent());
 }
 
 /**
  * Retourne l'URL publique canonique de la WebApp.
- * Utilise ScriptApp.getService().getUrl() qui renvoie l'URL officielle du webhook.
+ * Réservé aux administrateurs autorisés (voir assertAdminUI_).
  *
- * @return {string} URL officielle de la WebApp.
+ * @return {string} URL officielle de la WebApp, ou chaîne vide si indéterminée.
  */
 function getWebhookUrl() {
+  assertAdminUI_();
   try {
     const url = ScriptApp.getService().getUrl();
     if (url) return url;
   } catch (err) {
     console.warn('Impossible de lire ScriptApp.getService().getUrl() : ' + err.message);
   }
-  return 'https://script.google.com/macros/s/1DMpAcsU2wpS4qZtvSq6BI5XaksEZwk34D9oUkP0fuu5nL4NjvjoVeXdU/exec';
+  // Pas de repli codé en dur : un ID de déploiement ne doit pas vivre dans le
+  // code source (il part dans Git). L'UI gère l'absence d'URL.
+  return '';
 }

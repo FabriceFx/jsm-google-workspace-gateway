@@ -23,7 +23,9 @@ function SPEC_RESET_MOT_DE_PASSE() {
     action: 'RESET_MOT_DE_PASSE',
     description: 'Réinitialise le mot de passe avec changement au 1er login.',
     required: ['email_cible'],
-    emails: ['email_cible'],
+    // manager_email reçoit le mot de passe : validé (format + domaine) ici pour
+    // interdire l'envoi du secret vers une adresse hors du domaine.
+    emails: ['email_cible', 'manager_email'],
     fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
     handler: actionReinitialiserMotDePasse
   };
@@ -39,11 +41,12 @@ function SPEC_RESET_MOT_DE_PASSE() {
  * @return {!Object}
  */
 function actionReinitialiserMotDePasse(data, ctx) {
-  const utilisateur = getUserOrNull_(data.email_cible);
-  if (!utilisateur) {
-    throw new AppError_('NOT_FOUND',
-      'Compte ' + data.email_cible + ' introuvable.', 404);
-  }
+  requireUser_(data.email_cible);
+
+  // Contrôle du destinataire AVANT d'écraser le mot de passe : sans lui, on
+  // déconnecterait l'utilisateur sans que personne ne détienne le nouveau
+  // secret. Le format/domaine de manager_email est déjà validé (spec.emails).
+  const destinataire = requireDestinataireSecret_(data);
 
   const motDePasse = generatePassword_();
   AdminDirectory.Users.patch(
@@ -51,14 +54,13 @@ function actionReinitialiserMotDePasse(data, ctx) {
     data.email_cible
   );
 
-  const destinataire = data.manager_email || getProp_('NOTIFY_EMAIL');
   const envoye = envoyerIdentifiants_(
     destinataire, data.email_cible, motDePasse, ctx.ticketKey);
 
   if (!envoye) {
     throw new AppError_('NOTIFY_FAILED',
-      'Mot de passe réinitialisé mais non transmissible : aucun destinataire ' +
-      "valide. Réinitialiser depuis la console Admin.", 500);
+      'Mot de passe réinitialisé mais son envoi à ' + destinataire +
+      ' a échoué. Réinitialiser depuis la console Admin.', 500);
   }
 
   return {

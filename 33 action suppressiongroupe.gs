@@ -39,19 +39,13 @@ function actionSupprimerGroupe(data, ctx) {
       'exactement \'CONFIRMER_SUPPRESSION\'.', 400);
   }
 
-  try {
-    AdminDirectory.Groups.get(data.email_groupe);
-  } catch (err) {
-    if (String(err.message).indexOf('Resource Not Found') !== -1 ||
-        String(err.message).indexOf('notFound') !== -1) {
-      return {
-        idempotent: true,
-        target: data.email_groupe,
-        message: 'Le groupe ' + data.email_groupe +
-          ' n\'existe pas ou a déjà été supprimé.'
-      };
-    }
-    throw err;
+  if (!getGroupOrNull_(data.email_groupe)) {
+    return {
+      idempotent: true,
+      target: data.email_groupe,
+      message: 'Le groupe ' + data.email_groupe +
+        ' n\'existe pas ou a déjà été supprimé.'
+    };
   }
 
   AdminDirectory.Groups.remove(data.email_groupe);

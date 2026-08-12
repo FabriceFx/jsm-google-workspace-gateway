@@ -30,11 +30,7 @@ function SPEC_AJOUT_ALIAS() {
  * @return {!Object}
  */
 function actionAjouterAlias(data, ctx) {
-  var utilisateur = getUserOrNull_(data.email_cible);
-  if (!utilisateur) {
-    throw new AppError_('NOT_FOUND',
-      'Compte ' + data.email_cible + ' introuvable.', 404);
-  }
+  var utilisateur = requireUser_(data.email_cible);
 
   // Vérifier si l'alias existe déjà (idempotence).
   var aliases = (utilisateur.aliases || []).concat(utilisateur.nonEditableAliases || []);

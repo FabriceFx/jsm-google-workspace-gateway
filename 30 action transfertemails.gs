@@ -37,7 +37,7 @@ function SPEC_TRANSFERT_EMAILS() {
  */
 function actionTransfererEmails(data, ctx) {
   var SCOPE = 'https://www.googleapis.com/auth/gmail.settings.sharing';
-  var conserverCopie = (data.conserver_copie !== 'false' && data.conserver_copie !== false);
+  var conserverCopie = boolDeFormulaire_(data.conserver_copie, true);
 
   // Étape 1 : enregistrer l'adresse de redirection.
   try {
@@ -47,9 +47,10 @@ function actionTransfererEmails(data, ctx) {
       { forwardingEmail: data.email_destination },
       SCOPE);
   } catch (err) {
-    // 409 = adresse déjà enregistrée (idempotence).
-    if (String(err.message).indexOf('409') === -1 &&
-        String(err.message).indexOf('already') === -1) {
+    // 409 = adresse déjà enregistrée (idempotence). On s'appuie sur le code HTTP
+    // porté par l'AppError_ plutôt que sur une recherche de sous-chaîne, qui
+    // avalerait une erreur légitime dont le libellé contient « already ».
+    if (!(err instanceof AppError_) || err.httpHint !== 409) {
       throw err;
     }
   }

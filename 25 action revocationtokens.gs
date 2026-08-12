@@ -31,6 +31,8 @@ function SPEC_REVOCATION_TOKENS_APPS() {
  * @return {!Object}
  */
 function actionRevoquerTokens(data, ctx) {
+  requireUser_(data.email_cible);
+
   var reponse = AdminDirectory.Tokens.list(data.email_cible);
   var tokens = reponse.items || [];
 
@@ -56,16 +58,32 @@ function actionRevoquerTokens(data, ctx) {
     };
   }
 
+  // Révocation une par une : on isole les échecs pour ne pas laisser une
+  // révocation partielle remonter en « erreur interne » sans dire ce qui a été
+  // effectivement révoqué.
+  var revoquees = [];
+  var echecs = [];
   cibles.forEach(function (t) {
-    AdminDirectory.Tokens.remove(data.email_cible, t.clientId);
+    var nom = t.displayText || t.clientId;
+    try {
+      AdminDirectory.Tokens.remove(data.email_cible, t.clientId);
+      revoquees.push(nom);
+    } catch (err) {
+      echecs.push(nom + ' (' + err.message + ')');
+    }
   });
 
-  var noms = cibles.map(function (t) { return t.displayText || t.clientId; });
+  if (echecs.length) {
+    throw new AppError_('REVOCATION_PARTIELLE',
+      'Révocation incomplète pour ' + data.email_cible + '. Révoquées : ' +
+      (revoquees.join(', ') || 'aucune') + '. En échec : ' + echecs.join(', ') +
+      '. Relancer l\'action pour réessayer les applications restantes.', 502);
+  }
 
   return {
     target: data.email_cible,
-    message: cibles.length + ' application(s) révoquée(s) pour ' +
-      data.email_cible + ' : ' + noms.join(', ') + '.',
-    details: { applications: noms }
+    message: revoquees.length + ' application(s) révoquée(s) pour ' +
+      data.email_cible + ' : ' + revoquees.join(', ') + '.',
+    details: { applications: revoquees }
   };
 }

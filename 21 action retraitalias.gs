@@ -30,14 +30,20 @@ function SPEC_RETRAIT_ALIAS() {
  * @return {!Object}
  */
 function actionRetirerAlias(data, ctx) {
-  var utilisateur = getUserOrNull_(data.email_cible);
-  if (!utilisateur) {
-    throw new AppError_('NOT_FOUND',
-      'Compte ' + data.email_cible + ' introuvable.', 404);
-  }
+  var utilisateur = requireUser_(data.email_cible);
 
   var aliases = utilisateur.aliases || [];
   if (aliases.indexOf(data.alias) === -1) {
+    // Un alias non éditable (alias de domaine, généré par Workspace) ne figure
+    // pas dans `aliases` mais dans `nonEditableAliases` : le distinguer évite un
+    // « erreur interne » opaque au profit d'un message actionnable.
+    var nonEditables = utilisateur.nonEditableAliases || [];
+    if (nonEditables.indexOf(data.alias) !== -1) {
+      throw new AppError_('ALIAS_NON_EDITABLE',
+        data.alias + ' est un alias de domaine non modifiable, généré ' +
+        'automatiquement par Workspace. Il ne peut pas être retiré via cette ' +
+        'action.', 400);
+    }
     return {
       idempotent: true,
       target: data.email_cible,

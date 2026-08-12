@@ -61,8 +61,7 @@ function actionAjouterGroupe(data, ctx) {
       data.email_groupe
     );
   } catch (err) {
-    const m = String(err.message);
-    if (m.indexOf('Resource Not Found') !== -1 || m.indexOf('notFound') !== -1) {
+    if (estNotFound_(err)) {
       throw new AppError_('NOT_FOUND',
         'Groupe ' + data.email_groupe + ' ou membre ' + data.email_cible +
         ' introuvable.', 404);

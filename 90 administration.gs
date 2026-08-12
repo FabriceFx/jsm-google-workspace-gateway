@@ -14,6 +14,7 @@
  * dans le webhook Jira. Refuse d'écraser un token existant.
  */
 function setup_genererToken() {
+  assertAdminUI_();
   const props = PropertiesService.getScriptProperties();
   if (props.getProperty('SECRET_TOKEN')) {
     console.log('Un SECRET_TOKEN existe déjà. Le supprimer manuellement pour ' +
@@ -30,6 +31,7 @@ function setup_genererToken() {
  * Retourne un diagnostic dans les logs d'exécution.
  */
 function setup_verifierConfiguration() {
+  assertAdminUI_();
   const rapport = [];
   const token = getProp_('SECRET_TOKEN');
 
@@ -87,6 +89,7 @@ function setup_verifierConfiguration() {
  * CONFIG.INTERVALLE_DECLENCHEUR_MIN.
  */
 function setup_installerDeclencheur() {
+  assertAdminUI_();
   ScriptApp.getProjectTriggers().forEach(function (t) {
     if (t.getHandlerFunction() === 'traiterFileAttente') {
       ScriptApp.deleteTrigger(t);
@@ -109,6 +112,7 @@ function setup_installerDeclencheur() {
  * de compte avec INVALID_OU_ID.
  */
 function admin_listerUnitesOrganisationnelles() {
+  assertAdminUI_();
   try {
     const reponse = AdminDirectory.Orgunits.list('my_customer', { type: 'all' });
     const unites = reponse.organizationUnits || [];
@@ -136,6 +140,7 @@ function admin_listerUnitesOrganisationnelles() {
  * googleusercontent, qui exige une lecture publique et un type MIME correct.
  */
 function admin_verifierLogo() {
+  assertAdminUI_();
   const brut = getProp_('LOGO_URL').trim().replace(/^["'<]+|["'>]+$/g, '');
   const url = getLogoUrl_();
   const rapport = [];
@@ -210,6 +215,7 @@ function admin_verifierLogo() {
  * (ou l'ouvrir dans un navigateur, tout sélectionner, puis copier-coller).
  */
 function admin_genererSignatureEmail() {
+  assertAdminUI_();
   const signature = signatureEmailHtml_({
     nom: 'Prénom Nom',
     fonction: 'Intitulé du poste',
@@ -223,6 +229,7 @@ function admin_genererSignatureEmail() {
 
 /** Affiche dans les logs les demandes actuellement en attente. */
 function admin_listerFileAttente() {
+  assertAdminUI_();
   const sheet = getQueueSheet_();
   if (!sheet) { console.log('Classeur d\'audit non configuré.'); return; }
 
@@ -242,6 +249,7 @@ function admin_listerFileAttente() {
  * @param {string} requestId Identifiant de la demande.
  */
 function admin_annulerAction(requestId) {
+  assertAdminUI_();
   const sheet = getQueueSheet_();
   const cible = sheet && trouverLigne_(sheet, requestId, CONFIG.STATUTS.EN_ATTENTE);
   if (!cible) { console.log('Aucune demande en attente pour ' + requestId); return; }
@@ -257,6 +265,7 @@ function admin_annulerAction(requestId) {
  * @param {string} requestId Identifiant de la demande.
  */
 function admin_forcerExecution(requestId) {
+  assertAdminUI_();
   const sheet = getQueueSheet_();
   const cible = sheet && trouverLigne_(sheet, requestId, CONFIG.STATUTS.EN_ATTENTE);
   if (!cible) { console.log('Aucune demande en attente pour ' + requestId); return; }

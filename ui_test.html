@@ -596,7 +596,7 @@
       max-height: 320px;
       overflow-y: auto;
       white-space: pre-wrap;
-      word-break: break-all;
+      overflow-wrap: anywhere;
     }
 
     /* Code block container for Guide tab */
@@ -767,13 +767,13 @@
 
   <!-- Navigation Tabs -->
   <nav class="nav-tabs-bar">
-    <div class="nav-tabs-content">
-      <button class="tab-btn active" onclick="switchTab('console')">
-        <span class="material-symbols-outlined">science</span>
+    <div class="nav-tabs-content" role="tablist" aria-label="Sections de la console">
+      <button class="tab-btn active" role="tab" id="tab-btn-console" aria-selected="true" aria-controls="tab-console" onclick="switchTab('console')">
+        <span class="material-symbols-outlined" aria-hidden="true">science</span>
         <span>Console de Test Interactive</span>
       </button>
-      <button class="tab-btn" onclick="switchTab('guide')">
-        <span class="material-symbols-outlined">menu_book</span>
+      <button class="tab-btn" role="tab" id="tab-btn-guide" aria-selected="false" aria-controls="tab-guide" onclick="switchTab('guide')">
+        <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
         <span>Guide d'Intégration JSM</span>
       </button>
     </div>
@@ -781,17 +781,17 @@
 
   <main>
     <!-- TAB 1 : CONSOLE DE TEST -->
-    <div class="tab-pane active" id="tab-console">
+    <div class="tab-pane active" id="tab-console" role="tabpanel" aria-labelledby="tab-btn-console">
       <div class="console-grid">
         <!-- Colonne gauche : Liste des actions -->
         <aside class="card">
           <div class="card-title">
-            <span class="material-symbols-outlined">widgets</span>
-            <span>Actions disponibles (25)</span>
+            <span class="material-symbols-outlined" aria-hidden="true">widgets</span>
+            <span>Actions disponibles (<span id="action-count">25</span>)</span>
           </div>
 
           <div class="search-box">
-            <span class="material-symbols-outlined">search</span>
+            <span class="material-symbols-outlined" aria-hidden="true">search</span>
             <input type="text" id="search-input" placeholder="Filtrer une action..." oninput="filtrerActions()" />
           </div>
 
@@ -807,7 +807,7 @@
         <section>
           <div class="card">
             <div class="card-title" id="form-title-container">
-              <span class="material-symbols-outlined">edit_note</span>
+              <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
               <span id="form-title">Sélectionnez une action</span>
             </div>
 
@@ -820,12 +820,12 @@
 
               <div class="form-grid">
                 <div class="md-field">
-                  <label>Clé du Ticket (ticket_key) <span class="req">*</span></label>
+                  <label for="ticket_key">Clé du Ticket (ticket_key) <span class="req">*</span></label>
                   <input type="text" id="ticket_key" value="ITSM-1001" required />
                 </div>
 
                 <div class="md-field">
-                  <label>ID de Requête (request_id)</label>
+                  <label for="request_id">ID de Requête (request_id)</label>
                   <input type="text" id="request_id" placeholder="Généré automatiquement si vide" />
                 </div>
               </div>
@@ -844,23 +844,23 @@
                   <div class="switch-desc">Ignore les créneaux d'administration en cas d'urgence</div>
                 </div>
                 <label class="switch">
-                  <input type="checkbox" id="force_immediat" onchange="toggleUrgenceMotif()" />
+                  <input type="checkbox" id="force_immediat" onchange="toggleUrgenceMotif()" aria-controls="motif-urgence-container" aria-expanded="false" />
                   <span class="slider"></span>
                 </label>
               </div>
 
               <div class="md-field" id="motif-urgence-container" style="display: none; margin-top: 16px;">
-                <label>Motif de l'urgence (motif_urgence) <span class="req">*</span></label>
+                <label for="motif_urgence">Motif de l'urgence (motif_urgence) <span class="req">*</span></label>
                 <input type="text" id="motif_urgence" placeholder="Ex: Panne bloquante sur site de production" />
               </div>
 
               <div class="btn-group">
                 <button type="submit" class="btn btn-primary" id="btn-submit">
-                  <span class="material-symbols-outlined">play_arrow</span>
+                  <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
                   <span>Exécuter l'action</span>
                 </button>
                 <button type="button" class="btn btn-secondary" onclick="remplirExemple()">
-                  <span class="material-symbols-outlined">auto_fix_high</span>
+                  <span class="material-symbols-outlined" aria-hidden="true">auto_fix_high</span>
                   <span>Remplir avec des données de test</span>
                 </button>
               </div>
@@ -869,12 +869,12 @@
             <!-- Zone de résultat -->
             <div class="result-box" id="result-box">
               <div class="card-title" style="margin-top: 24px;">
-                <span class="material-symbols-outlined">terminal</span>
+                <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
                 <span>Résultat de l'exécution</span>
               </div>
 
-              <div class="status-banner" id="status-banner">
-                <span class="material-symbols-outlined status-icon" id="status-icon">info</span>
+              <div class="status-banner" id="status-banner" role="status" aria-live="polite">
+                <span class="material-symbols-outlined status-icon" id="status-icon" aria-hidden="true">info</span>
                 <div class="status-info">
                   <h4 id="status-title">Traitement en cours...</h4>
                   <p id="status-message">Veuillez patienter.</p>
@@ -890,12 +890,12 @@
     </div>
 
     <!-- TAB 2 : GUIDE D'INTÉGRATION JSM -->
-    <div class="tab-pane" id="tab-guide">
+    <div class="tab-pane" id="tab-guide" role="tabpanel" aria-labelledby="tab-btn-guide" aria-hidden="true">
       <div class="card">
         
         <div class="guide-section">
           <h2>
-            <span class="material-symbols-outlined">settings_ethernet</span>
+            <span class="material-symbols-outlined" aria-hidden="true">settings_ethernet</span>
             <span>1. Architecture de connexion Jira Automation</span>
           </h2>
           <p>
@@ -932,7 +932,7 @@
 
         <div class="guide-section">
           <h2>
-            <span class="material-symbols-outlined">code</span>
+            <span class="material-symbols-outlined" aria-hidden="true">code</span>
             <span>2. Structure standard du Payload JSON Jira</span>
           </h2>
           <p>
@@ -959,7 +959,7 @@
 
         <div class="guide-section">
           <h2>
-            <span class="material-symbols-outlined">call_split</span>
+            <span class="material-symbols-outlined" aria-hidden="true">call_split</span>
             <span>3. Traitement des réponses dans Jira Automation</span>
           </h2>
           <p>
@@ -986,7 +986,7 @@
 
         <div class="guide-section">
           <h2>
-            <span class="material-symbols-outlined">view_list</span>
+            <span class="material-symbols-outlined" aria-hidden="true">view_list</span>
             <span>4. Cartographie complète des 25 actions & Payloads Jira</span>
           </h2>
           <p>
@@ -995,7 +995,7 @@
 
           <div style="margin-top: 16px;">
             <div class="search-box">
-              <span class="material-symbols-outlined">search</span>
+              <span class="material-symbols-outlined" aria-hidden="true">search</span>
               <input type="text" id="search-guide-input" placeholder="Filtrer une action dans le guide..." oninput="filtrerGuideActions()" />
             </div>
 
@@ -1010,8 +1010,8 @@
   </main>
 
   <!-- Toast Container -->
-  <div class="toast" id="toast-notif">
-    <span class="material-symbols-outlined">check_circle</span>
+  <div class="toast" id="toast-notif" role="status" aria-live="polite">
+    <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
     <span id="toast-text">Code copié dans le presse-papier !</span>
   </div>
 
@@ -1025,16 +1025,35 @@
     let actionSelectionnee = null;
 
     // Gestion des onglets
-    function switchTab(tabId) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-      document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    // Échappe toute valeur avant insertion dans du HTML via innerHTML.
+    // Les données du catalogue et les messages d'erreur viennent du serveur ;
+    // sans échappement, un caractère « < » suffirait à injecter du balisage
+    // dans une page qui pilote des actions d'administration.
+    function escapeHtml(valeur) {
+      return String(valeur === null || valeur === undefined ? '' : valeur)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
-      if (tabId === 'console') {
-        document.querySelectorAll('.tab-btn')[0].classList.add('active');
-        document.getElementById('tab-console').classList.add('active');
-      } else {
-        document.querySelectorAll('.tab-btn')[1].classList.add('active');
-        document.getElementById('tab-guide').classList.add('active');
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      document.querySelectorAll('.tab-pane').forEach(p => {
+        p.classList.remove('active');
+        p.setAttribute('aria-hidden', 'true');
+      });
+
+      const btn = document.getElementById('tab-btn-' + tabId);
+      const pane = document.getElementById('tab-' + tabId);
+      if (btn) { btn.classList.add('active'); btn.setAttribute('aria-selected', 'true'); }
+      if (pane) { pane.classList.add('active'); pane.setAttribute('aria-hidden', 'false'); }
+
+      if (tabId === 'guide') {
         afficherUrlWebhook();
         genererGuideActions();
       }
@@ -1096,10 +1115,10 @@
           .withFailureHandler(function(err) {
             charge = true;
             clearTimeout(timer);
-            listEl.innerHTML = 
+            listEl.innerHTML =
               '<div style="color: #c62828; padding: 16px; text-align: center;">' +
               '<p><strong>Erreur de chargement :</strong></p>' +
-              '<p style="font-size: 13px; margin: 8px 0;">' + (err.message || err) + '</p>' +
+              '<p style="font-size: 13px; margin: 8px 0;">' + escapeHtml(err.message || err) + '</p>' +
               '<button class="btn btn-secondary" onclick="chargerCatalogue()" style="padding: 6px 16px; font-size: 13px;">Réessayer</button>' +
               '</div>';
           })
@@ -1118,7 +1137,14 @@
 
     function afficherCatalogue(actions) {
       catalogueActions = actions;
+      const compteur = document.getElementById('action-count');
+      if (compteur) compteur.innerText = actions.length;
       filtrerActions();
+      // Le guide a pu être affiché avec la liste de repli avant l'arrivée du
+      // catalogue : on vide l'accordéon pour qu'il se régénère avec les vraies
+      // actions à la prochaine ouverture de l'onglet.
+      const guide = document.getElementById('guide-actions-accordion');
+      if (guide) guide.innerHTML = '';
       if (actions.length > 0) {
         selectionnerAction(actions[0].action);
       }
@@ -1141,16 +1167,17 @@
       filtrees.forEach(a => {
         const item = document.createElement('div');
         item.className = 'action-item' + (actionSelectionnee && actionSelectionnee.action === a.action ? ' active' : '');
+        item.dataset.action = a.action;
         item.onclick = () => selectionnerAction(a.action);
         
         const badgeClass = a.fenetre === 'PERMANENTE' ? 'badge-permanente' : 'badge-standard';
 
         item.innerHTML = `
           <div class="action-item-name">
-            <span>${a.action}</span>
-            <span class="badge-fenetre ${badgeClass}">${a.fenetre}</span>
+            <span>${escapeHtml(a.action)}</span>
+            <span class="badge-fenetre ${badgeClass}">${escapeHtml(a.fenetre)}</span>
           </div>
-          <div class="action-item-desc">${a.description}</div>
+          <div class="action-item-desc">${escapeHtml(a.description)}</div>
         `;
         listEl.appendChild(item);
       });
@@ -1160,13 +1187,9 @@
       actionSelectionnee = catalogueActions.find(a => a.action === nomAction);
       if (!actionSelectionnee) return;
 
-      // Mise à jour de la sélection visuelle
+      // Mise à jour de la sélection visuelle (par identifiant, pas par texte)
       document.querySelectorAll('.action-item').forEach(el => {
-        if (el.querySelector('.action-item-name span').innerText === nomAction) {
-          el.classList.add('active');
-        } else {
-          el.classList.remove('active');
-        }
+        el.classList.toggle('active', el.dataset.action === nomAction);
       });
 
       // Titre & Description
@@ -1284,7 +1307,8 @@
         'EFFACEMENT_APPAREIL': [
           { id: 'email_cible', label: 'E-mail du propriétaire', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
           { id: 'type_effacement', label: 'Type d\'effacement', type: 'select', options: [{val: 'COMPTE', txt: 'Compte pro uniquement (COMPTE)'}, {val: 'COMPLET', txt: 'Réinitialisation usine complète (COMPLET)'}] },
-          { id: 'device_id', label: 'ID de l\'appareil (optionnel)', placeholder: 'Laissez vide pour tous ses appareils' }
+          { id: 'device_id', label: 'ID de l\'appareil (optionnel)', placeholder: 'Laissez vide pour tous ses appareils' },
+          { id: 'confirmation', label: 'Confirmation (si COMPLET sur tous les appareils)', placeholder: 'CONFIRMER_EFFACEMENT' }
         ],
         'BLOCAGE_APPAREIL': [
           { id: 'email_cible', label: 'E-mail du propriétaire', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
@@ -1339,9 +1363,11 @@
     }
 
     function toggleUrgenceMotif() {
-      const checked = document.getElementById('force_immediat').checked;
+      const toggle = document.getElementById('force_immediat');
+      const checked = toggle.checked;
       const container = document.getElementById('motif-urgence-container');
       const input = document.getElementById('motif_urgence');
+      toggle.setAttribute('aria-expanded', checked ? 'true' : 'false');
       container.style.display = checked ? 'block' : 'none';
       if (checked) input.setAttribute('required', 'required');
       else input.removeAttribute('required');
@@ -1411,7 +1437,7 @@
           .withSuccessHandler(function(res) {
             renvoyerResultat(res);
             btn.disabled = false;
-            btn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span><span>Exécuter l\'action</span>';
+            btn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">play_arrow</span><span>Exécuter l\'action</span>';
           })
           .withFailureHandler(function(err) {
             renvoyerResultat({
@@ -1421,7 +1447,7 @@
               message: err.message
             });
             btn.disabled = false;
-            btn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span><span>Exécuter l\'action</span>';
+            btn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">play_arrow</span><span>Exécuter l\'action</span>';
           })
           .executerActionDepuisUI(payload);
       } else {
@@ -1437,7 +1463,7 @@
             details: payload.data
           });
           btn.disabled = false;
-          btn.innerHTML = '<span class="material-symbols-outlined">play_arrow</span><span>Exécuter l\'action</span>';
+          btn.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">play_arrow</span><span>Exécuter l\'action</span>';
         }, 1200);
       }
     }
@@ -1483,7 +1509,9 @@
         const champs = ObtenirChampsPourAction(a);
         const sampleData = {};
         champs.forEach(f => {
-          sampleData[f.id] = `{{issue.${f.label.replace(/\*/g,'').trim()}}}`;
+          // Smart value Jira valide : la clé du champ (f.id), jamais son libellé
+          // affiché (qui contient accents et espaces → référence invalide).
+          sampleData[f.id] = `{{issue.${f.id}}}`;
         });
 
         const templateJson = {
@@ -1495,36 +1523,38 @@
         };
 
         const jsonStr = JSON.stringify(templateJson, null, 2);
+        const preId = 'guide-json-' + a.action;
         const card = document.createElement('div');
         card.className = 'card guide-action-card';
         card.style.padding = '18px';
 
         const badgeClass = a.fenetre === 'PERMANENTE' ? 'badge-permanente' : 'badge-standard';
 
+        // Tout contenu dérivé du serveur est échappé avant insertion en innerHTML.
         card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleGuideCard('${a.action}')">
+          <div style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;" onclick="toggleGuideCard('${escapeHtml(a.action)}')">
             <div style="display: flex; align-items: center; gap: 10px;">
               <span class="material-symbols-outlined" style="color: var(--primary);">terminal</span>
-              <strong style="font-family: 'Outfit'; font-size: 16px;">${a.action}</strong>
-              <span class="badge-fenetre ${badgeClass}">${a.fenetre}</span>
+              <strong style="font-family: 'Outfit'; font-size: 16px;">${escapeHtml(a.action)}</strong>
+              <span class="badge-fenetre ${badgeClass}">${escapeHtml(a.fenetre)}</span>
             </div>
-            <span class="material-symbols-outlined" id="icon-toggle-${a.action}">expand_more</span>
+            <span class="material-symbols-outlined" id="icon-toggle-${escapeHtml(a.action)}">expand_more</span>
           </div>
-          <p style="font-size: 13px; color: var(--text-secondary); margin: 6px 0 0;">${a.description}</p>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 6px 0 0;">${escapeHtml(a.description)}</p>
 
-          <div id="body-guide-${a.action}" style="display: none; margin-top: 16px;">
+          <div id="body-guide-${escapeHtml(a.action)}" style="display: none; margin-top: 16px;">
             <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">Champs attendus dans 'data' :</div>
             <ul style="font-size: 13px; margin-left: 20px; color: var(--text); margin-bottom: 12px;">
-              ${champs.map(f => `<li><code>${f.id}</code> ${a.required && a.required.includes(f.id) ? '<strong style="color: #c62828;">(Requis)</strong>' : '(Optionnel)'} — ${f.label}</li>`).join('')}
+              ${champs.map(f => `<li><code>${escapeHtml(f.id)}</code> ${a.required && a.required.includes(f.id) ? '<strong style="color: #c62828;">(Requis)</strong>' : '(Optionnel)'} — ${escapeHtml(f.label)}</li>`).join('')}
             </ul>
 
             <div style="font-size: 13px; font-weight: 600; margin-bottom: 6px;">Payload JSON à coller dans Jira Automation :</div>
             <div class="code-block-container" style="margin-bottom: 0;">
-              <button class="btn-copy-code" onclick="copierTexte(\`${jsonStr.replace(/`/g, '\\`').replace(/\\/g, '\\\\')}\`)">
+              <button class="btn-copy-code" onclick="copierCode('${escapeHtml(preId)}')">
                 <span class="material-symbols-outlined" style="font-size: 14px;">content_copy</span>
                 <span>Copier JSON Jira</span>
               </button>
-              <pre>${jsonStr}</pre>
+              <pre id="${escapeHtml(preId)}">${escapeHtml(jsonStr)}</pre>
             </div>
           </div>
         `;

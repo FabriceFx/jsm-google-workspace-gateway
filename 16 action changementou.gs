@@ -30,11 +30,7 @@ function SPEC_CHANGEMENT_OU() {
  * @return {!Object}
  */
 function actionChangerOU(data, ctx) {
-  var utilisateur = getUserOrNull_(data.email_cible);
-  if (!utilisateur) {
-    throw new AppError_('NOT_FOUND',
-      'Compte ' + data.email_cible + ' introuvable.', 404);
-  }
+  var utilisateur = requireUser_(data.email_cible);
 
   var ancienneOU = utilisateur.orgUnitPath || '/';
   if (ancienneOU === data.unite_organisationnelle) {

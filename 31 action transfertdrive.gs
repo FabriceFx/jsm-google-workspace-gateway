@@ -15,9 +15,6 @@
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
-/** ID de l'application Google Drive dans l'API Data Transfer. */
-var DRIVE_APP_ID = '55656082996';
-
 function SPEC_TRANSFERT_DRIVE() {
   return {
     action: 'TRANSFERT_DRIVE',
@@ -37,19 +34,20 @@ function SPEC_TRANSFERT_DRIVE() {
  * @return {!Object}
  */
 function actionTransfererDrive(data, ctx) {
-  // Résoudre les adresses en identifiants internes.
-  var source = getUserOrNull_(data.email_source);
-  if (!source) {
-    throw new AppError_('NOT_FOUND',
-      'Compte source ' + data.email_source + ' introuvable.', 404);
-  }
-  var destination = getUserOrNull_(data.email_destination);
-  if (!destination) {
-    throw new AppError_('NOT_FOUND',
-      'Compte destination ' + data.email_destination + ' introuvable.', 404);
+  /** ID de l'application Google Drive dans l'API Data Transfer. */
+  var DRIVE_APP_ID = '55656082996';
+
+  if (data.email_source === data.email_destination) {
+    throw new AppError_('SOURCE_EGALE_DESTINATION',
+      'Le compte source et le compte destination sont identiques (' +
+      data.email_source + ') : aucun transfert à effectuer.');
   }
 
-  var inclurePrives = (data.inclure_prives === 'true' || data.inclure_prives === true);
+  // Résoudre les adresses en identifiants internes.
+  var source = requireUser_(data.email_source, 'source');
+  var destination = requireUser_(data.email_destination, 'destination');
+
+  var inclurePrives = boolDeFormulaire_(data.inclure_prives, false);
   var niveaux = inclurePrives ? ['SHARED', 'PRIVATE'] : ['SHARED'];
 
   var corps = {

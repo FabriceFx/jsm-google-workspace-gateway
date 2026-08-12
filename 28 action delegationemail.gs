@@ -34,18 +34,30 @@ function SPEC_DELEGATION_EMAIL() {
 function actionDeleguerEmail(data, ctx) {
   var SCOPE = 'https://www.googleapis.com/auth/gmail.settings.sharing';
 
-  // Vérifier que le délégué existe dans l'annuaire.
-  var delegue = getUserOrNull_(data.email_delegue);
-  if (!delegue) {
-    throw new AppError_('NOT_FOUND',
-      'Délégué ' + data.email_delegue + ' introuvable dans l\'annuaire.', 404);
-  }
+  // Vérifier que les deux comptes existent dans l'annuaire.
+  requireUser_(data.email_cible, 'cible');
+  requireUser_(data.email_delegue, 'délégué');
 
-  appelGmailApi_(data.email_cible,
-    'settings/delegates',
-    'POST',
-    { delegateEmail: data.email_delegue },
-    SCOPE);
+  try {
+    appelGmailApi_(data.email_cible,
+      'settings/delegates',
+      'POST',
+      { delegateEmail: data.email_delegue },
+      SCOPE);
+  } catch (err) {
+    // 409 = délégation déjà en place : un rejeu Jira doit renvoyer un succès
+    // idempotent plutôt qu'échouer.
+    if (err instanceof AppError_ && err.httpHint === 409) {
+      return {
+        idempotent: true,
+        target: data.email_cible,
+        message: data.email_delegue + ' a déjà accès à la boîte de ' +
+          data.email_cible + '. Aucune action réalisée.',
+        details: { delegue: data.email_delegue }
+      };
+    }
+    throw err;
+  }
 
   return {
     target: data.email_cible,

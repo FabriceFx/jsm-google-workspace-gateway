@@ -24,7 +24,9 @@ function SPEC_CREATION_COMPTE() {
     action: 'CREATION_COMPTE',
     description: 'Crée un compte utilisateur Workspace.',
     required: ['prenom', 'nom', 'email_souhaite'],
-    emails: ['email_souhaite', 'email_perso'],
+    // manager_email est listé ici pour que sanitizeData_ valide son format ET
+    // son domaine : il reçoit le mot de passe provisoire, jamais vers l'externe.
+    emails: ['email_souhaite', 'email_perso', 'manager_email'],
     fenetre: 'STANDARD',   // soumise au créneau ouvrable, différée sinon
     handler: actionCreerUtilisateur
   };

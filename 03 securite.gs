@@ -63,6 +63,48 @@ function assertAuthorized_(payload, ctx) {
 }
 
 /**
+ * Contrôle d'accès des fonctions appelées depuis la console (google.script.run).
+ *
+ * CONTEXTE. La webapp est déployée en `executeAs: USER_DEPLOYING` +
+ * `access: ANYONE` — configuration imposée par le webhook, que Jira appelle
+ * sans session Google (l'authentification y repose sur le SECRET_TOKEN). Mais
+ * la même URL sert aussi l'interface d'administration : sans ce garde, un
+ * visiteur anonyme pourrait invoquer les fonctions google.script.run, qui
+ * s'exécutent avec les droits d'administration du déployeur.
+ *
+ * RÈGLE. On identifie l'APPELANT via Session.getActiveUser() (vide pour un
+ * anonyme ou un utilisateur hors domaine) :
+ *   - le déployeur exécutant depuis l'éditeur (appelant == effectif) est admis ;
+ *   - sinon l'appelant doit figurer dans la propriété ADMIN_UI_EMAILS
+ *     (adresses séparées par des virgules).
+ * Toute autre origine — au premier chef l'anonyme — est refusée.
+ *
+ * @return {string} Adresse de l'administrateur authentifié.
+ * @throws {AppError_} 403 si l'appelant n'est pas un administrateur autorisé.
+ */
+function assertAdminUI_() {
+    const effectif = String((Session.getEffectiveUser() &&
+        Session.getEffectiveUser().getEmail()) || '').toLowerCase();
+    const appelant = String((Session.getActiveUser() &&
+        Session.getActiveUser().getEmail()) || '').toLowerCase();
+
+    // Exécution depuis l'éditeur par le propriétaire du script : toujours admise.
+    if (appelant && appelant === effectif) return appelant;
+
+    const admins = getProp_('ADMIN_UI_EMAILS')
+        .split(',').map(function (a) { return a.trim().toLowerCase(); })
+        .filter(Boolean);
+
+    if (appelant && admins.indexOf(appelant) !== -1) return appelant;
+
+    console.warn('Accès console refusé — appelant : %s',
+        appelant || '(anonyme / hors domaine)');
+    throw new AppError_('FORBIDDEN',
+        "Console d'administration réservée aux administrateurs autorisés. " +
+        "Ajouter l'adresse à la propriété ADMIN_UI_EMAILS du script.", 403);
+}
+
+/**
  * Comparaison de chaînes à temps constant.
  * @param {string} a
  * @param {string} b

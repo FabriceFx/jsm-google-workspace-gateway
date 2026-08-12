@@ -49,6 +49,16 @@ function actionSupprimerCompte(data, ctx) {
     };
   }
 
+  // Garde-fou : ne jamais supprimer un compte à privilèges via un simple ticket
+  // (y compris le compte qui exécute le script). Une telle suppression doit
+  // rester un geste manuel et réfléchi depuis la console d'administration.
+  if (utilisateur.isAdmin || utilisateur.isDelegatedAdmin) {
+    throw new AppError_('COMPTE_PROTEGE',
+      'Le compte ' + data.email_cible + ' dispose de droits d\'administration : ' +
+      'sa suppression est refusée par sécurité. La réaliser manuellement depuis ' +
+      'la console d\'administration si elle est réellement voulue.', 403);
+  }
+
   AdminDirectory.Users.remove(data.email_cible);
 
   return {

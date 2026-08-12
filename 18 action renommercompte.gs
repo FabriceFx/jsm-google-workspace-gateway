@@ -31,11 +31,7 @@ function SPEC_RENOMMER_COMPTE() {
  * @return {!Object}
  */
 function actionRenommerCompte(data, ctx) {
-  var utilisateur = getUserOrNull_(data.email_cible);
-  if (!utilisateur) {
-    throw new AppError_('NOT_FOUND',
-      'Compte ' + data.email_cible + ' introuvable.', 404);
-  }
+  requireUser_(data.email_cible);
 
   if (data.email_cible === data.nouvel_email) {
     return {
