@@ -776,27 +776,24 @@ function extraireValeursUser_(user, def) {
 }
 
 /**
- * Retourne les valeurs distinctes existantes pour une clé de suggestion, en
- * parcourant l'annuaire. Résultat MIS EN CACHE 6 h (l'énumération est coûteuse
- * et le vocabulaire évolue lentement) — voir viderCacheSuggestions_ pour forcer.
+ * Construit, en UNE seule énumération de l'annuaire, les valeurs distinctes de
+ * TOUTES les sources de suggestions à la fois. L'agrégat est MIS EN CACHE 6 h :
+ * on évite ainsi 6 parcours concurrents au chargement d'un formulaire.
  *
- * ⚠️ Reflète les données telles quelles : d'éventuelles variantes/fautes de
- * saisie existantes apparaîtront ; c'est une aide (datalist), pas une liste
- * fermée. Bornée à SUGGESTIONS_MAX_PAGES pages.
+ * ⚠️ Reflète les données telles quelles (variantes/fautes de saisie comprises) :
+ * c'est une aide, pas un référentiel. Borné à SUGGESTIONS_MAX_PAGES pages.
  *
- * @param {string} cle Clé de SOURCES_SUGGESTIONS.
- * @return {!Array<!{val: string, txt: string}>}
+ * @return {!Object<string, !Array<!{val: string, txt: string}>>} clé → options.
  */
-function suggestionsAnnuaire_(cle) {
-  var def = SOURCES_SUGGESTIONS[cle];
-  if (!def) return [];
-
+function construireToutesSuggestions_() {
   var cache = CacheService.getScriptCache();
-  var cacheKey = 'sugg_' + cle;
-  var enCache = cache.get(cacheKey);
+  var enCache = cache.get('sugg_all');
   if (enCache) return JSON.parse(enCache);
 
-  var valeurs = {};
+  var cles = Object.keys(SOURCES_SUGGESTIONS);
+  var sets = {};
+  cles.forEach(function (c) { sets[c] = {}; });
+
   var pageToken = null;
   var pages = 0;
   do {
@@ -807,28 +804,42 @@ function suggestionsAnnuaire_(cle) {
     if (pageToken) opt.pageToken = pageToken;
     var rep = AdminDirectory.Users.list(opt);
     (rep.users || []).forEach(function (u) {
-      extraireValeursUser_(u, def).forEach(function (v) {
-        if (v !== null && v !== undefined && String(v).trim() !== '') {
-          valeurs[String(v)] = true;
-        }
+      cles.forEach(function (c) {
+        extraireValeursUser_(u, SOURCES_SUGGESTIONS[c]).forEach(function (v) {
+          if (v !== null && v !== undefined && String(v).trim() !== '') {
+            sets[c][String(v)] = true;
+          }
+        });
       });
     });
     pageToken = rep.nextPageToken;
     pages++;
   } while (pageToken && pages < SUGGESTIONS_MAX_PAGES);
 
-  var liste = Object.keys(valeurs).sort().map(function (v) {
-    return { val: v, txt: v };
+  var resultat = {};
+  cles.forEach(function (c) {
+    resultat[c] = Object.keys(sets[c]).sort().map(function (v) {
+      return { val: v, txt: v };
+    });
   });
-  // Cache 6 h (max autorisé par CacheService).
-  cache.put(cacheKey, JSON.stringify(liste), 21600);
-  return liste;
+  cache.put('sugg_all', JSON.stringify(resultat), 21600);  // 6 h (max CacheService)
+  return resultat;
+}
+
+/**
+ * Suggestions distinctes pour une clé (compat getOptionsUI('suggest:cle')).
+ * S'appuie sur l'agrégat partagé (une seule énumération).
+ * @param {string} cle Clé de SOURCES_SUGGESTIONS.
+ * @return {!Array<!{val: string, txt: string}>}
+ */
+function suggestionsAnnuaire_(cle) {
+  if (!SOURCES_SUGGESTIONS[cle]) return [];
+  return construireToutesSuggestions_()[cle] || [];
 }
 
 /** Vide le cache des suggestions (à appeler après un nettoyage de données). */
 function viderCacheSuggestions_() {
-  var cles = Object.keys(SOURCES_SUGGESTIONS).map(function (c) { return 'sugg_' + c; });
-  CacheService.getScriptCache().removeAll(cles);
+  CacheService.getScriptCache().remove('sugg_all');
 }
 
 // ---------------------------------------------------------------------------

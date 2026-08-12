@@ -98,14 +98,14 @@ l'Admin SDK — le tout sans intervention manuelle.
 > `statut`, `cse`, `fonction_transversale`, `ou`, plus les listes techniques
 > (`role_groupe`, `type_effacement`…).
 >
-> 💡 **Autocomplétion depuis l'annuaire** : `societe`, `departement`,
-> `centre_cout`, `statut`, `cse`, `fonction_transversale` proposent en
-> **autocomplétion** (datalist) les valeurs déjà présentes dans l'annuaire,
-> **tout en autorisant une nouvelle saisie**. Priorité : une liste curée dans
-> `LISTES` (non vide) l'emporte ; sinon les suggestions s'affichent. Les valeurs
-> sont extraites en parcourant les comptes puis **mises en cache 6 h** (attention :
-> elles reflètent les données telles quelles, variantes/fautes comprises).
-> `admin_viderCacheSuggestions()` force le rafraîchissement après un nettoyage.
+> 💡 **Listes alimentées depuis l'annuaire** : `societe`, `departement`,
+> `centre_cout`, `org_description`, `statut`, `cse`, `fonction_transversale`
+> s'affichent en **menus déroulants** peuplés avec les valeurs déjà présentes
+> dans les comptes (comme l'OU). Priorité : une liste curée dans `LISTES` (non
+> vide) l'emporte ; sinon la liste dynamique s'affiche. Les valeurs sont
+> extraites en **une seule** énumération de l'annuaire, **mise en cache 6 h**
+> (attention : elles reflètent les données telles quelles, variantes/fautes
+> comprises). `admin_viderCacheSuggestions()` force le rafraîchissement.
 
 **Fenêtre Standard** : exécution immédiate pendant les créneaux d'administration
 (lun.–ven. 8h30–17h30, sauf jours fériés français). Hors créneau, la demande

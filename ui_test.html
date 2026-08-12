@@ -1473,16 +1473,11 @@
             ${field.options.map(o => `<option value="${escapeHtml(o.val)}">${escapeHtml(o.txt)}</option>`).join('')}
           </select>`;
         } else if (field.optionsSource && enLigne) {
-          // Liste déroulante peuplée en direct depuis Google (voir chargerOptions).
+          // Liste déroulante peuplée en direct depuis Google (OU, bâtiments, ou
+          // 'suggest:*' = valeurs existantes de l'annuaire). Voir chargerOptions.
           inputHtml = `<select id="field_${field.id}" data-source="${escapeHtml(field.optionsSource)}" ${isRequired ? 'required' : ''}>
             <option value="">Chargement…</option>
           </select>`;
-        } else if (field.suggestSource && enLigne) {
-          // Champ libre AVEC autocomplétion des valeurs existantes de l'annuaire
-          // (datalist) : suggère sans verrouiller la saisie.
-          const dlId = 'dl_' + field.id;
-          inputHtml = `<input type="text" id="field_${field.id}" list="${dlId}" data-suggest="${escapeHtml(field.suggestSource)}" placeholder="${escapeHtml(field.placeholder || '')}" ${isRequired ? 'required' : ''} />
-            <datalist id="${dlId}"></datalist>`;
         } else {
           // Liste vide / source dynamique hors ligne : on retombe sur une saisie libre.
           inputHtml = `<input type="${field.type || 'text'}" id="field_${field.id}" placeholder="${escapeHtml(field.placeholder || '')}" ${isRequired ? 'required' : ''} />`;
@@ -1495,11 +1490,16 @@
         container.appendChild(div);
       });
 
-      // Peupler les listes déroulantes dynamiques (OU, bâtiments) et les
-      // autocomplétions (suggestions tirées de l'annuaire).
+      // Peupler les listes déroulantes dynamiques. Les sources 'suggest:*'
+      // (valeurs de l'annuaire) sont chargées EN UN SEUL appel groupé ; l'OU et
+      // les bâtiments gardent leur appel dédié (API distinctes).
       if (enLigne) {
-        container.querySelectorAll('select[data-source]').forEach(sel => chargerOptions(sel));
-        container.querySelectorAll('input[data-suggest]').forEach(el => chargerSuggestions(el));
+        const suggestSelects = [];
+        container.querySelectorAll('select[data-source]').forEach(sel => {
+          if (sel.dataset.source.indexOf('suggest:') === 0) suggestSelects.push(sel);
+          else chargerOptions(sel);
+        });
+        if (suggestSelects.length) chargerToutesSuggestions(suggestSelects);
       }
 
       // Masquer le résultat précédent
@@ -1510,6 +1510,7 @@
     // à chaque changement d'action).
     const optionsCache = {};
 
+    // Charge une liste déroulante à source unique (OU, bâtiments).
     function chargerOptions(selectEl) {
       const source = selectEl.dataset.source;
       if (optionsCache[source]) { remplirSelect(selectEl, optionsCache[source]); return; }
@@ -1519,19 +1520,31 @@
           remplirSelect(selectEl, optionsCache[source]);
         })
         .withFailureHandler(function(err) {
-          const msg = (err && err.message) || String(err);
-          console.error('Chargement liste « ' + source +' » échoué :', msg);
-          // On rend le champ éditable (saisie libre) ET on montre la cause :
-          // le plus souvent un scope non réautorisé après mise à jour du manifeste.
-          const div = selectEl.parentNode;
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.id = selectEl.id;
-          input.placeholder = 'Saisie manuelle — ' + msg;
-          selectEl.replaceWith(input);
-          afficherToast('Liste « ' + source + ' » : ' + msg);
+          degraderSelectEnInput(selectEl, source, (err && err.message) || String(err));
         })
         .getOptionsUI(source);
+    }
+
+    // Charge EN UN SEUL appel toutes les listes 'suggest:*' (valeurs de
+    // l'annuaire) et remplit les selects correspondants.
+    function chargerToutesSuggestions(selects) {
+      if (optionsCache['__suggest']) { selects.forEach(remplirSuggestSelect); return; }
+      google.script.run
+        .withSuccessHandler(function(agg) {
+          optionsCache['__suggest'] = agg || {};
+          selects.forEach(remplirSuggestSelect);
+        })
+        .withFailureHandler(function(err) {
+          const msg = (err && err.message) || String(err);
+          console.error('Chargement des suggestions échoué :', msg);
+          selects.forEach(sel => degraderSelectEnInput(sel, sel.dataset.source, msg));
+        })
+        .getSuggestionsUI();
+    }
+
+    function remplirSuggestSelect(selectEl) {
+      const cle = selectEl.dataset.source.slice('suggest:'.length);
+      remplirSelect(selectEl, (optionsCache['__suggest'] || {})[cle] || []);
     }
 
     function remplirSelect(selectEl, opts) {
@@ -1541,30 +1554,16 @@
       if (courant) selectEl.value = courant;
     }
 
-    // Autocomplétion : remplit le <datalist> associé à un champ avec les valeurs
-    // existantes de l'annuaire (source préfixée 'suggest:'). Échec silencieux :
-    // le champ reste une simple saisie libre.
-    function chargerSuggestions(inputEl) {
-      const cle = 'suggest:' + inputEl.dataset.suggest;
-      const dl = document.getElementById(inputEl.getAttribute('list'));
-      if (optionsCache[cle]) { remplirDatalist(dl, optionsCache[cle]); return; }
-      google.script.run
-        .withSuccessHandler(function(opts) {
-          optionsCache[cle] = opts || [];
-          remplirDatalist(dl, optionsCache[cle]);
-        })
-        .withFailureHandler(function(err) {
-          // Échec non bloquant : le champ reste une saisie libre. On trace la
-          // cause pour le diagnostic (souvent un scope non réautorisé).
-          console.error('Suggestions « ' + inputEl.dataset.suggest + ' » échouées :',
-            (err && err.message) || err);
-        })
-        .getOptionsUI(cle);
-    }
-
-    function remplirDatalist(dl, opts) {
-      if (!dl) return;
-      dl.innerHTML = opts.map(o => `<option value="${escapeHtml(o.val)}"></option>`).join('');
+    // Échec de chargement : on remplace le <select> par une saisie libre et on
+    // montre la cause (le plus souvent un scope non réautorisé après manifeste).
+    function degraderSelectEnInput(selectEl, source, msg) {
+      console.error('Chargement liste « ' + source + ' » échoué :', msg);
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.id = selectEl.id;
+      input.placeholder = 'Saisie manuelle — ' + msg;
+      selectEl.replaceWith(input);
+      afficherToast('Liste « ' + source + ' » : ' + msg);
     }
 
     // ═══════════════════════════════════════════════════════════════════════
@@ -1585,35 +1584,31 @@
       inclure_prives:   [{ val: 'false', txt: 'Non (fichiers partagés uniquement)' }, { val: 'true', txt: 'Oui (partagés et privés)' }],
       visible_annuaire: [{ val: '', txt: '(ne pas changer)' }, { val: 'true', txt: 'Oui' }, { val: 'false', txt: 'Non' }],
 
-      // ═══ LISTES MÉTIER — À COMPLÉTER avec vos valeurs réelles ═══
-      // Unité organisationnelle : laisser [] = liste DYNAMIQUE (tous les OU de
-      // Google) ; renseigner pour n'en proposer qu'une sélection contrôlée.
+      // ═══ LISTES MÉTIER ═══
+      // Vide []  ⇒ liste alimentée DYNAMIQUEMENT depuis l'annuaire (comme l'OU) :
+      //            les valeurs déjà présentes dans les comptes sont proposées.
+      // Renseignée ⇒ liste FERMÉE avec vos valeurs (prioritaire sur l'annuaire).
+      //            ex. societe: [{ val: 'COOPERL ARC ATLANTIQUE', txt: 'COOPERL ARC ATLANTIQUE' }]
       ou:                    [],
-      societe:               [{ val: '', txt: '— choisir —' },
-                              { val: 'COOPERL ARC ATLANTIQUE', txt: 'COOPERL ARC ATLANTIQUE' }],
-      centre_cout:           [],   // ex. { val: 'DSI-001', txt: 'DSI-001' } — [] = saisie libre
-      org_description:       [],   // ex. { val: 'Equipé', txt: 'Equipé' } — [] = autocomplétion annuaire
-      statut:                [{ val: '', txt: '— choisir — ' },
-                              { val: 'Cadre', txt: 'Cadre' },
-                              { val: 'Agent de maîtrise', txt: 'Agent de maîtrise' },
-                              { val: 'Employé', txt: 'Employé' },
-                              { val: 'Ouvrier', txt: 'Ouvrier' }],
-      cse:                   [{ val: '', txt: '— choisir —' },
-                              { val: 'CSE Lamballe', txt: 'CSE Lamballe' }],
-      fonction_transversale: [{ val: '', txt: '— choisir —' },
-                              { val: 'Direction des Systèmes d\'Information', txt: 'Direction des Systèmes d\'Information' }]
+      societe:               [],
+      departement:           [],
+      centre_cout:           [],
+      org_description:       [],
+      statut:                [],
+      cse:                   [],
+      fonction_transversale: []
     };
 
     // Champs RH / accès repliés côté serveur dans les schémas personnalisés
     // (voir MAPPING_SCHEMAS_PERSO). Les valeurs des listes viennent de LISTES.
     const CHAMPS_RH = [
       { id: 'rh_matricule', label: 'Matricule RH', type: 'number', placeholder: '61578' },
-      { id: 'rh_statut', label: 'Statut', options: LISTES.statut, suggestSource: 'statut' },
+      { id: 'rh_statut', label: 'Statut', options: LISTES.statut, optionsSource: 'suggest:statut' },
       { id: 'rh_sous_service', label: 'Sous-service', placeholder: 'Equipe Outils collaboratifs' },
       { id: 'rh_site_paie', label: 'Site de paie', placeholder: '01' },
-      { id: 'rh_cse', label: 'CSE', options: LISTES.cse, suggestSource: 'cse' },
+      { id: 'rh_cse', label: 'CSE', options: LISTES.cse, optionsSource: 'suggest:cse' },
       { id: 'rh_batiment', label: 'Bâtiment RH (code numérique)', type: 'number', placeholder: '289' },
-      { id: 'rh_fonction_transversale', label: 'Fonction transversale', options: LISTES.fonction_transversale, suggestSource: 'fonction_transversale' },
+      { id: 'rh_fonction_transversale', label: 'Fonction transversale', options: LISTES.fonction_transversale, optionsSource: 'suggest:fonction_transversale' },
       { id: 'acces_lumapps', label: 'Accès Lumapps', options: LISTES.ouinon },
       { id: 'acces_jira', label: 'Accès Jira', options: LISTES.ouinon },
       { id: 'acces_confluence', label: 'Accès Confluence', options: LISTES.ouinon }
@@ -1628,10 +1623,10 @@
           { id: 'unite_organisationnelle', label: 'Unité Organisationnelle (OU)', options: LISTES.ou, optionsSource: 'orgunits', placeholder: '/Collaborateurs' },
           { id: 'manager_email', label: 'E-mail du Manager (reçoit le mot de passe)', type: 'email', placeholder: 'manager@cooperl.com' },
           { id: 'intitule_poste', label: 'Intitulé de poste', placeholder: 'Chef de projet' },
-          { id: 'departement', label: 'Service / département', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
-          { id: 'societe', label: 'Société', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
-          { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
-          { id: 'org_description', label: 'Description (poste)', options: LISTES.org_description, suggestSource: 'org_description', placeholder: 'Equipé' },
+          { id: 'departement', label: 'Service / département', options: LISTES.departement, optionsSource: 'suggest:departement', placeholder: 'Pôle Organisation DSI' },
+          { id: 'societe', label: 'Société', options: LISTES.societe, optionsSource: 'suggest:societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
+          { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, optionsSource: 'suggest:centre_cout', placeholder: 'DSI-001' },
+          { id: 'org_description', label: 'Description (poste)', options: LISTES.org_description, optionsSource: 'suggest:org_description', placeholder: 'Equipé' },
           { id: 'telephone_pro', label: 'Téléphone professionnel', placeholder: '+33 2 96 00 00 00' },
           { id: 'telephone_mobile', label: 'Téléphone mobile', placeholder: '+33 6 00 00 00 00' },
           { id: 'adresse', label: 'Adresse professionnelle', placeholder: '2Ter Rue Sébastien Coupé, 22403 Lamballe-Armor' },
@@ -1651,10 +1646,10 @@
           { id: 'prenom', label: 'Nouveau prénom', placeholder: 'Jean' },
           { id: 'nom', label: 'Nouveau nom', placeholder: 'Dupont' },
           { id: 'intitule_poste', label: 'Poste', placeholder: 'Directeur Projets' },
-          { id: 'departement', label: 'Service / département', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
-          { id: 'societe', label: 'Société', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
-          { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
-          { id: 'org_description', label: 'Description (poste)', options: LISTES.org_description, suggestSource: 'org_description', placeholder: 'Equipé' },
+          { id: 'departement', label: 'Service / département', options: LISTES.departement, optionsSource: 'suggest:departement', placeholder: 'Pôle Organisation DSI' },
+          { id: 'societe', label: 'Société', options: LISTES.societe, optionsSource: 'suggest:societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
+          { id: 'centre_cout', label: 'Centre de coûts', options: LISTES.centre_cout, optionsSource: 'suggest:centre_cout', placeholder: 'DSI-001' },
+          { id: 'org_description', label: 'Description (poste)', options: LISTES.org_description, optionsSource: 'suggest:org_description', placeholder: 'Equipé' },
           { id: 'telephone_pro', label: 'Téléphone professionnel', placeholder: '+33 2 96 00 00 00' },
           { id: 'telephone_mobile', label: 'Téléphone mobile', placeholder: '+33 6 00 00 00 00' },
           { id: 'manager_email', label: 'E-mail du Manager', type: 'email', placeholder: 'directeur@cooperl.com' },
@@ -1793,10 +1788,10 @@
           { id: 'unite_organisationnelle', label: 'Unité Organisationnelle (optionnel)', options: LISTES.ou, optionsSource: 'orgunits', placeholder: '/Collaborateurs' },
           { id: 'manager_email', label: 'E-mail du Manager (reçoit le mot de passe)', type: 'email', placeholder: 'manager@cooperl.com' },
           { id: 'intitule_poste', label: 'Intitulé de poste (optionnel)', placeholder: 'Chef de projet' },
-          { id: 'departement', label: 'Service / département (optionnel)', suggestSource: 'departement', placeholder: 'Pôle Organisation DSI' },
-          { id: 'societe', label: 'Société (optionnel)', options: LISTES.societe, suggestSource: 'societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
-          { id: 'centre_cout', label: 'Centre de coûts (optionnel)', options: LISTES.centre_cout, suggestSource: 'centre_cout', placeholder: 'DSI-001' },
-          { id: 'org_description', label: 'Description poste (optionnel)', options: LISTES.org_description, suggestSource: 'org_description', placeholder: 'Equipé' },
+          { id: 'departement', label: 'Service / département (optionnel)', options: LISTES.departement, optionsSource: 'suggest:departement', placeholder: 'Pôle Organisation DSI' },
+          { id: 'societe', label: 'Société (optionnel)', options: LISTES.societe, optionsSource: 'suggest:societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
+          { id: 'centre_cout', label: 'Centre de coûts (optionnel)', options: LISTES.centre_cout, optionsSource: 'suggest:centre_cout', placeholder: 'DSI-001' },
+          { id: 'org_description', label: 'Description poste (optionnel)', options: LISTES.org_description, optionsSource: 'suggest:org_description', placeholder: 'Equipé' },
           { id: 'telephone_pro', label: 'Téléphone pro (optionnel)', placeholder: '+33 2 96 00 00 00' },
           { id: 'telephone_mobile', label: 'Téléphone mobile (optionnel)', placeholder: '+33 6 00 00 00 00' },
           { id: 'adresse', label: 'Adresse professionnelle (optionnel)', placeholder: '2Ter Rue Sébastien Coupé, 22403 Lamballe-Armor' },

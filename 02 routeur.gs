@@ -306,13 +306,25 @@ function getOptionsUI(source) {
     }).sort(function (a, b) { return a.txt.localeCompare(b.txt); });
   }
 
-  // Suggestions tirées des valeurs existantes de l'annuaire (datalist, cache 6 h).
+  // Suggestions tirées des valeurs existantes de l'annuaire (cache 6 h).
   if (source.indexOf('suggest:') === 0) {
     return suggestionsAnnuaire_(source.slice('suggest:'.length));
   }
 
   // Source inconnue : tableau vide (le client retombe sur une saisie libre).
   return [];
+}
+
+/**
+ * Retourne d'un coup TOUTES les listes de suggestions tirées de l'annuaire
+ * (société, service, centre de coûts, description, statut, CSE, fonction…).
+ * Une seule énumération partagée côté serveur (voir construireToutesSuggestions_).
+ * Réservé aux administrateurs autorisés.
+ * @return {!Object<string, !Array<!{val: string, txt: string}>>}
+ */
+function getSuggestionsUI() {
+  assertAdminUI_();
+  return construireToutesSuggestions_();
 }
 
 /**
