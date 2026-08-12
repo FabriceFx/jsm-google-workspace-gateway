@@ -714,23 +714,64 @@
 
     // Chargement initial du catalogue
     window.addEventListener('DOMContentLoaded', function() {
+      chargerCatalogue();
+    });
+
+    function chargerCatalogue() {
+      const listEl = document.getElementById('action-list');
+      listEl.innerHTML = `
+        <div style="text-align: center; padding: 24px; color: var(--text-secondary);">
+          <div class="spinner" style="border-top-color: var(--primary); margin: 0 auto 12px;"></div>
+          Chargement du catalogue...
+        </div>
+      `;
+
+      let charge = false;
+      const timer = setTimeout(function() {
+        if (!charge && catalogueActions.length === 0) {
+          listEl.innerHTML = `
+            <div style="text-align: center; padding: 16px; color: #c62828;">
+              <p style="margin-bottom: 8px;"><strong>Le chargement prend du temps.</strong></p>
+              <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 12px;">
+                Si c'est votre première ouverture, autorisez les accès du script ou rafraîchissez la page.
+              </p>
+              <button class="btn btn-secondary" onclick="chargerCatalogue()" style="padding: 6px 16px; font-size: 13px;">
+                Réessayer
+              </button>
+            </div>
+          `;
+        }
+      }, 6000);
+
       if (typeof google !== 'undefined' && google.script && google.script.run) {
         google.script.run
-          .withSuccessHandler(afficherCatalogue)
-          .withFailureHandler(function(err) {
-            document.getElementById('action-list').innerHTML = 
-              '<div style="color: #c62828; padding: 16px;">Erreur de chargement du catalogue : ' + err.message + '</div>';
+          .withSuccessHandler(function(actions) {
+            charge = true;
+            clearTimeout(timer);
+            afficherCatalogue(actions);
           })
-          .getSpecsCatalogue_();
+          .withFailureHandler(function(err) {
+            charge = true;
+            clearTimeout(timer);
+            listEl.innerHTML = 
+              '<div style="color: #c62828; padding: 16px; text-align: center;">' +
+              '<p><strong>Erreur de chargement :</strong></p>' +
+              '<p style="font-size: 13px; margin: 8px 0;">' + (err.message || err) + '</p>' +
+              '<button class="btn btn-secondary" onclick="chargerCatalogue()" style="padding: 6px 16px; font-size: 13px;">Réessayer</button>' +
+              '</div>';
+          })
+          .getSpecsCatalogue();
       } else {
-        // Mode simulation hors Apps Script (pour développement local)
+        charge = true;
+        clearTimeout(timer);
+        // Mode simulation hors Apps Script
         afficherCatalogue([
           { action: 'CREATION_COMPTE', description: 'Crée un compte utilisateur Workspace.', required: ['prenom', 'nom', 'email_souhaite'], emails: ['email_souhaite', 'email_perso'], fenetre: 'STANDARD' },
           { action: 'SUSPENSION', description: 'Suspend un compte et révoque ses sessions.', required: ['email_cible'], emails: ['email_cible'], fenetre: 'PERMANENTE' },
           { action: 'CHANGEMENT_OU', description: 'Déplace un compte dans une autre OU.', required: ['email_cible', 'unite_organisationnelle'], emails: ['email_cible'], fenetre: 'STANDARD' }
         ]);
       }
-    });
+    }
 
     function afficherCatalogue(actions) {
       catalogueActions = actions;

@@ -254,7 +254,7 @@ function appelerHandler_(spec, data, ctx) {
  * Expose la liste des spécifications au client HTML.
  * @return {!Array<!Object>}
  */
-function getSpecsCatalogue_() {
+function getSpecsCatalogue() {
   const actions = getActions_();
   return Object.keys(actions).sort().map(function (nom) {
     const s = actions[nom];
