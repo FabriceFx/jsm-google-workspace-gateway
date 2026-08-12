@@ -66,6 +66,15 @@ l'Admin SDK — le tout sans intervention manuelle.
 > ⚙️ Les actions **Messagerie** nécessitent un compte de service avec
 > délégation de domaine (voir section « Actions Gmail »).
 >
+> 👥 **Groupes dynamiques** : un groupe dont l'appartenance est calculée
+> automatiquement par une requête (membres dérivés des attributs des comptes)
+> **n'accepte ni ajout ni retrait manuel** de membre. `AJOUT_GROUPE` et
+> `RETRAIT_GROUPE` renvoient alors un message explicite `GROUPE_DYNAMIQUE`
+> (au lieu d'une erreur brute), et `RETRAIT_TOUS_GROUPES` **saute** ces groupes
+> sans les compter en échec (listés dans `details.dynamiques`). Pour changer
+> l'appartenance, ajuster les attributs du compte (service, OU…) ou la règle du
+> groupe dans la console d'administration.
+>
 > 🧩 Les **attributs personnalisés** (création et mise à jour de profil)
 > peuvent être fournis de deux façons, combinables : un objet JSON
 > `custom_schemas` (`{"NomSchema": {"Champ": valeur}}`), ou des **champs plats**

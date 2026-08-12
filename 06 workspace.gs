@@ -107,6 +107,17 @@ function traduireErreurAdmin_(err) {
             message: "L'utilisateur est déjà membre de ce groupe."
         },
         {
+            // Groupe à appartenance calculée : ajout/retrait manuel impossible.
+            motifs: ['DYNAMIC'],
+            code: 'GROUPE_DYNAMIQUE', http: 400,
+            message: "Ce groupe est un GROUPE DYNAMIQUE : ses membres sont " +
+                "calculés automatiquement à partir d'une requête sur les attributs " +
+                "des comptes. On ne peut donc PAS y ajouter ni retirer un membre " +
+                "manuellement. Pour changer l'appartenance, ajuster les attributs " +
+                "du compte (service, OU…) ou la règle du groupe dans la console " +
+                'd\'administration.'
+        },
+        {
             motifs: ['DOMAIN NOT FOUND', 'INVALID_DOMAIN'],
             code: 'INVALID_DOMAIN', http: 400,
             message: "Domaine inconnu de l'annuaire Workspace. Vérifier la liste des " +
@@ -167,6 +178,18 @@ function estNotFound_(err) {
     return m.indexOf('resource not found') !== -1 ||
         m.indexOf('notfound') !== -1 ||
         m.indexOf('not found') !== -1;
+}
+
+/**
+ * Indique si une erreur signale un GROUPE DYNAMIQUE (appartenance calculée par
+ * une requête, non modifiable manuellement). Utilisé pour distinguer ce cas
+ * d'un échec réel lors des retraits en masse.
+ *
+ * @param {!Error} err Erreur levée par l'Admin SDK.
+ * @return {boolean}
+ */
+function estErreurGroupeDynamique_(err) {
+    return String((err && err.message) || err).toUpperCase().indexOf('DYNAMIC') !== -1;
 }
 
 /**

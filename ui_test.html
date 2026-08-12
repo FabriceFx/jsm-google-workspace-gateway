@@ -1519,8 +1519,17 @@
           remplirSelect(selectEl, optionsCache[source]);
         })
         .withFailureHandler(function(err) {
-          selectEl.innerHTML = '<option value="">(chargement impossible — saisie manuelle)</option>';
-          selectEl.removeAttribute('data-source');
+          const msg = (err && err.message) || String(err);
+          console.error('Chargement liste « ' + source +' » échoué :', msg);
+          // On rend le champ éditable (saisie libre) ET on montre la cause :
+          // le plus souvent un scope non réautorisé après mise à jour du manifeste.
+          const div = selectEl.parentNode;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.id = selectEl.id;
+          input.placeholder = 'Saisie manuelle — ' + msg;
+          selectEl.replaceWith(input);
+          afficherToast('Liste « ' + source + ' » : ' + msg);
         })
         .getOptionsUI(source);
     }
@@ -1544,7 +1553,12 @@
           optionsCache[cle] = opts || [];
           remplirDatalist(dl, optionsCache[cle]);
         })
-        .withFailureHandler(function() { /* saisie libre conservée */ })
+        .withFailureHandler(function(err) {
+          // Échec non bloquant : le champ reste une saisie libre. On trace la
+          // cause pour le diagnostic (souvent un scope non réautorisé).
+          console.error('Suggestions « ' + inputEl.dataset.suggest + ' » échouées :',
+            (err && err.message) || err);
+        })
         .getOptionsUI(cle);
     }
 

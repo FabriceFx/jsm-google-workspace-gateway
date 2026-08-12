@@ -61,17 +61,22 @@ function actionRetirerTousGroupes(data, ctx) {
   // Retrait un par un : on isole les échecs pour ne pas masquer un retrait
   // partiel derrière une « erreur interne » (même logique que REVOCATION_TOKENS).
   var retires = [];
-  var ignores = [];
+  var ignores = [];      // appartenances indirectes (groupe imbriqué)
+  var dynamiques = [];   // groupes dynamiques : membres non modifiables
   var echecs = [];
   groupes.forEach(function (groupe) {
     try {
       AdminDirectory.Members.remove(groupe, data.email_cible);
       retires.push(groupe);
     } catch (err) {
-      // 404 = appartenance indirecte (membre d'un groupe imbriqué) : non
-      // retirable ici, on l'ignore sans la compter en échec.
       if (estNotFound_(err)) {
+        // 404 = appartenance indirecte (membre d'un groupe imbriqué).
         ignores.push(groupe);
+      } else if (estErreurGroupeDynamique_(err)) {
+        // Groupe dynamique : l'appartenance est calculée, on ne peut pas la
+        // retirer ici. Ce n'est pas un échec — l'accès suivra l'évolution des
+        // attributs du compte (à traiter par ailleurs si nécessaire).
+        dynamiques.push(groupe);
       } else {
         echecs.push(groupe + ' (' + err.message + ')');
       }
@@ -85,11 +90,15 @@ function actionRetirerTousGroupes(data, ctx) {
       '. Relancer l\'action pour réessayer les groupes restants.', 502);
   }
 
+  var notes = [];
+  if (ignores.length) notes.push(ignores.length + ' appartenance(s) indirecte(s) ignorée(s)');
+  if (dynamiques.length) notes.push(dynamiques.length + ' groupe(s) dynamique(s) non modifiable(s) : ' + dynamiques.join(', '));
+
   return {
     target: data.email_cible,
     message: data.email_cible + ' retiré de ' + retires.length + ' groupe(s)' +
-      (ignores.length ? ' (' + ignores.length + ' appartenance(s) indirecte(s) ignorée(s))' : '') +
+      (notes.length ? ' (' + notes.join(' ; ') + ')' : '') +
       (retires.length ? ' : ' + retires.join(', ') : '') + '.',
-    details: { retires: retires, ignores: ignores }
+    details: { retires: retires, ignores: ignores, dynamiques: dynamiques }
   };
 }
