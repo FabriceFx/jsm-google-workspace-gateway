@@ -1,6 +1,6 @@
 # Passerelle Jira Service Management → Google Workspace
 
-> **v2.6.0** — Automatise les opérations d'administration Google Workspace
+> **v2.7.0** — Automatise les opérations d'administration Google Workspace
 > déclenchées par les formulaires Jira Service Management.
 
 *[English version below](#jira-service-management--google-workspace-gateway)*
@@ -311,7 +311,7 @@ MIT — Voir le fichier LICENSE pour les détails.
 
 # Jira Service Management → Google Workspace gateway
 
-> **v2.6.0** — Automates Google Workspace administration operations triggered
+> **v2.7.0** — Automates Google Workspace administration operations triggered
 > by Jira Service Management forms.
 
 ## Overview

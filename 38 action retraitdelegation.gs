@@ -10,7 +10,7 @@
  *
  * Champs attendus dans `data` : email_cible, email_delegue
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.6.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

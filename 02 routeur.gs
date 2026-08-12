@@ -4,7 +4,7 @@
 * Points d'entrée doPost (webhook Jira) et doGet (supervision), plus
 * l'exécuteur partagé entre traitement synchrone et traitement différé.
 *
-* Projet : Passerelle Jira Service Management → Google Workspace (v2.6.0)
+* Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
 * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
 */
 

@@ -6,7 +6,7 @@
  * Champs attendus dans `data` : prenom, nom, email_souhaite, [unite_organisationnelle], [email_perso],
  *        [manager_email], [intitule_poste], [telephone]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.6.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

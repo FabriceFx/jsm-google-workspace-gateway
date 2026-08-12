@@ -16,7 +16,7 @@
  * groupe entier est sûr — les étapes déjà faites se signalent DEJA_FAIT et les
  * étapes en échec sont réessayées.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.6.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

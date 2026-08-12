@@ -8,7 +8,7 @@
  *   Si client_id est fourni, seule cette application est révoquée.
  *   Sinon, TOUTES les applications tierces sont révoquées.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.6.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v2.7.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

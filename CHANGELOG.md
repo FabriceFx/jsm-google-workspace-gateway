@@ -3,6 +3,59 @@
 Tous les changements notables de ce projet sont documentés ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [2.7.0] — 2026-08-12
+
+### Sécurité (correctifs critiques)
+
+- **Console d'administration protégée.** Les fonctions exposées à
+  `google.script.run` (`getSpecsCatalogue`, `executerActionDepuisUI`,
+  `getWebhookUrl`, et les fonctions `admin_*`/`setup_*`) exigent désormais un
+  contrôle d'identité (`assertAdminUI_`) : propriétaire du script ou adresse
+  listée dans la nouvelle propriété **`ADMIN_UI_EMAILS`**. `executerActionDepuisUI`
+  n'injecte plus le token sans cette vérification. Anti-clickjacking
+  (`XFrameOptionsMode.DEFAULT`) et suppression de l'ID de déploiement codé en dur.
+- **Fuite de secrets corrigée.** `manager_email` est désormais validé
+  (format + domaine) dans `CREATION_COMPTE`, `RESET_MOT_DE_PASSE` et
+  `GENERATION_CODES_SECOURS` : plus d'envoi d'identifiants vers un domaine externe.
+- **XSS de la console** neutralisé (échappement systématique des données serveur
+  et messages d'erreur injectés en `innerHTML`).
+
+### Corrigé
+
+- `isMember_` ne renvoie plus `false` que sur un vrai 404 (fin des faux succès
+  sur `RETRAIT_GROUPE`).
+- `type_effacement` validé + confirmation exigée pour un wipe usine de tous les
+  appareils.
+- Destinataire du secret contrôlé **avant** l'effet destructif (reset, codes 2FA).
+- `MISE_A_JOUR_PROFIL` fusionne les tableaux `organizations`/`phones`/`relations`
+  au lieu de les écraser.
+- Dates ISO strictes pour la réponse d'absence ; révocations partielles isolées.
+
+### Ajouté — 9 nouvelles actions et groupes (34 au total)
+
+**Actions atomiques**
+- **`RETRAIT_TOUS_GROUPES`** — Retire un compte de tous ses groupes (offboarding).
+- **`DESACTIVATION_REPONSE_ABSENCE`**, **`ARRET_TRANSFERT_EMAILS`**,
+  **`RETRAIT_DELEGATION_EMAIL`** — Les inverses des actions Gmail (retour d'absence).
+- **`ATTRIBUTION_LICENCE`** / **`RETRAIT_LICENCE`** — Gestion des licences
+  Workspace (une licence non retirée reste facturée). Propriétés `LICENSE_SKU_ID`
+  / `LICENSE_PRODUCT_ID`, scope `apps.licensing`.
+
+**Groupes d'action (séquences orchestrées, rapport étape par étape)**
+- **`ARRIVEE_COLLABORATEUR`** — Onboarding : création + licence + groupes + alias.
+- **`DEPART_COLLABORATEUR`** — Offboarding dans le bon ordre : transferts +
+  délégation + retrait des groupes + suspension + retrait de licence.
+- **`RETOUR_ABSENCE`** — Coupe réponse d'absence, transfert et délégation.
+
+### Documentation
+
+- **Guide d'intégration JSM entièrement refondu** pour un public novice :
+  checklist des prérequis, principe illustré, création du **formulaire JSM et
+  mapping des champs personnalisés**, création de la règle, structure du payload,
+  traitement des réponses, tableau de dépannage des codes d'erreur, glossaire.
+- Scope `admin.directory.orgunit.readonly` ajouté ; nouvelles propriétés
+  documentées dans le README.
+
 ## [2.6.0] — 2026-08-12
 
 ### Ajouté — 19 nouvelles actions (25 au total)
