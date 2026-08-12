@@ -831,7 +831,13 @@
               </div>
 
               <div class="form-section-title">Paramètres métier (data)</div>
-              
+
+              <div id="fields-loading" role="status" aria-live="polite"
+                   style="display:none; align-items:center; gap:10px; padding:10px 14px; margin-bottom:14px; background:#f0f7f9; border:1px solid var(--border,#e2e8f0); border-radius:8px; color:var(--text-secondary); font-size:14px;">
+                <div class="spinner" style="width:18px; height:18px; border-top-color:var(--primary); margin:0;"></div>
+                <span>Chargement des listes depuis Google…</span>
+              </div>
+
               <div class="form-grid" id="dynamic-fields">
                 <!-- Champs générés dynamiquement ici -->
               </div>
@@ -1494,6 +1500,7 @@
       // (valeurs de l'annuaire) sont chargées EN UN SEUL appel groupé ; l'OU et
       // les bâtiments gardent leur appel dédié (API distinctes).
       if (enLigne) {
+        reinitialiserChargement();
         const suggestSelects = [];
         container.querySelectorAll('select[data-source]').forEach(sel => {
           if (sel.dataset.source.indexOf('suggest:') === 0) suggestSelects.push(sel);
@@ -1510,17 +1517,34 @@
     // à chaque changement d'action).
     const optionsCache = {};
 
+    // Indicateur d'attente : compte les chargements de listes en cours et
+    // affiche/masque la bannière + (dés)active le bouton d'exécution.
+    let chargementsEnCours = 0;
+    function reinitialiserChargement() { chargementsEnCours = 0; majIndicateurChargement(); }
+    function debutChargement() { chargementsEnCours++; majIndicateurChargement(); }
+    function finChargement() { chargementsEnCours = Math.max(0, chargementsEnCours - 1); majIndicateurChargement(); }
+    function majIndicateurChargement() {
+      const banniere = document.getElementById('fields-loading');
+      const btn = document.getElementById('btn-submit');
+      const actif = chargementsEnCours > 0;
+      if (banniere) banniere.style.display = actif ? 'flex' : 'none';
+      if (btn) btn.disabled = actif;
+    }
+
     // Charge une liste déroulante à source unique (OU, bâtiments).
     function chargerOptions(selectEl) {
       const source = selectEl.dataset.source;
       if (optionsCache[source]) { remplirSelect(selectEl, optionsCache[source]); return; }
+      debutChargement();
       google.script.run
         .withSuccessHandler(function(opts) {
           optionsCache[source] = opts || [];
           remplirSelect(selectEl, optionsCache[source]);
+          finChargement();
         })
         .withFailureHandler(function(err) {
           degraderSelectEnInput(selectEl, source, (err && err.message) || String(err));
+          finChargement();
         })
         .getOptionsUI(source);
     }
@@ -1529,15 +1553,18 @@
     // l'annuaire) et remplit les selects correspondants.
     function chargerToutesSuggestions(selects) {
       if (optionsCache['__suggest']) { selects.forEach(remplirSuggestSelect); return; }
+      debutChargement();
       google.script.run
         .withSuccessHandler(function(agg) {
           optionsCache['__suggest'] = agg || {};
           selects.forEach(remplirSuggestSelect);
+          finChargement();
         })
         .withFailureHandler(function(err) {
           const msg = (err && err.message) || String(err);
           console.error('Chargement des suggestions échoué :', msg);
           selects.forEach(sel => degraderSelectEnInput(sel, sel.dataset.source, msg));
+          finChargement();
         })
         .getSuggestionsUI();
     }
