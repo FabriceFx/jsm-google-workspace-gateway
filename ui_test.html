@@ -911,9 +911,17 @@
               <h4>2. Action Webhook</h4>
               <p>Ajouter une action <strong>"Send web request"</strong> configurée en <strong>POST</strong>.</p>
             </div>
-            <div class="step-card">
-              <h4>3. Webhook URL</h4>
-              <p>L'URL de déploiement de cette WebApp (ex: <code>https://script.google.com/macros/s/.../exec</code>).</p>
+            <div class="step-card" style="grid-column: 1 / -1; background: #f0f7f9; border-left-color: var(--primary);">
+              <h4>3. Webhook URL (URL de déploiement de la WebApp)</h4>
+              <p style="margin-bottom: 10px;">Copiez cette URL exacte et collez-la dans le champ <strong>Webhook URL</strong> de Jira Automation :</p>
+              
+              <div class="code-block-container" style="margin: 8px 0 0;">
+                <button class="btn-copy-code" onclick="copierCode('url-webhook-display')" style="background: var(--primary); border: none;">
+                  <span class="material-symbols-outlined" style="font-size: 16px;">content_copy</span>
+                  <span>Copier l'URL Webhook</span>
+                </button>
+                <pre id="url-webhook-display" style="white-space: pre-wrap; word-break: break-all; font-size: 13px; color: #38bdf8; padding-right: 140px;">https://script.google.com/macros/s/.../exec</pre>
+              </div>
             </div>
             <div class="step-card">
               <h4>4. Content-Type</h4>
@@ -1027,7 +1035,15 @@
       } else {
         document.querySelectorAll('.tab-btn')[1].classList.add('active');
         document.getElementById('tab-guide').classList.add('active');
+        afficherUrlWebhook();
         genererGuideActions();
+      }
+    }
+
+    function afficherUrlWebhook() {
+      const el = document.getElementById('url-webhook-display');
+      if (el && window.location.href) {
+        el.innerText = window.location.href.split('?')[0];
       }
     }
 
