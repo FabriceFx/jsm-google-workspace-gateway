@@ -342,8 +342,18 @@ Toutes les autres actions fonctionnent uniquement avec l'Admin SDK.
 42 action attributionlicence Attribution d'une licence Workspace
 43 action retraitlicence     Libération d'une licence Workspace
 44 groupe arriveecollaborateur Groupe d'action : onboarding complet
+45 action infocompte.gs      Fiche d'identité et diagnostic de compte
+46 action ajoutmembredrivepartage.gs Ajout de membre sur Drive partagé
+47 action retraitmembredrivepartage.gs Retrait de membre sur Drive partagé
+48 action creationdrivepartage.gs Création de Drive partagé
+49 action partagecalendrier.gs Partage et délégation d'agenda
+50 action retraitpartagecalendrier.gs Révocation de partage d'agenda
+51 groupe urgencecompromission.gs Groupe d'action : kill-switch sécurité
+52 groupe mutationinterne.gs Groupe d'action : mobilité interne RH
+53 action archivagecompte.gs Déclassement et licence Archived User
 90 administration.gs         Fonctions de pilotage manuel
 91 tests.gs                  Tests (unitaires + diagnostics manuels)
+ui_test.html                 Console WebApp, simulateur & banc d'essai
 ```
 
 ## Sécurité
