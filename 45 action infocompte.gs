@@ -78,17 +78,24 @@ function actionInfoCompte_(data, ctx) {
     }
     appareils.forEach(function (d) {
       let syncDate = null;
+      let enrollementDate = null;
       if (d.lastSync) {
         const parsed = new Date(d.lastSync);
         if (!isNaN(parsed.getTime())) syncDate = parsed;
+      }
+      if (d.firstSync) {
+        const parsedFirst = new Date(d.firstSync);
+        if (!isNaN(parsedFirst.getTime())) enrollementDate = parsedFirst;
       }
       if (syncDate && (!derniereSyncMobileDate || syncDate > derniereSyncMobileDate)) {
         derniereSyncMobileDate = syncDate;
       }
       const nomAppareil = [d.model || d.type || 'Appareil', d.os ? '(' + d.os + ')' : ''].filter(Boolean).join(' ');
       const statutApp = d.status === 'APPROVED' ? '✅ Approuvé' : (d.status === 'BLOCKED' ? '⛔ Bloqué' : (d.status || 'Actif'));
-      const syncStr = syncDate ? formaterDate_(syncDate) : 'Date de synchro inconnue';
-      appareilsResume.push(nomAppareil + ' [' + statutApp + '] — dernière synchro : ' + syncStr);
+      const syncStr = syncDate ? formaterDate_(syncDate) : 'Aucune synchro';
+      const enrolStr = enrollementDate ? ' | enrôlé le : ' + formaterDate_(enrollementDate) : '';
+      const sourceStr = d.source ? ' [' + d.source + ']' : '';
+      appareilsResume.push(nomAppareil + ' [' + statutApp + sourceStr + '] — synchro : ' + syncStr + enrolStr);
     });
   } catch (err) {
     erreurAppareils = err.message;

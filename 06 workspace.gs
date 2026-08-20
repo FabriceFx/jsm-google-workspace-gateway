@@ -534,7 +534,47 @@ function envoyerIdentifiants_(destinataire, compte, motDePasse, ticketKey) {
 // ---------------------------------------------------------------------------
 
 /**
- * Liste les appareils mobiles enregistrés pour un utilisateur.
+ * Interroge Cloud Identity Devices API pour récupérer les appareils MDM d'entreprise.
+ * @param {string} email Adresse e-mail de l'utilisateur.
+ * @return {!Array<!Object>}
+ */
+function listerAppareilsCloudIdentity_(email) {
+  const emailPropre = String(email || '').toLowerCase().trim();
+  const resultats = [];
+  try {
+    const token = ScriptApp.getOAuthToken();
+    const url = 'https://cloudidentity.googleapis.com/v1/devices?customer=customers/my_customer&filter=user_email%3D%22' + encodeURIComponent(emailPropre) + '%22';
+    const rep = UrlFetchApp.fetch(url, {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer ' + token,
+        'Accept': 'application/json'
+      },
+      muteHttpExceptions: true
+    });
+    if (rep.getResponseCode() === 200) {
+      const data = JSON.parse(rep.getContentText());
+      const devices = data.devices || [];
+      devices.forEach(function (d) {
+        resultats.push({
+          resourceId: d.name ? d.name.split('/').pop() : 'cloud-identity',
+          model: d.model || d.brand || 'Terminal Entreprise',
+          os: d.osVersion ? (d.deviceType || 'OS') + ' ' + d.osVersion : (d.deviceType || 'Mobile'),
+          type: d.deviceType || 'MDM_ENTREPRISE',
+          status: d.managementState === 'MANAGED' ? 'APPROVED' : (d.managementState || 'APPROVED'),
+          lastSync: d.lastSyncTime || null,
+          source: 'Cloud Identity MDM'
+        });
+      });
+    }
+  } catch (err) {
+    console.warn('Erreur appel Cloud Identity Devices pour ' + emailPropre + ' : ' + err.message);
+  }
+  return resultats;
+}
+
+/**
+ * Liste les appareils mobiles enregistrés pour un utilisateur (Directory API + Cloud Identity).
  * @param {string} email Adresse de l'utilisateur.
  * @return {!Array<!Object>} Liste des appareils (peut être vide).
  */
@@ -543,14 +583,21 @@ function listerAppareilsUtilisateur_(email) {
   const appareils = [];
   let pageToken = null;
 
-  // 1. Recherche directe par adresse e-mail
+  // 1. Recherche directe via Admin Directory Mobiledevices avec projection: 'FULL'
   try {
     do {
-      const options = { query: 'email:' + emailPropre, maxResults: 100 };
+      const options = {
+        query: 'email:' + emailPropre,
+        projection: 'FULL',
+        maxResults: 100
+      };
       if (pageToken) options.pageToken = pageToken;
       const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
       if (reponse.mobiledevices) {
-        reponse.mobiledevices.forEach(function (d) { appareils.push(d); });
+        reponse.mobiledevices.forEach(function (d) {
+          d.source = 'Admin Directory MDM';
+          appareils.push(d);
+        });
       }
       pageToken = reponse.nextPageToken;
     } while (pageToken);
@@ -558,13 +605,17 @@ function listerAppareilsUtilisateur_(email) {
     console.warn('Erreur lors de la recherche des appareils mobiles pour ' + emailPropre + ' : ' + err.message);
   }
 
-  // 2. Si aucun résultat et que l'adresse contient un @, repli par préfixe utilisateur
+  // 2. Si aucun résultat, tentative élargie par préfixe utilisateur
   if (appareils.length === 0 && emailPropre.indexOf('@') !== -1) {
     const userPart = emailPropre.split('@')[0];
     try {
       pageToken = null;
       do {
-        const options = { query: 'email:' + userPart + '*', maxResults: 100 };
+        const options = {
+          query: 'email:' + userPart + '*',
+          projection: 'FULL',
+          maxResults: 100
+        };
         if (pageToken) options.pageToken = pageToken;
         const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
         if (reponse.mobiledevices) {
@@ -572,6 +623,7 @@ function listerAppareilsUtilisateur_(email) {
             const emailsApp = (d.email || []).map(function (e) { return String(e).toLowerCase().trim(); });
             if (emailsApp.indexOf(emailPropre) !== -1 || emailsApp.some(function (e) { return e.indexOf(userPart) === 0; })) {
               if (!appareils.some(function (exist) { return exist.resourceId === d.resourceId; })) {
+                d.source = 'Admin Directory MDM';
                 appareils.push(d);
               }
             }
@@ -582,6 +634,18 @@ function listerAppareilsUtilisateur_(email) {
     } catch (err) {
       console.warn('Erreur lors du repli de recherche mobile pour ' + userPart + ' : ' + err.message);
     }
+  }
+
+  // 3. Complément Cloud Identity Devices API (flottes d'entreprise Android Enterprise / iOS DEP)
+  try {
+    const ciAppareils = listerAppareilsCloudIdentity_(emailPropre);
+    ciAppareils.forEach(function (ci) {
+      if (!appareils.some(function (exist) { return exist.resourceId === ci.resourceId || exist.model === ci.model; })) {
+        appareils.push(ci);
+      }
+    });
+  } catch (err) {
+    // Non bloquant
   }
 
   return appareils;
