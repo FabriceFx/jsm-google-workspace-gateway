@@ -1,7 +1,7 @@
 # Cahier de Recette & Guide de Qualification Opérationnelle
 # *Acceptance Test Playbook & Operational Qualification Guide*
 
-> **Passerelle Jira Service Management → Google Workspace (v3.0.0)**  
+> **Passerelle Jira Service Management → Google Workspace (v3.1.0)**  
 > *Développé par Fabrice Faucheux ([faucheux.bzh](https://faucheux.bzh))*
 
 ---
@@ -9,11 +9,11 @@
 ## 🇫🇷 Version Française
 
 ### 1. Présentation & Objectifs
-Ce cahier de recette accompagne la mise en service de la passerelle. Il permet de tester méthodiquement chacune des **43 actions**, de vérifier leur conformité opérationnelle et de consigner leur validation directement dans le **Banc d'Essai & Matrice de Recette** de la console d'administration avant le raccordement en production avec Jira Service Management.
+Ce cahier de recette accompagne la mise en service de la passerelle. Il permet de tester méthodiquement chacune des **48 actions**, de vérifier leur conformité opérationnelle et de consigner leur validation directement dans le **Banc d'Essai & Matrice de Recette** de la console d'administration avant le raccordement en production avec Jira Service Management.
 
 ### 2. Outils de test à disposition
 1. **Banc d'Essai & Recette (Onglet 2 de la WebApp)** : Tableau de bord de qualification avec sélecteur d'état opérationnel (🟢 *Validé*, 🟡 *À tester*, 🔴 *Anomalie*, ⚪ *Non applicable*), saisie d'observations et export du PV de recette.
-2. **Console d'administration (Onglet 1 de la WebApp)** : Formulaire dynamique pour tester chaque action en réel ou avec des données pré-remplies (« Remplir avec un exemple »).
+2. **Console d'administration (Onglet 1 de la WebApp)** : Formulaire dynamique pour tester chaque action en réel ou avec des données pré-remplies (« Remplir avec un exemple »), avec support de l'exécution programmée (`date_execution`) et du callback Jira automatique.
 3. **Diagnostics & Tests Apps Script (`91 tests.gs` / `90 administration.gs`)** :
    - `test_unitaires()` : Contrôle automatique de 100% des fonctions pures (79 tests).
    - `admin_verifierApis()` : Smoke test des API en lecture seule (Directory, Gmail, Licensing, DataTransfer).
@@ -36,6 +36,7 @@ Ce cahier de recette accompagne la mise en service de la passerelle. Il permet d
 |---|---|---|---|
 | `CREATION_GROUPE` | `email_groupe`: "test-groupe-recette@domaine.com", `nom_groupe`: "Groupe Test Recette" | Groupe créé dans Google Workspace. | Visible dans Groupes de Google Admin. |
 | `AJOUT_GROUPE` | `email_cible`: "votre-email@domaine.com", `email_groupe`: "test-groupe-recette@domaine.com", `role`: "MEMBER" | Utilisateur ajouté comme membre. | Idempotence : rejouer l'action renvoie `idempotent: true`. |
+| `CONFIG_GROUPE` | `email_groupe`: "test-groupe-recette@domaine.com", `who_can_post_message`: "ANYONE_CAN_POST", `allow_external_members`: "true" | Droits et modération modifiés via Groups Settings API. | Contrôler dans Google Groups. |
 | `LISTE_MEMBRES_GROUPE` | `email_groupe`: "test-groupe-recette@domaine.com" | Liste des membres retournée en lecture seule. | Contient votre adresse avec le rôle MEMBER. |
 | `RETRAIT_GROUPE` | `email_cible`: "votre-email@domaine.com", `email_groupe`: "test-groupe-recette@domaine.com" | Utilisateur retiré du groupe. | Retrait confirmé dans l'annuaire. |
 | `RETRAIT_TOUS_GROUPES`| `email_cible`: "votre-email@domaine.com" | Utilisateur retiré de tous ses groupes directs. | Les groupes dynamiques sont sautés gracieusement. |
@@ -67,6 +68,7 @@ Ce cahier de recette accompagne la mise en service de la passerelle. Il permet d
 #### ✉️ 6. Messagerie Gmail *(Compte de Service requis)*
 | Action | Données de test | Résultat attendu |
 |---|---|---|
+| `SIGNATURE_EMAIL` | `email_cible`: "compte-test@domaine.com" | Signature HTML officielle déployée selon la charte graphique. |
 | `REPONSE_ABSENCE` | `email_cible`: "compte-test@domaine.com", `message_absence`: "En congé", `date_debut`: "2026-08-01", `date_fin`: "2026-08-31" | Répondeur d'absence activé dans Gmail. |
 | `DESACTIVATION_REPONSE_ABSENCE` | `email_cible`: "compte-test@domaine.com" | Répondeur d'absence désactivé. |
 | `TRANSFERT_EMAILS` | `email_cible`: "compte-test@domaine.com", `email_destination`: "successeur@domaine.com" | Redirection automatique active dans Gmail. |
@@ -77,7 +79,8 @@ Ce cahier de recette accompagne la mise en service de la passerelle. Il permet d
 #### 🌟 7. Diagnostic & Support Helpdesk
 | Action | Données de test | Résultat attendu | Points de contrôle |
 |---|---|---|---|
-| `INFO_COMPTE` | `email_cible`: "compte-test@domaine.com" | Fiche diagnostic complète formatée en texte/Markdown et JSON (statut, 2FA, OU, groupes, transferts, licences, dernier login). | Fenêtre permanente 24/7 en lecture seule. Idéal pour notes Jira internes. |
+| `INFO_COMPTE` | `email_cible`: "compte-test@domaine.com" | Fiche diagnostic express (statut, 2FA, OU, groupes, transferts, licences, dernier login, synchro mobile). | Fenêtre permanente 24/7 en lecture seule. |
+| `AUDIT_ACCES_COMPLET` | `email_cible`: "compte-test@domaine.com" | Revue exhaustive consolidée de tout le patrimoine d'accès (groupes, Drives partagés, agendas, délégations, licences, mobiles, OAuth). | Idéal pour audits de sécurité et RGPD. |
 
 #### 📁 8. Google Drive & Drives Partagés (Shared Drives)
 | Action | Données de test | Résultat attendu |
@@ -87,11 +90,13 @@ Ce cahier de recette accompagne la mise en service de la passerelle. Il permet d
 | `AJOUT_MEMBRE_DRIVE_PARTAGE` | `email_cible`: "collaborateur@domaine.com", `drive_id`: "ID_DU_DRIVE", `role`: "fileOrganizer" | Permission créée sur le Drive partagé. |
 | `RETRAIT_MEMBRE_DRIVE_PARTAGE`| `email_cible`: "collaborateur@domaine.com", `drive_id`: "ID_DU_DRIVE" | Permission révoquée du Drive partagé. |
 
-#### 📅 9. Calendriers Google (Agendas)
+#### 📅 9. Calendriers Google & Salles de Réunion
 | Action | Données de test | Résultat attendu |
 |---|---|---|
 | `PARTAGE_CALENDRIER` | `email_calendrier`: "agenda@domaine.com", `email_beneficiaire`: "assistante@domaine.com", `role`: "writer" | Règle d'accès ACL ajoutée sur l'agenda Calendar. |
 | `RETRAIT_PARTAGE_CALENDRIER`| `email_calendrier`: "agenda@domaine.com", `email_beneficiaire`: "assistante@domaine.com" | ACL supprimée de l'agenda. |
+| `CREATION_RESSOURCE_CALENDRIER` | `resource_id`: "salle-test", `resource_name`: "Salle Test", `capacity`: 10 | Salle de réunion créée dans Calendar Resources. |
+| `SUPPRESSION_RESSOURCE_CALENDRIER` | `resource_id`: "salle-test" | Ressource supprimée de Google Calendar. |
 
 #### 💳 10. Licences Workspace & Archivage
 | Action | Données de test | Résultat attendu |

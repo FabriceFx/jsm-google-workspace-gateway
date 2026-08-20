@@ -72,6 +72,10 @@ function declarationsFormulaires_() {
     SPEC_DESACTIVATION_REPONSE_ABSENCE,
     SPEC_TRANSFERT_EMAILS,
     SPEC_ARRET_TRANSFERT_EMAILS,
+    SPEC_SIGNATURE_EMAIL,
+
+    // --- Configuration des Groupes (Groups Settings API) --------------------
+    SPEC_CONFIG_GROUPE,
 
     // --- Drive ---------------------------------------------------------------
     SPEC_TRANSFERT_DRIVE,
@@ -82,15 +86,18 @@ function declarationsFormulaires_() {
 
     // --- Diagnostic & Support (lecture seule) -------------------------------
     SPEC_INFO_COMPTE,
+    SPEC_AUDIT_ACCES_COMPLET,
 
     // --- Drives partagés (Shared Drives) -------------------------------------
     SPEC_AJOUT_MEMBRE_DRIVE_PARTAGE,
     SPEC_RETRAIT_MEMBRE_DRIVE_PARTAGE,
     SPEC_CREATION_DRIVE_PARTAGE,
 
-    // --- Calendriers Google --------------------------------------------------
+    // --- Calendriers Google & Ressources ------------------------------------
     SPEC_PARTAGE_CALENDRIER,
     SPEC_RETRAIT_PARTAGE_CALENDRIER,
+    SPEC_CREATION_RESSOURCE_CALENDRIER,
+    SPEC_SUPPRESSION_RESSOURCE_CALENDRIER,
 
     // --- Groupes d'action (séquences orchestrées) ----------------------------
     SPEC_ARRIVEE_COLLABORATEUR,

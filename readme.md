@@ -1,6 +1,6 @@
 # Passerelle Jira Service Management → Google Workspace
 
-> **v3.0.0** — Automatise les opérations d'administration Google Workspace
+> **v3.1.0** — Automatise les opérations d'administration Google Workspace
 > déclenchées par les formulaires Jira Service Management.
 
 *[English version below](#jira-service-management--google-workspace-gateway)*
@@ -15,7 +15,7 @@ envoie un webhook POST vers cette webapp Google Apps Script. Le routeur
 identifie l'action demandée, vérifie l'authentification et les données, puis
 exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 
-### Actions disponibles (43 actions)
+### Actions disponibles (48 actions)
 
 | Action | Description | Fenêtre |
 |---|---|---|
@@ -32,6 +32,7 @@ exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 | `CREATION_GROUPE` | Crée un nouveau groupe Google | Standard |
 | `SUPPRESSION_GROUPE` | Supprime un groupe (confirmation obligatoire) | Standard |
 | `LISTE_MEMBRES_GROUPE` | Liste les membres d'un groupe (lecture seule) | Permanente |
+| `CONFIG_GROUPE` | Modifie les autorisations de publication, modération et accès externe via Groups Settings API | Standard |
 | **Alias** | | |
 | `AJOUT_ALIAS` | Ajoute un alias e-mail à un compte | Standard |
 | `RETRAIT_ALIAS` | Supprime un alias e-mail d'un compte | Standard |
@@ -47,6 +48,7 @@ exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 | `BLOCAGE_APPAREIL` | Bloque un appareil suspect | Permanente |
 | `APPROBATION_APPAREIL` | Approuve un nouvel appareil en attente | Standard |
 | **Messagerie** ⚙️ | | |
+| `SIGNATURE_EMAIL` | Déploie automatiquement la signature HTML officielle Gmail (charte d'entreprise) ou personnalisée | Standard |
 | `DELEGATION_EMAIL` | Donne accès à la boîte mail d'un utilisateur à un délégué | Standard |
 | `RETRAIT_DELEGATION_EMAIL` | Retire l'accès d'un délégué à une boîte mail | Standard |
 | `REPONSE_ABSENCE` | Active la réponse d'absence automatique | Standard |
@@ -54,15 +56,18 @@ exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 | `TRANSFERT_EMAILS` | Redirige les e-mails entrants vers une autre adresse | Standard |
 | `ARRET_TRANSFERT_EMAILS` | Désactive la redirection automatique des e-mails | Standard |
 | **Diagnostic & Support** | | |
-| `INFO_COMPTE` | Retourne la fiche diagnostic complète d'un compte (statut, 2FA, OU, groupes, transferts, licences, dernier login) | Permanente |
+| `INFO_COMPTE` | Retourne la fiche diagnostic express d'un compte (statut, 2FA, OU, groupes, dernier login, synchro mobile) | Permanente |
+| `AUDIT_ACCES_COMPLET` | Revue consolidée complète de tout le patrimoine d'accès (groupes, Drives partagés, agendas, délégations, licences, mobiles, OAuth) | Permanente |
 | **Drive & Drives partagés** | | |
 | `TRANSFERT_DRIVE` | Transfère la propriété des fichiers Drive à un autre utilisateur | Standard |
 | `CREATION_DRIVE_PARTAGE` | Crée un nouveau Shared Drive et lui assigne son gestionnaire initial | Standard |
 | `AJOUT_MEMBRE_DRIVE_PARTAGE` | Ajoute un membre ou un groupe à un Drive partagé avec rôle (organizer, fileOrganizer, commenter, reader) | Standard |
 | `RETRAIT_MEMBRE_DRIVE_PARTAGE` | Révoque l'accès d'un membre à un Drive partagé | Permanente |
-| **Calendriers** | | |
+| **Calendriers & Salles** | | |
 | `PARTAGE_CALENDRIER` | Accorde l'accès à un agenda Google Calendar (lecture, modification, gestion) | Standard |
 | `RETRAIT_PARTAGE_CALENDRIER` | Révoque l'accès d'un collaborateur à un agenda | Permanente |
+| `CREATION_RESSOURCE_CALENDRIER` | Crée une nouvelle salle de réunion ou ressource d'entreprise réservable | Standard |
+| `SUPPRESSION_RESSOURCE_CALENDRIER` | Supprime définitivement une ressource de calendrier ou salle | Standard |
 | **Licences & Archivage** | | |
 | `ATTRIBUTION_LICENCE` | Attribue une licence Workspace à un utilisateur | Standard |
 | `RETRAIT_LICENCE` | Libère la licence d'un utilisateur (facturée tant qu'assignée) | Standard |
@@ -306,7 +311,8 @@ Toutes les autres actions fonctionnent uniquement avec l'Admin SDK.
 05 fileattente.gs            File d'attente persistante (Google Sheets)
 06 workspace.gs              Briques Admin SDK, Gmail API, traduction erreurs
 07 journal.gs                Journal d'audit, notifications d'anomalies
-08 email.gs                  Gabarit e-mail chartée Cooperl
+08 email.gs                  Gabarit e-mail chartée Cooperl (signatures incluses)
+09 jira.gs                   Module de callback & notifications Jira Cloud
 10 action creationcompte     Création de compte Workspace
 11 action ajoutgroupe        Ajout à un groupe
 12 action retraitgroupe      Retrait d'un groupe
@@ -351,6 +357,11 @@ Toutes les autres actions fonctionnent uniquement avec l'Admin SDK.
 51 groupe urgencecompromission.gs Groupe d'action : kill-switch sécurité
 52 groupe mutationinterne.gs Groupe d'action : mobilité interne RH
 53 action archivagecompte.gs Déclassement et licence Archived User
+54 action signatureemail.gs  Signature d'e-mail automatique (charte Gmail)
+55 action auditaccescomplet.gs Revue consolidée de tout le patrimoine d'accès
+56 action configgroupe.gs    Configuration et modération des groupes (API Groups Settings)
+57 action creationressourcecalendrier.gs Création de ressource de calendrier / salle
+58 action suppressionressourcecalendrier.gs Suppression de ressource de calendrier
 90 administration.gs         Fonctions de pilotage manuel
 91 tests.gs                  Tests (unitaires + diagnostics manuels)
 ui_test.html                 Console WebApp, simulateur & banc d'essai
@@ -376,22 +387,26 @@ MIT — Voir le fichier LICENSE pour les détails.
 
 # Jira Service Management → Google Workspace gateway
 
-> **v3.0.0** — Automates Google Workspace administration operations triggered
+> **v3.1.0** — Automates Google Workspace administration operations triggered
 > by Jira Service Management forms.
 
 ## Overview
 
 When a JSM agent validates a ticket (onboarding, offboarding, access request,
-password reset…), Jira Automation sends a POST webhook to this Google Apps
+password reset, email signature, Shared Drive or Calendar resource creation…), Jira Automation sends a POST webhook to this Google Apps
 Script webapp. The router identifies the requested action, verifies
 authentication and data, then executes the operation via the Admin SDK — all
 without manual intervention.
 
 ### Available actions
 
-43 actions are available across 11 categories: accounts, groups, aliases,
-security, mobile devices, email (⚙️ requires service account), account diagnosis & support, Shared Drives, Google Calendar, licenses & archiving, and orchestrated sequences.
+48 actions are available across 11 categories: accounts, groups & group permissions, aliases,
+security, mobile devices, email & email signatures (⚙️ requires service account), account diagnosis & full access audit, Shared Drives, Google Calendar & room resources, licenses & archiving, and orchestrated sequences.
 See the French section above for the complete table.
+
+**Scheduled execution**: pass `date_execution: "2026-09-30T18:00:00Z"` in payload to schedule an action or orchestrated group at an exact future date/time.
+
+**Jira closed-loop callback**: automatically adds an internal comment to the Jira ticket (`issue_key`) and can auto-resolve it upon successful completion.
 
 **Standard window**: immediate execution during admin hours (Mon–Fri
 8:30–17:30, excluding French public holidays). Outside hours, the request is
@@ -432,7 +447,11 @@ queued for automatic execution at the next open slot.
    | `ALLOWED_DOMAINS` | ✅ | Allowed domains, comma-separated |
    | `NOTIFY_EMAIL` | Recommended | Notification address (alerts, passwords) |
    | `DEFAULT_OU` | Optional | Default organisational unit (e.g. `/Employees`) |
-   | `LOGO_URL` | Optional | Public URL of the Cooperl logo for emails |
+   | `JIRA_BASE_URL` | Optional | Jira instance URL for automatic callbacks (e.g. `https://domain.atlassian.net`) |
+   | `JIRA_USER_EMAIL`| Optional | Jira service user email for API REST callback |
+   | `JIRA_API_TOKEN` | Optional | Jira Cloud API token |
+   | `JIRA_AUTO_RESOLVE` | Optional | `true` to auto-resolve Jira issues upon success |
+   | `LOGO_URL` | Optional | Public URL of the company logo for emails |
    | `LOGO_VARIANTE` | Optional | `BLANC` (default) or `BLEU` depending on hosted file |
    | `RESPECT_JOURS_FERIES` | Optional | `true` (default) or `false` |
    | `JOURS_FERMETURE` | Optional | ISO dates for company closure days, comma-separated |

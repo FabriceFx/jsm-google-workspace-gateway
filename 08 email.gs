@@ -481,3 +481,51 @@ function envoyerEmailCooperl_(destinataire, objet, contenu) {
     return false;
   }
 }
+
+/**
+ * Génère le code HTML d'une signature de messagerie responsive aux couleurs de la charte.
+ *
+ * @param {!Object} u Objet utilisateur Admin Directory ou données manuelles.
+ * @param {Object=} options Paramètres complémentaires (logo, liens, mentions).
+ * @return {string} Code HTML de la signature.
+ */
+function genererSignatureHtml_(u, options) {
+  const opts = options || {};
+  const nom = (u.name && (u.name.fullName || ((u.name.givenName || '') + ' ' + (u.name.familyName || '')))) || opts.nom || '';
+  const org = (u.organizations && u.organizations[0]) || {};
+  const poste = org.title || opts.poste || '';
+  const service = org.department || opts.service || '';
+  const societe = org.name || opts.societe || 'Cooperl';
+  const email = u.primaryEmail || opts.email || '';
+
+  const phones = (u.phones || []).map(function (p) { return p.value; });
+  if (opts.telephone) phones.push(opts.telephone);
+  const telStr = phones.filter(Boolean).join(' | ');
+
+  const logoUrl = opts.logoUrl || getProp_('LOGO_URL') ||
+    'https://lh3.googleusercontent.com/d/1w6nS8mY_cooperl_logo';
+
+  const html = [
+    '<div style="font-family:' + CHARTE.POLICE + ';font-size:13px;color:' + CHARTE.TEXTE + ';line-height:18px;">',
+    '  <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-family:' + CHARTE.POLICE + ';">',
+    '    <tr>',
+    '      <td style="padding-right:15px;vertical-align:top;border-right:2px solid ' + CHARTE.BLEU + ';">',
+    '        <div style="font-size:15px;font-weight:700;color:' + CHARTE.BLEU + ';">' + echapper_(nom) + '</div>',
+    poste ? '        <div style="font-size:13px;font-weight:600;color:' + CHARTE.TEXTE + ';">' + echapper_(poste) + '</div>' : '',
+    service ? '        <div style="font-size:12px;color:' + CHARTE.TEXTE_SECONDAIRE + ';">' + echapper_(service) + ' — ' + echapper_(societe) + '</div>' : '',
+    '      </td>',
+    '      <td style="padding-left:15px;vertical-align:top;">',
+    telStr ? '        <div style="font-size:12px;color:' + CHARTE.TEXTE + ';">📞 ' + echapper_(telStr) + '</div>' : '',
+    email ? '        <div style="font-size:12px;color:' + CHARTE.BLEU + ';">✉️ <a href="mailto:' + echapper_(email) + '" style="color:' + CHARTE.BLEU + ';text-decoration:none;">' + echapper_(email) + '</a></div>' : '',
+    '        <div style="font-size:12px;color:' + CHARTE.TEXTE_SECONDAIRE + ';">🌐 <a href="https://' + CHARTE.SITE + '" style="color:' + CHARTE.TEXTE_SECONDAIRE + ';text-decoration:none;">' + CHARTE.SITE + '</a></div>',
+    '      </td>',
+    '    </tr>',
+    '  </table>',
+    '  <div style="padding-top:8px;font-size:10px;color:' + CHARTE.TEXTE_SECONDAIRE + ';font-style:italic;">',
+    '    ' + CHARTE.SIEGE,
+    '  </div>',
+    '</div>'
+  ].filter(Boolean).join('\n');
+
+  return html;
+}

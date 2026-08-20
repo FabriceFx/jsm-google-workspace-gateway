@@ -3,6 +3,29 @@
 Tous les changements notables de ce projet sont documentés ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [3.1.0] — 2026-08-20
+
+### Boucle fermée Jira, Déclenchement programmé, Audit d'accès & Signatures
+
+> **La boucle est enfin bouclée sans la moindre charge mentale.** Tu n'as plus à garder un ticket ouvert pour un départ prévu dans 15 jours, ni à relancer l'équipe pour savoir si l'action a bien tourné au petit matin. La passerelle prend le relais, exécute à l'heure H, poste la note interne sur le ticket Jira et déploie la signature d'e-mail officielle en toute transparence.
+
+### Nouvelles Actions (portant le catalogue à 48 actions)
+
+- **Messagerie & Identité de marque** :
+  - `SIGNATURE_EMAIL` : Déploiement et normalisation automatique de la signature d'e-mail officielle Gmail (charte graphique d'entreprise, coordonnées de l'annuaire, poste, téléphone, logo) ou personnalisée sur l'adresse principale et les alias SendAs.
+- **Conformité & Revue d'accès** :
+  - `AUDIT_ACCES_COMPLET` : Consolidation instantanée de tout le patrimoine d'accès d'un utilisateur (groupes, rôles Drives partagés, agendas, délégations de messagerie, licences, flotte mobile MDM et jetons OAuth applicatifs) pour les audits RGPD / ISO 27001.
+- **Gestion des Groupes & Boîtes collaboratives** :
+  - `CONFIG_GROUPE` : Pilotage des autorisations de publication (ouverture aux expéditeurs externes/clients, restriction domaine/membres) et modération via l'API *Google Groups Settings*.
+- **Salles de réunion & Ressources partagées** :
+  - `CREATION_RESSOURCE_CALENDRIER` : Création et référencement des salles de réunion, cabines visio Meet, véhicules et équipements d'entreprise dans Google Calendar.
+  - `SUPPRESSION_RESSOURCE_CALENDRIER` : Décommissionnement et suppression définitive d'une ressource de calendrier.
+
+### Nouvelles Capacités Moteur & Plateforme
+
+- **Boucle fermée Jira Cloud (`09 jira.gs`)** : Callback REST API automatique sur les tickets Jira (`issue_key`). Ajout automatique d'une note interne formatée (ADF/Markdown) et option de résolution de ticket (`JIRA_AUTO_RESOLVE`).
+- **Exécution différée programmée à date future (`DATE_EXECUTION`)** : Prise en charge d'un horodatage cible dans le payload. La file d'attente conserve la demande au statut `PROGRAMME` et le déclencheur l'exécute automatiquement à l'heure convenue.
+
 ## [3.0.0] — 2026-08-20
 
 ### Boîte à outils Helpdesk, Drives partagés, Agendas & Kill-switch sécurité

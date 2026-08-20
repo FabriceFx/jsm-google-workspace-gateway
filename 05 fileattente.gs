@@ -58,7 +58,8 @@ function enfilerAction_(ctx, data, planning) {
     }
 
     // Idempotence : un rejeu Jira ne doit pas empiler deux fois la même demande.
-    const existante = trouverLigne_(sheet, ctx.requestId, CONFIG.STATUTS.EN_ATTENTE);
+    const existante = trouverLigne_(sheet, ctx.requestId, CONFIG.STATUTS.EN_ATTENTE) ||
+        trouverLigne_(sheet, ctx.requestId, CONFIG.STATUTS.PROGRAMME);
     if (existante) {
         const prevu = existante.row[COL.PREVU];
         return {
@@ -70,26 +71,46 @@ function enfilerAction_(ctx, data, planning) {
         };
     }
 
-    const prevu = prochaineOuverture_(new Date(), planning);
+    let prevu = null;
+    let estProgramme = false;
+    if (data.date_execution) {
+        const dProg = new Date(data.date_execution);
+        if (!isNaN(dProg.getTime()) && dProg > new Date()) {
+            prevu = dProg;
+            estProgramme = true;
+        }
+    }
+
+    if (!prevu) {
+        prevu = prochaineOuverture_(new Date(), planning);
+    }
+
     if (!prevu) {
         throw new AppError_('PLANNING_INVALIDE',
             "Aucun créneau d'ouverture trouvé dans les " + CONFIG.HORIZON_PLANIF_JOURS +
             ' prochains jours. Vérifier la configuration du planning.', 500);
     }
 
-    const cible = data.email_cible || data.email_souhaite || '';
+    const cible = data.email_cible || data.email_souhaite || data.email_groupe || data.resource_id || '';
+    const statutLigne = estProgramme ? CONFIG.STATUTS.PROGRAMME : CONFIG.STATUTS.EN_ATTENTE;
+    const msgLigne = estProgramme
+        ? 'Exécution programmée pour le ' + formaterDate_(prevu)
+        : 'En attente du prochain créneau';
 
     sheet.appendRow([
         new Date(), ctx.ticketKey, ctx.requestId, ctx.action,
-        CONFIG.STATUTS.EN_ATTENTE, cible, JSON.stringify(data),
-        prevu, 0, 'En attente du prochain créneau', '', ctx.traceId
+        statutLigne, cible, JSON.stringify(data),
+        prevu, 0, msgLigne, '', ctx.traceId
     ]);
+
+    const msgRetour = estProgramme
+        ? 'Demande programmée avec succès pour le ' + formaterDate_(prevu) + '.'
+        : 'Demande enregistrée hors créneau d\'administration. Exécution automatique prévue le ' + formaterDate_(prevu) + '.';
 
     return {
         target: cible,
         scheduledForIso: prevu.toISOString(),
-        message: 'Demande enregistrée hors créneau d\'administration. ' +
-            'Exécution automatique prévue le ' + formaterDate_(prevu) + '.'
+        message: msgRetour
     };
 }
 
@@ -154,7 +175,8 @@ function traiterFileAttente() {
 
         for (let i = 1; i < values.length; i++) {
             const row = values[i];
-            if (row[COL.STATUT] !== CONFIG.STATUTS.EN_ATTENTE) continue;
+            const statutActuel = row[COL.STATUT];
+            if (statutActuel !== CONFIG.STATUTS.EN_ATTENTE && statutActuel !== CONFIG.STATUTS.PROGRAMME) continue;
 
             const numLigne = i + 1;
             const ctx = {
@@ -164,6 +186,14 @@ function traiterFileAttente() {
                 traceId: Utilities.getUuid().slice(0, 8),
                 differe: true
             };
+
+            // --- Vérification de l'échéance programmée --------------------------
+            const brutPrevu = row[COL.PREVU];
+            const datePrevue = (brutPrevu && !isNaN(new Date(brutPrevu).getTime())) ? new Date(brutPrevu) : null;
+            if (datePrevue && maintenant < datePrevue) {
+                reportees++;
+                continue; // Pas encore l'heure d'exécution
+            }
 
             // --- Péremption ----------------------------------------------------
             // La cellule contient normalement une vraie Date ; on tolère une saisie
@@ -194,8 +224,9 @@ function traiterFileAttente() {
 
             // --- Exécution ------------------------------------------------------
             const tentative = Number(row[COL.TENTATIVES] || 0) + 1;
+            let data = {};
             try {
-                const data = JSON.parse(row[COL.DATA]);
+                data = JSON.parse(row[COL.DATA]);
                 const result = appelerHandler_(spec, data, ctx);
 
                 majLigne_(sheet, numLigne, CONFIG.STATUTS.TERMINE,
@@ -205,6 +236,9 @@ function traiterFileAttente() {
                 traitees++;
                 console.log('[%s] DIFFÉRÉ EXÉCUTÉ %s / %s — %s',
                     ctx.traceId, ctx.action, ctx.ticketKey, result.message);
+
+                // Callback Jira automatique
+                notifierJiraCallback_(data.issue_key || row[COL.TICKET], result, ctx, true);
 
             } catch (err) {
                 const definitif = tentative >= CONFIG.MAX_TENTATIVES;

@@ -809,7 +809,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <span class="badge-version">v3.0.0</span>
+        <span class="badge-version">v3.1.0</span>
       </div>
     </div>
   </header>
@@ -1486,7 +1486,7 @@
   </div>
 
   <footer>
-    Passerelle Jira Service Management → Google Workspace (v3.0.0) — Développé par 
+    Passerelle Jira Service Management → Google Workspace (v3.1.0) — Développé par 
     <a href="https://faucheux.bzh" target="_blank" rel="noopener">Fabrice Faucheux</a>
   </footer>
 
@@ -1830,6 +1830,9 @@
       role_drive:       [{ val: 'fileOrganizer', txt: 'Gestionnaire de contenu (fileOrganizer)' }, { val: 'organizer', txt: 'Gestionnaire complet (organizer)' }, { val: 'commenter', txt: 'Commentateur (commenter)' }, { val: 'reader', txt: 'Lecteur (reader)' }],
       type_membre_drive:[{ val: 'user', txt: 'Utilisateur (user)' }, { val: 'group', txt: 'Groupe (group)' }],
       role_calendrier:  [{ val: 'reader', txt: 'Lecture des détails (reader)' }, { val: 'writer', txt: 'Modification des évènements (writer)' }, { val: 'owner', txt: 'Gestionnaire et partage (owner)' }, { val: 'freeBusyReader', txt: 'Disponibilités uniquement (freeBusyReader)' }],
+      who_can_post_message: [{ val: 'ALL_IN_DOMAIN_CAN_POST', txt: 'Tous les membres du domaine (ALL_IN_DOMAIN_CAN_POST)' }, { val: 'ANYONE_CAN_POST', txt: 'Tout le monde / Public externe (ANYONE_CAN_POST)' }, { val: 'ALL_MEMBERS_CAN_POST', txt: 'Membres du groupe uniquement (ALL_MEMBERS_CAN_POST)' }, { val: 'ALL_MANAGERS_CAN_POST', txt: 'Gestionnaires uniquement (ALL_MANAGERS_CAN_POST)' }],
+      message_moderation_level: [{ val: 'MODERATE_NONE', txt: 'Aucune modération (MODERATE_NONE)' }, { val: 'MODERATE_NON_MEMBERS', txt: 'Modérer les messages des non-membres (MODERATE_NON_MEMBERS)' }, { val: 'MODERATE_ALL_MESSAGES', txt: 'Modérer tous les messages (MODERATE_ALL_MESSAGES)' }],
+      resource_type:    [{ val: 'SALLE', txt: 'Salle de réunion (SALLE)' }, { val: 'VISIO', txt: 'Cabine visio / Équipement Meet (VISIO)' }, { val: 'VEHICULE', txt: 'Véhicule de service (VEHICULE)' }, { val: 'EQUIPEMENT', txt: 'Équipement / Matériel nomade (EQUIPEMENT)' }],
 
       // ═══ LISTES MÉTIER ═══
       // Vide []  ⇒ liste alimentée DYNAMIQUEMENT depuis l'annuaire (comme l'OU) :
@@ -2110,6 +2113,31 @@
           { id: 'unite_organisationnelle', label: 'Unité d\'archivage (optionnel)', placeholder: '/Archives' },
           { id: 'sku_source', label: 'SKU standard à retirer (optionnel)', placeholder: 'Laissez vide pour la valeur par défaut' },
           { id: 'sku_archive', label: 'SKU licence archivage (optionnel)', placeholder: 'ex. 1010020030 (Archived User)' }
+        ],
+        'SIGNATURE_EMAIL': [
+          { id: 'email_cible', label: 'E-mail du collaborateur', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
+          { id: 'send_as_email', label: 'Alias spécifique (optionnel)', type: 'email', placeholder: 'contact@cooperl.com' },
+          { id: 'signature_html', label: 'Code HTML personnalisé (optionnel - laissez vide pour génération auto charte)', placeholder: '<div><b>Jean DUPONT</b>...</div>' }
+        ],
+        'AUDIT_ACCES_COMPLET': [
+          { id: 'email_cible', label: 'E-mail du compte à auditer', type: 'email', placeholder: 'jean.dupont@cooperl.com' }
+        ],
+        'CONFIG_GROUPE': [
+          { id: 'email_groupe', label: 'E-mail du groupe à configurer', type: 'email', placeholder: 'equipe-projet@cooperl.com' },
+          { id: 'who_can_post_message', label: 'Qui peut publier / envoyer des e-mails ?', options: LISTES.who_can_post_message },
+          { id: 'allow_external_members', label: 'Autoriser les membres / expéditeurs externes ?', options: LISTES.ouinon },
+          { id: 'message_moderation_level', label: 'Niveau de modération des messages', options: LISTES.message_moderation_level }
+        ],
+        'CREATION_RESSOURCE_CALENDRIER': [
+          { id: 'resource_id', label: 'Identifiant unique de la ressource (ID)', placeholder: 'salle-armor-lamballe' },
+          { id: 'resource_name', label: 'Nom d\'affichage de la salle / ressource', placeholder: 'Salle Armor (Bâtiment 2)' },
+          { id: 'resource_type', label: 'Type de ressource', options: LISTES.resource_type },
+          { id: 'capacity', label: 'Capacité d\'accueil (personnes)', type: 'number', placeholder: '12' },
+          { id: 'floor_name', label: 'Étage (optionnel)', placeholder: '1er étage' },
+          { id: 'resource_description', label: 'Description & équipements', placeholder: 'Écran 75", Caméra Meet, Tableau blanc' }
+        ],
+        'SUPPRESSION_RESSOURCE_CALENDRIER': [
+          { id: 'resource_id', label: 'Identifiant unique de la ressource à supprimer', placeholder: 'salle-armor-lamballe' }
         ]
       };
 
@@ -2417,14 +2445,14 @@
 
     function determinerFamilleAction(nom) {
       if (['CREATION_COMPTE', 'CHANGEMENT_OU', 'MISE_A_JOUR_PROFIL', 'RENOMMER_COMPTE', 'SUPPRESSION_COMPTE'].includes(nom)) return 'Comptes';
-      if (['AJOUT_GROUPE', 'RETRAIT_GROUPE', 'RETRAIT_TOUS_GROUPES', 'CREATION_GROUPE', 'SUPPRESSION_GROUPE', 'LISTE_MEMBRES_GROUPE'].includes(nom)) return 'Groupes';
+      if (['AJOUT_GROUPE', 'RETRAIT_GROUPE', 'RETRAIT_TOUS_GROUPES', 'CREATION_GROUPE', 'SUPPRESSION_GROUPE', 'LISTE_MEMBRES_GROUPE', 'CONFIG_GROUPE'].includes(nom)) return 'Groupes';
       if (['AJOUT_ALIAS', 'RETRAIT_ALIAS'].includes(nom)) return 'Alias';
       if (['SUSPENSION', 'REACTIVATION', 'RESET_MOT_DE_PASSE', 'DECONNEXION_FORCEE', 'REVOCATION_TOKENS_APPS', 'GENERATION_CODES_SECOURS'].includes(nom)) return 'Sécurité';
       if (['EFFACEMENT_APPAREIL', 'BLOCAGE_APPAREIL', 'APPROBATION_APPAREIL'].includes(nom)) return 'Appareils';
-      if (['DELEGATION_EMAIL', 'RETRAIT_DELEGATION_EMAIL', 'REPONSE_ABSENCE', 'DESACTIVATION_REPONSE_ABSENCE', 'TRANSFERT_EMAILS', 'ARRET_TRANSFERT_EMAILS'].includes(nom)) return 'Messagerie';
-      if (['INFO_COMPTE'].includes(nom)) return 'Diagnostic';
+      if (['DELEGATION_EMAIL', 'RETRAIT_DELEGATION_EMAIL', 'REPONSE_ABSENCE', 'DESACTIVATION_REPONSE_ABSENCE', 'TRANSFERT_EMAILS', 'ARRET_TRANSFERT_EMAILS', 'SIGNATURE_EMAIL'].includes(nom)) return 'Messagerie';
+      if (['INFO_COMPTE', 'AUDIT_ACCES_COMPLET'].includes(nom)) return 'Diagnostic';
       if (['TRANSFERT_DRIVE', 'AJOUT_MEMBRE_DRIVE_PARTAGE', 'RETRAIT_MEMBRE_DRIVE_PARTAGE', 'CREATION_DRIVE_PARTAGE'].includes(nom)) return 'Drive';
-      if (['PARTAGE_CALENDRIER', 'RETRAIT_PARTAGE_CALENDRIER'].includes(nom)) return 'Calendrier';
+      if (['PARTAGE_CALENDRIER', 'RETRAIT_PARTAGE_CALENDRIER', 'CREATION_RESSOURCE_CALENDRIER', 'SUPPRESSION_RESSOURCE_CALENDRIER'].includes(nom)) return 'Calendrier';
       if (['ATTRIBUTION_LICENCE', 'RETRAIT_LICENCE', 'ARCHIVAGE_COMPTE'].includes(nom)) return 'Licences';
       if (['ARRIVEE_COLLABORATEUR', 'DEPART_COLLABORATEUR', 'RETOUR_ABSENCE', 'URGENCE_COMPROMISSION', 'MUTATION_INTERNE'].includes(nom)) return "Groupes d'actions";
       return 'Autre';
@@ -2716,7 +2744,7 @@
         nonApplicables.length ? nonApplicables.join('\n') : `*(Aucune)*`,
         ``,
         `---`,
-        `*Généré par la Passerelle Jira Service Management → Google Workspace (v3.0.0)*`
+        `*Généré par la Passerelle Jira Service Management → Google Workspace (v3.1.0)*`
       ];
 
       document.getElementById('recette-export-text').innerText = lignes.join('\n');

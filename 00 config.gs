@@ -5,7 +5,7 @@
  * Les secrets (SECRET_TOKEN...) ne figurent JAMAIS ici : ils vivent dans
  * Paramètres du projet > Propriétés du script.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v3.0.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v3.1.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -15,7 +15,7 @@
  * @const
  */
 const CONFIG = Object.freeze({
-  VERSION: '3.0.0',
+  VERSION: '3.1.0',
   /** Longueur du mot de passe temporaire généré. */
   PASSWORD_LENGTH: 16,
   /** Durée max d'attente du verrou d'exclusion mutuelle (ms). */
@@ -41,6 +41,7 @@ const CONFIG = Object.freeze({
   /** Statuts possibles d'une ligne de la file. */
   STATUTS: {
     EN_ATTENTE: 'EN_ATTENTE',
+    PROGRAMME: 'PROGRAMME',
     TERMINE: 'TERMINE',
     ECHEC: 'ECHEC',
     ANNULE: 'ANNULE',

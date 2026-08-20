@@ -59,8 +59,9 @@ function doPost(e) {
         const planning = resoudrePlanning_(ctx.action, spec);
         const ouvert = estOuvert_(maintenant, planning);
         const forcage = (payload.force_immediat === true || payload.force_immediat === 'true');
+        const aDateFuture = !!(data.date_execution && !isNaN(new Date(data.date_execution).getTime()) && new Date(data.date_execution) > maintenant);
 
-        if (!ouvert && forcage) {
+        if (!ouvert && forcage && !aDateFuture) {
             // Dérogation explicite : tracée, et conditionnée à un motif écrit.
             if (!payload.motif_urgence) {
                 throw new AppError_('MOTIF_REQUIS',
@@ -72,9 +73,8 @@ function doPost(e) {
                 traceId, ctx.action, ctx.ticketKey, ctx.derogation);
         }
 
-        if (!ouvert && !forcage) {
-            // Hors créneau : on mémorise la demande, le déclencheur l'exécutera
-            // à l'ouverture. Voir traiterFileAttente().
+        if (aDateFuture || (!ouvert && !forcage)) {
+            // Hors créneau ou exécution programmée à date future : on mémorise la demande
             const lockQ = LockService.getScriptLock();
             if (!lockQ.tryLock(CONFIG.LOCK_TIMEOUT_MS)) {
                 throw new AppError_('BUSY',
@@ -88,12 +88,12 @@ function doPost(e) {
             }
 
             const dureeQ = Date.now() - started;
-            console.log('[%s] DIFFÉRÉ %s / %s — %s (%d ms)',
-                traceId, ctx.action, ctx.ticketKey, planif.message, dureeQ);
-            audit_(ctx, 'QUEUED', planif.target || '', planif.message, dureeQ);
+            console.log('[%s] %s %s / %s — %s (%d ms)',
+                traceId, aDateFuture ? 'PROGRAMMÉ' : 'DIFFÉRÉ', ctx.action, ctx.ticketKey, planif.message, dureeQ);
+            audit_(ctx, aDateFuture ? 'SCHEDULED' : 'QUEUED', planif.target || '', planif.message, dureeQ);
 
             return jsonResponse_({
-                status: 'queued',
+                status: aDateFuture ? 'scheduled' : 'queued',
                 http_status: 202,
                 action: ctx.action,
                 ticket_key: ctx.ticketKey,
@@ -114,6 +114,9 @@ function doPost(e) {
             traceId, ctx.action, ctx.ticketKey, result.message, duration);
 
         audit_(ctx, 'SUCCESS', result.target || '', result.message, duration);
+
+        // Callback Jira automatique
+        notifierJiraCallback_(data.issue_key || ctx.ticketKey, result, ctx, false);
 
         return jsonResponse_({
             status: 'success',
