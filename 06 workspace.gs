@@ -534,47 +534,7 @@ function envoyerIdentifiants_(destinataire, compte, motDePasse, ticketKey) {
 // ---------------------------------------------------------------------------
 
 /**
- * Interroge Cloud Identity Devices API pour récupérer les appareils MDM d'entreprise.
- * @param {string} email Adresse e-mail de l'utilisateur.
- * @return {!Array<!Object>}
- */
-function listerAppareilsCloudIdentity_(email) {
-  const emailPropre = String(email || '').toLowerCase().trim();
-  const resultats = [];
-  try {
-    const token = ScriptApp.getOAuthToken();
-    const url = 'https://cloudidentity.googleapis.com/v1/devices?customer=customers/my_customer&filter=user_email%3D%22' + encodeURIComponent(emailPropre) + '%22';
-    const rep = UrlFetchApp.fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': 'Bearer ' + token,
-        'Accept': 'application/json'
-      },
-      muteHttpExceptions: true
-    });
-    if (rep.getResponseCode() === 200) {
-      const data = JSON.parse(rep.getContentText());
-      const devices = data.devices || [];
-      devices.forEach(function (d) {
-        resultats.push({
-          resourceId: d.name ? d.name.split('/').pop() : 'cloud-identity',
-          model: d.model || d.brand || 'Terminal Entreprise',
-          os: d.osVersion ? (d.deviceType || 'OS') + ' ' + d.osVersion : (d.deviceType || 'Mobile'),
-          type: d.deviceType || 'MDM_ENTREPRISE',
-          status: d.managementState === 'MANAGED' ? 'APPROVED' : (d.managementState || 'APPROVED'),
-          lastSync: d.lastSyncTime || null,
-          source: 'Cloud Identity MDM'
-        });
-      });
-    }
-  } catch (err) {
-    console.warn('Erreur appel Cloud Identity Devices pour ' + emailPropre + ' : ' + err.message);
-  }
-  return resultats;
-}
-
-/**
- * Liste les appareils mobiles enregistrés pour un utilisateur (Directory API + Cloud Identity).
+ * Liste les appareils mobiles enregistrés pour un utilisateur via AdminDirectory.Mobiledevices.
  * @param {string} email Adresse de l'utilisateur.
  * @return {!Array<!Object>} Liste des appareils (peut être vide).
  */
@@ -666,18 +626,6 @@ function listerAppareilsUtilisateur_(email) {
     } catch (err) {
       console.warn('Erreur lors du scan global des appareils mobiles : ' + err.message);
     }
-  }
-
-  // 4. Complément Cloud Identity Devices API (flottes d'entreprise Android Enterprise / iOS DEP)
-  try {
-    const ciAppareils = listerAppareilsCloudIdentity_(emailPropre);
-    ciAppareils.forEach(function (ci) {
-      if (!appareils.some(function (exist) { return exist.resourceId === ci.resourceId || exist.model === ci.model; })) {
-        appareils.push(ci);
-      }
-    });
-  } catch (err) {
-    // Non bloquant
   }
 
   return appareils;
