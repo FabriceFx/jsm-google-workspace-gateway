@@ -3,6 +3,48 @@
 Tous les changements notables de ce projet sont documentés ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [3.0.0] — 2026-08-20
+
+### Boîte à outils Helpdesk, Drives partagés, Agendas & Kill-switch sécurité
+
+> **Fini les 10 onglets ouverts dans Google Admin pour traiter un simple ticket.** L'agent Helpdesk ne perd plus 5 minutes par demande à naviguer dans l'annuaire pour vérifier un statut 2FA, ajouter un collègue à un Drive partagé ou partager l'agenda d'une assistante. Tout est exécuté et documenté en une seconde directement depuis le ticket Jira.
+
+### Nouvelles Actions (portant le catalogue à 43 actions)
+
+- **Diagnostic & Support Helpdesk** :
+  - `INFO_COMPTE` : Fiche d'identité express d'un compte (statut actif/suspendu, 2FA enrôlé, OU, groupes directs, délégations, transferts, licences, dernier login) pour injection automatique en note Jira interne.
+- **Drives partagés (Shared Drives)** :
+  - `CREATION_DRIVE_PARTAGE` : Création instantanée d'un nouvel espace d'équipe avec gestionnaire initial.
+  - `AJOUT_MEMBRE_DRIVE_PARTAGE` : Ajout d'un membre ou groupe avec permissions fines (`organizer`, `fileOrganizer`, `commenter`, `reader`).
+  - `RETRAIT_MEMBRE_DRIVE_PARTAGE` : Révocation des accès sur un Drive partagé.
+- **Calendriers Google** :
+  - `PARTAGE_CALENDRIER` : Partage et délégation d'agendas (`reader`, `writer`, `owner`, `freeBusyReader`).
+  - `RETRAIT_PARTAGE_CALENDRIER` : Suppression des partages d'agenda.
+- **Cybersécurité & Mobilité interne** :
+  - `URGENCE_COMPROMISSION` : **Kill-switch sécurité** neutralisant une menace en moins de 3 secondes (suspension + déconnexion forcée + révocation des tokens OAuth + blocage des téléphones).
+  - `MUTATION_INTERNE` : Séquence orchestrée pour les mobilités de collaborateurs (changement d'OU + mise à jour du profil RH + bascule des groupes + alerte nouveau manager).
+  - `ARCHIVAGE_COMPTE` : Déclassement d'un compte vers l'OU `/Archives` avec réassignation vers une licence d'archivage Google Vault (`Archived-User`) pour optimiser les coûts.
+
+## [2.9.0] — 2026-08-20
+
+### Banc d'essai & matrice de qualification opérationnelle
+
+> **L'esprit libre au moment de brancher Jira.** Tu n'as plus à redouter le premier ticket d'onboarding ou de départ en production. Chaque action a son témoin vert, chaque comportement est vérifié, chaque retour est tracé : tu branches le webhook Jira avec la certitude absolue que toute la chaîne répond au millimètre.
+
+### Ajouts & Améliorations
+
+- **Matrice de recette interactive (Onglet « Banc d'Essai & Recette »)** :
+  - Tableau de bord de qualification dynamique couvrant l'intégralité des 34 actions Google Workspace.
+  - Sélecteurs de statuts opérationnels (🟢 *Validé / Opérationnel*, 🟡 *À tester*, 🔴 *En anomalie*, ⚪ *Non applicable*) persistés côté serveur via `ScriptProperties` (`RECETTE_STATUS_JSON`).
+  - Jauges de suivi en temps réel (taux d'achèvement, actions validées, anomalies et reste à tester).
+  - Saisie de notes et d'observations de test avec horodatage et identification automatique de l'administrateur testeur.
+  - Boutons de bascule rapide vers la console d'exécution pour test direct et vers le guide Jira Automation.
+  - Export instantané du procès-verbal de recette au format Markdown pour l'archivage de projet.
+- **Fonctions d'administration & API de recette** :
+  - Ajout des points d'entrée sécurisés `getStatutsRecette()`, `sauvegarderStatutRecette()` et `reinitialiserStatutsRecette()` dans `02 routeur.gs`, protégés par `assertAdminUI_()`.
+- **Cahier de recette exhaustif bilingue (`RECETTE.md`)** :
+  - Protocole de test et jeux de données recommandés pour chacune des 34 actions et groupes d'actions.
+
 ## [2.8.0] — 2026-08-12
 
 Correctifs issus d'une revue d'expert de maturité (sécurité, correction, robustesse).

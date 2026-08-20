@@ -727,6 +727,55 @@
       to { transform: rotate(360deg); }
     }
 
+    /* Matrice de Recette & Qualification */
+    .recette-table th {
+      background: #f8fafc;
+      border-bottom: 2px solid var(--border);
+      color: var(--text-secondary);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-family: 'Outfit', sans-serif;
+    }
+    .recette-table th, .recette-table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .recette-row:hover {
+      background: rgba(13, 89, 115, 0.02);
+    }
+    .recette-select-status {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      font-weight: 600;
+      width: 100%;
+      cursor: pointer;
+      transition: var(--transition);
+      outline: none;
+    }
+    .status-valide { background: #f0fdf4 !important; color: #15803d !important; border-color: #bbf7d0 !important; }
+    .status-a-tester { background: #fffbeb !important; color: #b45309 !important; border-color: #fef3c7 !important; }
+    .status-anomalie { background: #fef2f2 !important; color: #b91c1c !important; border-color: #fecaca !important; }
+    .status-non-applicable { background: #f8fafc !important; color: #64748b !important; border-color: #e2e8f0 !important; }
+
+    .recette-note-input {
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      font-size: 13px;
+      background: var(--background);
+      transition: var(--transition);
+      outline: none;
+    }
+    .recette-note-input:focus {
+      background: #ffffff;
+      border-color: var(--primary);
+    }
+
     /* Footer */
     footer {
       background: var(--primary-dark);
@@ -760,7 +809,7 @@
         </div>
       </div>
       <div class="header-actions">
-        <span class="badge-version">v2.8.0</span>
+        <span class="badge-version">v3.0.0</span>
       </div>
     </div>
   </header>
@@ -771,6 +820,10 @@
       <button class="tab-btn active" role="tab" id="tab-btn-console" aria-selected="true" aria-controls="tab-console" onclick="switchTab('console')">
         <span class="material-symbols-outlined" aria-hidden="true">science</span>
         <span>Console d'administration</span>
+      </button>
+      <button class="tab-btn" role="tab" id="tab-btn-recette" aria-selected="false" aria-controls="tab-recette" onclick="switchTab('recette')">
+        <span class="material-symbols-outlined" aria-hidden="true">fact_check</span>
+        <span>Banc d'Essai & Recette</span>
       </button>
       <button class="tab-btn" role="tab" id="tab-btn-guide" aria-selected="false" aria-controls="tab-guide" onclick="switchTab('guide')">
         <span class="material-symbols-outlined" aria-hidden="true">menu_book</span>
@@ -1268,7 +1321,143 @@
 
       </div>
     </div>
+
+    <!-- TAB 3 : MATRICE DE RECETTE & STATUT OPÉRATIONNEL -->
+    <div class="tab-pane" id="tab-recette" role="tabpanel" aria-labelledby="tab-btn-recette" aria-hidden="true">
+      <!-- Tableau de bord et métriques de validation -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <h2 style="font-family: 'Outfit', sans-serif; font-size: 20px; font-weight: 600; color: var(--primary-dark); display: flex; align-items: center; gap: 10px;">
+              <span class="material-symbols-outlined" style="color: var(--primary);">fact_check</span>
+              <span>Matrice de Recette & Qualification Opérationnelle</span>
+            </h2>
+            <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">
+              Testez et qualifiez le bon fonctionnement de chacune des 43 actions avant le raccordement définitif à Jira Service Management.
+            </p>
+          </div>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-secondary" onclick="exporterRapportRecette()" style="padding: 8px 16px; font-size: 13px;">
+              <span class="material-symbols-outlined" aria-hidden="true">download</span>
+              <span>Exporter le bilan</span>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="chargerStatutsRecette()" style="padding: 8px 16px; font-size: 13px;">
+              <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+              <span>Rafraîchir</span>
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="confirmerReinitialisationRecette()" style="padding: 8px 16px; font-size: 13px; color: #c62828;">
+              <span class="material-symbols-outlined" aria-hidden="true">restart_alt</span>
+              <span>Réinitialiser</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Jauges / KPIs de progression -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 20px;">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: var(--radius-sm); padding: 14px 18px;">
+            <div style="font-size: 12px; font-weight: 600; color: #166534; text-transform: uppercase;">Validées / Opérationnelles</div>
+            <div style="font-size: 26px; font-weight: 700; color: #15803d; margin-top: 4px;" id="kpi-valides">0 / 43</div>
+          </div>
+          <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: var(--radius-sm); padding: 14px 18px;">
+            <div style="font-size: 12px; font-weight: 600; color: #92400e; text-transform: uppercase;">À tester / En attente</div>
+            <div style="font-size: 26px; font-weight: 700; color: #b45309; margin-top: 4px;" id="kpi-a-tester">43</div>
+          </div>
+          <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--radius-sm); padding: 14px 18px;">
+            <div style="font-size: 12px; font-weight: 600; color: #991b1b; text-transform: uppercase;">Anomalies signalées</div>
+            <div style="font-size: 26px; font-weight: 700; color: #b91c1c; margin-top: 4px;" id="kpi-anomalies">0</div>
+          </div>
+          <div style="background: var(--background); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 18px;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Taux d'achèvement</div>
+            <div style="font-size: 26px; font-weight: 700; color: var(--primary); margin-top: 4px;" id="kpi-taux">0%</div>
+          </div>
+        </div>
+
+        <!-- Barre de filtres et recherche -->
+        <div style="display: flex; gap: 12px; margin-top: 20px; flex-wrap: wrap; align-items: center;">
+          <div class="search-box" style="flex: 1; min-width: 240px; margin-bottom: 0;">
+            <span class="material-symbols-outlined" aria-hidden="true">search</span>
+            <input type="text" id="recette-search-input" placeholder="Filtrer une action, famille ou note..." oninput="filtrerGrilleRecette()" />
+          </div>
+          <select id="recette-filter-statut" onchange="filtrerGrilleRecette()" style="padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white;">
+            <option value="">Tous les statuts</option>
+            <option value="VALIDE">🟢 Validé / Opérationnel</option>
+            <option value="A_TESTER">🟡 À tester</option>
+            <option value="ANOMALIE">🔴 En anomalie</option>
+            <option value="NON_APPLICABLE">⚪ Non applicable</option>
+          </select>
+          <select id="recette-filter-famille" onchange="filtrerGrilleRecette()" style="padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; background: white;">
+            <option value="">Toutes les familles (43)</option>
+            <option value="Comptes">Comptes (5)</option>
+            <option value="Groupes">Groupes (6)</option>
+            <option value="Alias">Alias e-mail (2)</option>
+            <option value="Sécurité">Sécurité (6)</option>
+            <option value="Appareils">Appareils mobiles (3)</option>
+            <option value="Messagerie">Messagerie & Gmail (6)</option>
+            <option value="Diagnostic">Diagnostic & Support (1)</option>
+            <option value="Drive">Drives partagés (4)</option>
+            <option value="Calendrier">Calendriers (2)</option>
+            <option value="Licences">Licences & Archivage (3)</option>
+            <option value="Groupes d'actions">Groupes d'actions / Séquences (5)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Grille des actions de recette -->
+      <div class="card" style="padding: 0; overflow-x: auto;">
+        <table class="recette-table" style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px;">
+          <thead>
+            <tr>
+              <th style="padding: 14px 18px; width: 260px;">Action & Famille</th>
+              <th style="padding: 14px 18px; width: 140px;">Fenêtre</th>
+              <th style="padding: 14px 18px; width: 210px;">Statut de validation</th>
+              <th style="padding: 14px 18px;">Observations & PV de test</th>
+              <th style="padding: 14px 18px; width: 160px; text-align: right;">Opérations</th>
+            </tr>
+          </thead>
+          <tbody id="recette-table-body">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 32px; color: var(--text-secondary);">
+                <div class="spinner" style="border-top-color: var(--primary); margin: 0 auto 12px;"></div>
+                Chargement de la matrice de recette...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </main>
+
+  <!-- Modale d'export du bilan de recette -->
+  <div id="recette-export-overlay" role="dialog" aria-modal="true" aria-labelledby="export-title"
+       onclick="if(event.target===this) fermerExportRecette()"
+       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center; padding:20px;">
+    <div style="background:#ffffff; max-width:680px; width:100%; border-radius:14px; box-shadow:0 20px 50px rgba(0,0,0,0.3); overflow:hidden; display:flex; flex-direction:column; max-height:90vh;">
+      <div style="padding:20px 24px; border-bottom:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span class="material-symbols-outlined" aria-hidden="true" style="color:var(--primary); font-size:26px;">assignment_turned_in</span>
+          <h3 id="export-title" style="margin:0; font-size:18px; font-family:'Outfit'; color:var(--primary-dark);">Bilan de Recette & Qualification</h3>
+        </div>
+        <button type="button" onclick="fermerExportRecette()" style="background:none; border:none; cursor:pointer; color:var(--text-secondary);">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+      </div>
+      <div style="padding:20px 24px; flex:1; overflow-y:auto;">
+        <p style="font-size:14px; color:var(--text-secondary); margin-bottom:12px;">
+          Ce compte-rendu récapitule l'état d'avancement de la recette, prêt à être copié dans votre documentation de projet ou ticket Jira.
+        </p>
+        <div class="code-block-container" style="margin-bottom:0;">
+          <pre id="recette-export-text" style="max-height:350px; overflow-y:auto;"></pre>
+        </div>
+      </div>
+      <div style="padding:16px 24px; display:flex; justify-content:flex-end; gap:12px; background:#f7f9fa; border-top:1px solid #e2e8f0;">
+        <button type="button" class="btn btn-secondary" onclick="fermerExportRecette()">Fermer</button>
+        <button type="button" class="btn btn-primary" onclick="copierRapportRecette()">
+          <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+          <span>Copier le rapport</span>
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- Toast Container -->
   <div class="toast" id="toast-notif" role="status" aria-live="polite">
@@ -1297,7 +1486,7 @@
   </div>
 
   <footer>
-    Passerelle Jira Service Management → Google Workspace (v2.8.0) — Développé par 
+    Passerelle Jira Service Management → Google Workspace (v3.0.0) — Développé par 
     <a href="https://faucheux.bzh" target="_blank" rel="noopener">Fabrice Faucheux</a>
   </footer>
 
@@ -1337,6 +1526,10 @@
       if (tabId === 'guide') {
         afficherUrlWebhook();
         genererGuideActions();
+      }
+
+      if (tabId === 'recette') {
+        chargerStatutsRecette();
       }
     }
 
@@ -1634,6 +1827,9 @@
       conserver_copie:  [{ val: 'true', txt: 'Oui (conserver copie)' }, { val: 'false', txt: 'Non (archiver directement)' }],
       inclure_prives:   [{ val: 'false', txt: 'Non (fichiers partagés uniquement)' }, { val: 'true', txt: 'Oui (partagés et privés)' }],
       visible_annuaire: [{ val: '', txt: '(ne pas changer)' }, { val: 'true', txt: 'Oui' }, { val: 'false', txt: 'Non' }],
+      role_drive:       [{ val: 'fileOrganizer', txt: 'Gestionnaire de contenu (fileOrganizer)' }, { val: 'organizer', txt: 'Gestionnaire complet (organizer)' }, { val: 'commenter', txt: 'Commentateur (commenter)' }, { val: 'reader', txt: 'Lecteur (reader)' }],
+      type_membre_drive:[{ val: 'user', txt: 'Utilisateur (user)' }, { val: 'group', txt: 'Groupe (group)' }],
+      role_calendrier:  [{ val: 'reader', txt: 'Lecture des détails (reader)' }, { val: 'writer', txt: 'Modification des évènements (writer)' }, { val: 'owner', txt: 'Gestionnaire et partage (owner)' }, { val: 'freeBusyReader', txt: 'Disponibilités uniquement (freeBusyReader)' }],
 
       // ═══ LISTES MÉTIER ═══
       // Vide []  ⇒ liste alimentée DYNAMIQUEMENT depuis l'annuaire (comme l'OU) :
@@ -1866,11 +2062,59 @@
         'RETOUR_ABSENCE': [
           { id: 'email_cible', label: 'E-mail du compte de retour', type: 'email', placeholder: 'retour@cooperl.com' },
           { id: 'email_delegue', label: 'Délégué à retirer (optionnel)', type: 'email', placeholder: 'remplacant@cooperl.com' }
+        ],
+        'INFO_COMPTE': [
+          { id: 'email_cible', label: 'E-mail du compte à diagnostiquer', type: 'email', placeholder: 'jean.dupont@cooperl.com' }
+        ],
+        'AJOUT_MEMBRE_DRIVE_PARTAGE': [
+          { id: 'email_cible', label: 'E-mail du membre ou groupe à ajouter', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
+          { id: 'drive_id', label: 'ID du Drive partagé (Shared Drive)', placeholder: '0ABCdef123456789' },
+          { id: 'role', label: 'Rôle d\'accès sur le Drive', options: LISTES.role_drive },
+          { id: 'type_membre', label: 'Type de bénéficiaire', options: LISTES.type_membre_drive }
+        ],
+        'RETRAIT_MEMBRE_DRIVE_PARTAGE': [
+          { id: 'email_cible', label: 'E-mail du membre ou groupe à retirer', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
+          { id: 'drive_id', label: 'ID du Drive partagé (Shared Drive)', placeholder: '0ABCdef123456789' }
+        ],
+        'CREATION_DRIVE_PARTAGE': [
+          { id: 'nom_drive', label: 'Nom d\'affichage du Drive partagé', placeholder: 'Direction Financière — Projets' },
+          { id: 'gestionnaire_email', label: 'E-mail du gestionnaire initial', type: 'email', placeholder: 'responsable@cooperl.com' }
+        ],
+        'PARTAGE_CALENDRIER': [
+          { id: 'email_calendrier', label: 'E-mail de l\'agenda à partager', type: 'email', placeholder: 'directeur@cooperl.com' },
+          { id: 'email_beneficiaire', label: 'E-mail du bénéficiaire', type: 'email', placeholder: 'assistante@cooperl.com' },
+          { id: 'role', label: 'Droits sur l\'agenda', options: LISTES.role_calendrier }
+        ],
+        'RETRAIT_PARTAGE_CALENDRIER': [
+          { id: 'email_calendrier', label: 'E-mail de l\'agenda', type: 'email', placeholder: 'directeur@cooperl.com' },
+          { id: 'email_beneficiaire', label: 'E-mail du bénéficiaire à retirer', type: 'email', placeholder: 'assistante@cooperl.com' }
+        ],
+        'URGENCE_COMPROMISSION': [
+          { id: 'email_cible', label: 'E-mail du compte compromis', type: 'email', placeholder: 'victime.phishing@cooperl.com' },
+          { id: 'motif', label: 'Motif d\'urgence sécurité', placeholder: 'Phishing avéré — neutralisation immédiate' }
+        ],
+        'MUTATION_INTERNE': [
+          { id: 'email_cible', label: 'E-mail du collaborateur muté', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
+          { id: 'unite_organisationnelle', label: 'Nouvelle OU (optionnel)', options: LISTES.ou, optionsSource: 'orgunits', placeholder: '/Production/Site-Lamballe' },
+          { id: 'intitule_poste', label: 'Nouvel intitulé de poste (optionnel)', placeholder: 'Responsable Atelier' },
+          { id: 'departement', label: 'Nouveau service / département (optionnel)', options: LISTES.departement, optionsSource: 'suggest:departement', placeholder: 'Production' },
+          { id: 'societe', label: 'Société (optionnel)', options: LISTES.societe, optionsSource: 'suggest:societe', placeholder: 'COOPERL ARC ATLANTIQUE' },
+          { id: 'centre_cout', label: 'Centre de coûts (optionnel)', options: LISTES.centre_cout, optionsSource: 'suggest:centre_cout', placeholder: 'PROD-002' },
+          { id: 'manager_email', label: 'E-mail du nouveau manager (optionnel)', type: 'email', placeholder: 'chef.atelier@cooperl.com' },
+          { id: 'telephone_pro', label: 'Nouveau téléphone pro (optionnel)', placeholder: '+33 2 96 00 00 00' },
+          { id: 'retirer_anciens_groupes', label: 'Retirer des anciens groupes ?', options: LISTES.ouinon },
+          { id: 'nouveaux_groupes', label: 'Nouveaux groupes à rejoindre (séparés par des virgules)', placeholder: 'atelier-prod@cooperl.com, securite-site@cooperl.com' }
+        ],
+        'ARCHIVAGE_COMPTE': [
+          { id: 'email_cible', label: 'E-mail du compte à archiver', type: 'email', placeholder: 'partant@cooperl.com' },
+          { id: 'unite_organisationnelle', label: 'Unité d\'archivage (optionnel)', placeholder: '/Archives' },
+          { id: 'sku_source', label: 'SKU standard à retirer (optionnel)', placeholder: 'Laissez vide pour la valeur par défaut' },
+          { id: 'sku_archive', label: 'SKU licence archivage (optionnel)', placeholder: 'ex. 1010020030 (Archived User)' }
         ]
       };
 
       // Les champs RH / accès s'ajoutent aux formulaires de compte concernés.
-      ['CREATION_COMPTE', 'MISE_A_JOUR_PROFIL', 'ARRIVEE_COLLABORATEUR'].forEach(k => {
+      ['CREATION_COMPTE', 'MISE_A_JOUR_PROFIL', 'ARRIVEE_COLLABORATEUR', 'MUTATION_INTERNE'].forEach(k => {
         if (defs[k]) defs[k] = defs[k].concat(CHAMPS_RH);
       });
 
@@ -2164,6 +2408,347 @@
       setTimeout(() => {
         toast.classList.remove('show');
       }, 3000);
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  GESTION DU BANC D'ESSAI & DE LA MATRICE DE RECETTE
+    // ═══════════════════════════════════════════════════════════════════════
+    let statutsRecette = {};
+
+    function determinerFamilleAction(nom) {
+      if (['CREATION_COMPTE', 'CHANGEMENT_OU', 'MISE_A_JOUR_PROFIL', 'RENOMMER_COMPTE', 'SUPPRESSION_COMPTE'].includes(nom)) return 'Comptes';
+      if (['AJOUT_GROUPE', 'RETRAIT_GROUPE', 'RETRAIT_TOUS_GROUPES', 'CREATION_GROUPE', 'SUPPRESSION_GROUPE', 'LISTE_MEMBRES_GROUPE'].includes(nom)) return 'Groupes';
+      if (['AJOUT_ALIAS', 'RETRAIT_ALIAS'].includes(nom)) return 'Alias';
+      if (['SUSPENSION', 'REACTIVATION', 'RESET_MOT_DE_PASSE', 'DECONNEXION_FORCEE', 'REVOCATION_TOKENS_APPS', 'GENERATION_CODES_SECOURS'].includes(nom)) return 'Sécurité';
+      if (['EFFACEMENT_APPAREIL', 'BLOCAGE_APPAREIL', 'APPROBATION_APPAREIL'].includes(nom)) return 'Appareils';
+      if (['DELEGATION_EMAIL', 'RETRAIT_DELEGATION_EMAIL', 'REPONSE_ABSENCE', 'DESACTIVATION_REPONSE_ABSENCE', 'TRANSFERT_EMAILS', 'ARRET_TRANSFERT_EMAILS'].includes(nom)) return 'Messagerie';
+      if (['INFO_COMPTE'].includes(nom)) return 'Diagnostic';
+      if (['TRANSFERT_DRIVE', 'AJOUT_MEMBRE_DRIVE_PARTAGE', 'RETRAIT_MEMBRE_DRIVE_PARTAGE', 'CREATION_DRIVE_PARTAGE'].includes(nom)) return 'Drive';
+      if (['PARTAGE_CALENDRIER', 'RETRAIT_PARTAGE_CALENDRIER'].includes(nom)) return 'Calendrier';
+      if (['ATTRIBUTION_LICENCE', 'RETRAIT_LICENCE', 'ARCHIVAGE_COMPTE'].includes(nom)) return 'Licences';
+      if (['ARRIVEE_COLLABORATEUR', 'DEPART_COLLABORATEUR', 'RETOUR_ABSENCE', 'URGENCE_COMPROMISSION', 'MUTATION_INTERNE'].includes(nom)) return "Groupes d'actions";
+      return 'Autre';
+    }
+
+    function chargerStatutsRecette() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(data) {
+            statutsRecette = data || {};
+            afficherGrilleRecette();
+          })
+          .withFailureHandler(function(err) {
+            console.warn('Impossible de charger les statuts de recette :', err);
+            afficherGrilleRecette();
+          })
+          .getStatutsRecette();
+      } else {
+        afficherGrilleRecette();
+      }
+    }
+
+    function afficherGrilleRecette() {
+      const tbody = document.getElementById('recette-table-body');
+      if (!tbody) return;
+
+      const actions = catalogueActions.length > 0 ? catalogueActions : [
+        { action: 'CREATION_COMPTE', description: 'Crée un compte utilisateur Workspace.', required: ['prenom', 'nom', 'email_souhaite'], fenetre: 'STANDARD' },
+        { action: 'CHANGEMENT_OU', description: 'Déplace un compte dans une autre OU.', required: ['email_cible', 'unite_organisationnelle'], fenetre: 'STANDARD' },
+        { action: 'MISE_A_JOUR_PROFIL', description: 'Met à jour les informations du profil.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'RENOMMER_COMPTE', description: 'Change l\'adresse principale.', required: ['email_cible', 'nouvel_email'], fenetre: 'STANDARD', destructive: true },
+        { action: 'SUPPRESSION_COMPTE', description: 'Supprime définitivement un compte.', required: ['email_cible', 'confirmation'], fenetre: 'STANDARD', destructive: true },
+        { action: 'AJOUT_GROUPE', description: 'Ajoute un utilisateur à un groupe.', required: ['email_cible', 'email_groupe'], fenetre: 'STANDARD' },
+        { action: 'RETRAIT_GROUPE', description: 'Retire un utilisateur d\'un groupe.', required: ['email_cible', 'email_groupe'], fenetre: 'PERMANENTE' },
+        { action: 'RETRAIT_TOUS_GROUPES', description: 'Retire un utilisateur de tous ses groupes.', required: ['email_cible'], fenetre: 'PERMANENTE' },
+        { action: 'CREATION_GROUPE', description: 'Crée un nouveau groupe Google.', required: ['email_groupe', 'nom_groupe'], fenetre: 'STANDARD' },
+        { action: 'SUPPRESSION_GROUPE', description: 'Supprime un groupe Google.', required: ['email_groupe', 'confirmation'], fenetre: 'STANDARD', destructive: true },
+        { action: 'LISTE_MEMBRES_GROUPE', description: 'Liste les membres d\'un groupe.', required: ['email_groupe'], fenetre: 'PERMANENTE' },
+        { action: 'AJOUT_ALIAS', description: 'Ajoute un alias e-mail.', required: ['email_cible', 'alias'], fenetre: 'STANDARD' },
+        { action: 'RETRAIT_ALIAS', description: 'Supprime un alias e-mail.', required: ['email_cible', 'alias'], fenetre: 'STANDARD' },
+        { action: 'SUSPENSION', description: 'Suspend un compte.', required: ['email_cible'], fenetre: 'PERMANENTE' },
+        { action: 'REACTIVATION', description: 'Réactive un compte.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'RESET_MOT_DE_PASSE', description: 'Réinitialise le mot de passe.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'DECONNEXION_FORCEE', description: 'Déconnecte toutes les sessions.', required: ['email_cible'], fenetre: 'PERMANENTE' },
+        { action: 'REVOCATION_TOKENS_APPS', description: 'Révoque les tokens OAuth.', required: ['email_cible'], fenetre: 'PERMANENTE' },
+        { action: 'GENERATION_CODES_SECOURS', description: 'Génère de nouveaux codes 2FA.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'EFFACEMENT_APPAREIL', description: 'Efface à distance un appareil.', required: ['email_cible', 'type_effacement'], fenetre: 'PERMANENTE', destructive: true },
+        { action: 'BLOCAGE_APPAREIL', description: 'Bloque un appareil suspect.', required: ['email_cible'], fenetre: 'PERMANENTE' },
+        { action: 'APPROBATION_APPAREIL', description: 'Approuve un appareil en attente.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'DELEGATION_EMAIL', description: 'Délègue une boîte Gmail.', required: ['email_cible', 'email_delegue'], fenetre: 'STANDARD' },
+        { action: 'RETRAIT_DELEGATION_EMAIL', description: 'Retire une délégation Gmail.', required: ['email_cible', 'email_delegue'], fenetre: 'STANDARD' },
+        { action: 'REPONSE_ABSENCE', description: 'Active le répondeur Gmail.', required: ['email_cible', 'message_absence'], fenetre: 'STANDARD' },
+        { action: 'DESACTIVATION_REPONSE_ABSENCE', description: 'Désactive le répondeur Gmail.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'TRANSFERT_EMAILS', description: 'Active la redirection Gmail.', required: ['email_cible', 'email_destination'], fenetre: 'STANDARD' },
+        { action: 'ARRET_TRANSFERT_EMAILS', description: 'Désactive la redirection Gmail.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'TRANSFERT_DRIVE', description: 'Transfère les fichiers Drive.', required: ['email_source', 'email_destination'], fenetre: 'STANDARD', destructive: true },
+        { action: 'ATTRIBUTION_LICENCE', description: 'Attribue une licence Workspace.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'RETRAIT_LICENCE', description: 'Libère une licence Workspace.', required: ['email_cible'], fenetre: 'STANDARD' },
+        { action: 'ARRIVEE_COLLABORATEUR', description: 'Onboarding complet.', required: ['prenom', 'nom', 'email_souhaite'], fenetre: 'STANDARD' },
+        { action: 'DEPART_COLLABORATEUR', description: 'Offboarding complet.', required: ['email_cible'], fenetre: 'PERMANENTE', destructive: true },
+        { action: 'RETOUR_ABSENCE', description: 'Rétablissement post-absence.', required: ['email_cible'], fenetre: 'STANDARD' }
+      ];
+
+      // Calcul des KPIs
+      let nbValides = 0, nbAnomalies = 0, nbATester = 0;
+      actions.forEach(a => {
+        const info = statutsRecette[a.action] || {};
+        const st = info.statut || 'A_TESTER';
+        if (st === 'VALIDE') nbValides++;
+        else if (st === 'ANOMALIE') nbAnomalies++;
+        else if (st === 'NON_APPLICABLE') {}
+        else nbATester++;
+      });
+
+      const totalQualifiables = actions.length;
+      const pct = Math.round((nbValides / (totalQualifiables || 1)) * 100);
+
+      const elValides = document.getElementById('kpi-valides');
+      const elATester = document.getElementById('kpi-a-tester');
+      const elAnomalies = document.getElementById('kpi-anomalies');
+      const elTaux = document.getElementById('kpi-taux');
+      if (elValides) elValides.innerText = `${nbValides} / ${totalQualifiables}`;
+      if (elATester) elATester.innerText = nbATester;
+      if (elAnomalies) elAnomalies.innerText = nbAnomalies;
+      if (elTaux) elTaux.innerText = `${pct}%`;
+
+      // Construction des lignes du tableau
+      tbody.innerHTML = '';
+      actions.forEach(a => {
+        const famille = determinerFamilleAction(a.action);
+        const info = statutsRecette[a.action] || {};
+        const statut = info.statut || 'A_TESTER';
+        const note = info.note || '';
+        const auteur = info.auteur ? `Par ${info.auteur.split('@')[0]}` : '';
+        const dateStr = info.date ? new Date(info.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+        const metaStr = (auteur || dateStr) ? `${auteur} ${dateStr ? 'le ' + dateStr : ''}` : 'Non qualifié';
+
+        const tr = document.createElement('tr');
+        tr.className = 'recette-row';
+        tr.dataset.action = a.action;
+        tr.dataset.famille = famille;
+        tr.dataset.statut = statut;
+
+        const badgeFenetre = a.fenetre === 'PERMANENTE' ? 'badge-permanente' : 'badge-standard';
+
+        tr.innerHTML = `
+          <td>
+            <div style="font-weight: 600; color: var(--primary-dark); font-size: 14px;">${escapeHtml(a.action)}</div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 2px;">
+              <span style="background: var(--background); border: 1px solid var(--border); padding: 2px 6px; border-radius: 4px; font-weight: 500;">${escapeHtml(famille)}</span>
+              <span style="margin-left: 6px;">${escapeHtml(a.description)}</span>
+            </div>
+          </td>
+          <td>
+            <span class="badge-fenetre ${badgeFenetre}">${escapeHtml(a.fenetre)}</span>
+          </td>
+          <td>
+            <select class="recette-select-status status-${statut.toLowerCase().replace(/_/g, '-')}" 
+                    id="recette-statut-${escapeHtml(a.action)}" 
+                    onchange="modifierStatutRecette('${escapeHtml(a.action)}')">
+              <option value="A_TESTER" ${statut === 'A_TESTER' ? 'selected' : ''}>🟡 À tester</option>
+              <option value="VALIDE" ${statut === 'VALIDE' ? 'selected' : ''}>🟢 Validé / Opérationnel</option>
+              <option value="ANOMALIE" ${statut === 'ANOMALIE' ? 'selected' : ''}>🔴 En anomalie</option>
+              <option value="NON_APPLICABLE" ${statut === 'NON_APPLICABLE' ? 'selected' : ''}>⚪ Non applicable</option>
+            </select>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 4px;" id="recette-meta-${escapeHtml(a.action)}">
+              ${escapeHtml(metaStr)}
+            </div>
+          </td>
+          <td>
+            <input type="text" class="recette-note-input" 
+                   id="recette-note-${escapeHtml(a.action)}" 
+                   value="${escapeHtml(note)}" 
+                   placeholder="Ajouter une observation ou résultat..." 
+                   onblur="modifierStatutRecette('${escapeHtml(a.action)}')" 
+                   onkeydown="if(event.key==='Enter') this.blur();" />
+          </td>
+          <td style="text-align: right;">
+            <div style="display: inline-flex; gap: 6px;">
+              <button type="button" class="btn btn-secondary" onclick="testerActionDepuisRecette('${escapeHtml(a.action)}')" title="Tester dans la console" style="padding: 6px 10px; font-size: 12px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">play_arrow</span>
+                <span>Tester</span>
+              </button>
+              <button type="button" class="btn btn-secondary" onclick="voirGuideDepuisRecette('${escapeHtml(a.action)}')" title="Voir payload Jira" style="padding: 6px 8px; font-size: 12px;">
+                <span class="material-symbols-outlined" style="font-size: 16px;">menu_book</span>
+              </button>
+            </div>
+          </td>
+        `;
+
+        tbody.appendChild(tr);
+      });
+
+      filtrerGrilleRecette();
+    }
+
+    function modifierStatutRecette(nomAction) {
+      const select = document.getElementById('recette-statut-' + nomAction);
+      const noteInput = document.getElementById('recette-note-' + nomAction);
+      if (!select || !noteInput) return;
+
+      const statut = select.value;
+      const note = noteInput.value.trim();
+
+      select.className = 'recette-select-status status-' + statut.toLowerCase().replace(/_/g, '-');
+
+      const tr = select.closest('tr');
+      if (tr) tr.dataset.statut = statut;
+
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(maj) {
+            statutsRecette[nomAction] = maj;
+            const metaEl = document.getElementById('recette-meta-' + nomAction);
+            if (metaEl && maj) {
+              const auteur = maj.auteur ? `Par ${maj.auteur.split('@')[0]}` : '';
+              const dateStr = maj.date ? new Date(maj.date).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+              metaEl.innerText = `${auteur} ${dateStr ? 'le ' + dateStr : ''}`;
+            }
+            afficherToast(`Statut de ${nomAction} mis à jour !`);
+            recalculerKpisRecette();
+          })
+          .withFailureHandler(function(err) {
+            afficherToast('Erreur lors de la sauvegarde : ' + ((err && err.message) || err));
+          })
+          .sauvegarderStatutRecette(nomAction, statut, note);
+      } else {
+        statutsRecette[nomAction] = { statut, note, date: new Date().toISOString(), auteur: 'Admin Local' };
+        recalculerKpisRecette();
+        afficherToast(`Statut de ${nomAction} mis à jour (local) !`);
+      }
+    }
+
+    function recalculerKpisRecette() {
+      const rows = document.querySelectorAll('#recette-table-body .recette-row');
+      let nbValides = 0, nbAnomalies = 0, nbATester = 0;
+      rows.forEach(r => {
+        const st = r.dataset.statut || 'A_TESTER';
+        if (st === 'VALIDE') nbValides++;
+        else if (st === 'ANOMALIE') nbAnomalies++;
+        else if (st === 'NON_APPLICABLE') {}
+        else nbATester++;
+      });
+      const total = rows.length || 1;
+      const pct = Math.round((nbValides / total) * 100);
+
+      const elValides = document.getElementById('kpi-valides');
+      const elATester = document.getElementById('kpi-a-tester');
+      const elAnomalies = document.getElementById('kpi-anomalies');
+      const elTaux = document.getElementById('kpi-taux');
+      if (elValides) elValides.innerText = `${nbValides} / ${total}`;
+      if (elATester) elATester.innerText = nbATester;
+      if (elAnomalies) elAnomalies.innerText = nbAnomalies;
+      if (elTaux) elTaux.innerText = `${pct}%`;
+    }
+
+    function filtrerGrilleRecette() {
+      const q = (document.getElementById('recette-search-input')?.value || '').toLowerCase();
+      const filterStatut = document.getElementById('recette-filter-statut')?.value;
+      const filterFamille = document.getElementById('recette-filter-famille')?.value;
+
+      document.querySelectorAll('#recette-table-body .recette-row').forEach(tr => {
+        const action = tr.dataset.action.toLowerCase();
+        const famille = tr.dataset.famille;
+        const statut = tr.dataset.statut;
+        const note = (document.getElementById('recette-note-' + tr.dataset.action)?.value || '').toLowerCase();
+
+        const matchTexte = !q || action.includes(q) || note.includes(q) || famille.toLowerCase().includes(q);
+        const matchStatut = !filterStatut || statut === filterStatut;
+        const matchFamille = !filterFamille || famille === filterFamille;
+
+        tr.style.display = (matchTexte && matchStatut && matchFamille) ? '' : 'none';
+      });
+    }
+
+    function testerActionDepuisRecette(nomAction) {
+      switchTab('console');
+      selectionnerAction(nomAction);
+      document.getElementById('action-form').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function voirGuideDepuisRecette(nomAction) {
+      switchTab('guide');
+      const body = document.getElementById('body-guide-' + nomAction);
+      if (body) {
+        body.style.display = 'block';
+        const icon = document.getElementById('icon-toggle-' + nomAction);
+        if (icon) icon.innerText = 'expand_less';
+        body.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    function exporterRapportRecette() {
+      const now = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const rows = document.querySelectorAll('#recette-table-body .recette-row');
+      
+      let valides = [], aTester = [], anomalies = [], nonApplicables = [];
+
+      rows.forEach(r => {
+        const nom = r.dataset.action;
+        const famille = r.dataset.famille;
+        const st = r.dataset.statut || 'A_TESTER';
+        const note = document.getElementById('recette-note-' + nom)?.value.trim() || '—';
+        const item = `• **${nom}** [${famille}] : ${note}`;
+
+        if (st === 'VALIDE') valides.push(item);
+        else if (st === 'ANOMALIE') anomalies.push(item);
+        else if (st === 'NON_APPLICABLE') nonApplicables.push(item);
+        else aTester.push(item);
+      });
+
+      const total = rows.length;
+      const pct = Math.round((valides.length / (total || 1)) * 100);
+
+      const lignes = [
+        `# Procès-Verbal de Recette — Passerelle Jira → Google Workspace`,
+        `> **Date du rapport :** ${now} | **Couverture :** ${valides.length}/${total} (${pct}%)`,
+        ``,
+        `## 🟢 Actions Validées & Opérationnelles (${valides.length})`,
+        valides.length ? valides.join('\n') : `*(Aucune pour le moment)*`,
+        ``,
+        `## 🟡 Actions Restant à Tester (${aTester.length})`,
+        aTester.length ? aTester.join('\n') : `*(Toutes les actions ont été qualifiées !)*`,
+        ``,
+        `## 🔴 Anomalies Détectées (${anomalies.length})`,
+        anomalies.length ? anomalies.join('\n') : `*(Aucune anomalie signalée)*`,
+        ``,
+        `## ⚪ Actions Non Applicables (${nonApplicables.length})`,
+        nonApplicables.length ? nonApplicables.join('\n') : `*(Aucune)*`,
+        ``,
+        `---`,
+        `*Généré par la Passerelle Jira Service Management → Google Workspace (v3.0.0)*`
+      ];
+
+      document.getElementById('recette-export-text').innerText = lignes.join('\n');
+      document.getElementById('recette-export-overlay').style.display = 'flex';
+    }
+
+    function fermerExportRecette() {
+      document.getElementById('recette-export-overlay').style.display = 'none';
+    }
+
+    function copierRapportRecette() {
+      const txt = document.getElementById('recette-export-text').innerText;
+      copierTexte(txt);
+      afficherToast('Rapport de recette copié dans le presse-papier !');
+    }
+
+    function confirmerReinitialisationRecette() {
+      if (confirm('Voulez-vous vraiment réinitialiser l\'ensemble de la matrice de recette ? Tous les statuts et notes seront effacés.')) {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(function() {
+              statutsRecette = {};
+              afficherGrilleRecette();
+              afficherToast('Matrice de recette réinitialisée.');
+            })
+            .reinitialiserStatutsRecette();
+        } else {
+          statutsRecette = {};
+          afficherGrilleRecette();
+          afficherToast('Matrice de recette réinitialisée (local).');
+        }
+      }
     }
   </script>
 </body>

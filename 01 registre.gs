@@ -18,7 +18,7 @@
  * lus. En plaçant les références dans le corps d'une fonction, elles ne sont
  * résolues qu'à la première invocation — après chargement complet du projet.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v3.0.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
@@ -80,10 +80,25 @@ function declarationsFormulaires_() {
     SPEC_ATTRIBUTION_LICENCE,
     SPEC_RETRAIT_LICENCE,
 
+    // --- Diagnostic & Support (lecture seule) -------------------------------
+    SPEC_INFO_COMPTE,
+
+    // --- Drives partagés (Shared Drives) -------------------------------------
+    SPEC_AJOUT_MEMBRE_DRIVE_PARTAGE,
+    SPEC_RETRAIT_MEMBRE_DRIVE_PARTAGE,
+    SPEC_CREATION_DRIVE_PARTAGE,
+
+    // --- Calendriers Google --------------------------------------------------
+    SPEC_PARTAGE_CALENDRIER,
+    SPEC_RETRAIT_PARTAGE_CALENDRIER,
+
     // --- Groupes d'action (séquences orchestrées) ----------------------------
     SPEC_ARRIVEE_COLLABORATEUR,
     SPEC_DEPART_COLLABORATEUR,
-    SPEC_RETOUR_ABSENCE
+    SPEC_RETOUR_ABSENCE,
+    SPEC_URGENCE_COMPROMISSION,
+    SPEC_MUTATION_INTERNE,
+    SPEC_ARCHIVAGE_COMPTE
   ];
 }
 

@@ -4,7 +4,7 @@
 * Points d'entrée doPost (webhook Jira) et doGet (supervision), plus
 * l'exécuteur partagé entre traitement synchrone et traitement différé.
 *
-* Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
+* Projet : Passerelle Jira Service Management → Google Workspace (v3.0.0)
 * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
 */
 
@@ -368,4 +368,62 @@ function getWebhookUrl() {
   // Pas de repli codé en dur : un ID de déploiement ne doit pas vivre dans le
   // code source (il part dans Git). L'UI gère l'absence d'URL.
   return '';
+}
+
+/**
+ * Retourne l'état de recette et de validation de chaque action.
+ * Stocké dans les ScriptProperties (clé 'RECETTE_STATUS_JSON').
+ * Réservé aux administrateurs autorisés (voir assertAdminUI_).
+ *
+ * @return {!Object<string, {statut: string, note: string, auteur: string, date: string}>}
+ */
+function getStatutsRecette() {
+  assertAdminUI_();
+  const brut = getProp_('RECETTE_STATUS_JSON', '{}');
+  try {
+    return JSON.parse(brut) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+/**
+ * Enregistre le statut de recette et une observation pour une action donnée.
+ * Réservé aux administrateurs autorisés (voir assertAdminUI_).
+ *
+ * @param {string} nomAction Nom de l'action à qualifier.
+ * @param {string} statut 'VALIDE' | 'A_TESTER' | 'ANOMALIE' | 'NON_APPLICABLE'
+ * @param {string} note Observation libre ou résultat du test.
+ * @return {!Object} Entrée mise à jour.
+ */
+function sauvegarderStatutRecette(nomAction, statut, note) {
+  const admin = assertAdminUI_();
+  if (!nomAction) throw new AppError_('BAD_REQUEST', "Nom d'action manquant.");
+
+  const props = PropertiesService.getScriptProperties();
+  const brut = props.getProperty('RECETTE_STATUS_JSON') || '{}';
+  let table = {};
+  try { table = JSON.parse(brut) || {}; } catch (e) { table = {}; }
+
+  const entree = {
+    statut: String(statut || 'A_TESTER'),
+    note: String(note || '').slice(0, 1000),
+    auteur: admin,
+    date: new Date().toISOString()
+  };
+
+  table[nomAction] = entree;
+  props.setProperty('RECETTE_STATUS_JSON', JSON.stringify(table));
+  return entree;
+}
+
+/**
+ * Réinitialise tous les statuts de recette.
+ * Réservé aux administrateurs autorisés (voir assertAdminUI_).
+ * @return {!Object} Objet vide.
+ */
+function reinitialiserStatutsRecette() {
+  assertAdminUI_();
+  PropertiesService.getScriptProperties().deleteProperty('RECETTE_STATUS_JSON');
+  return {};
 }

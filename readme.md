@@ -1,6 +1,6 @@
 # Passerelle Jira Service Management → Google Workspace
 
-> **v2.8.0** — Automatise les opérations d'administration Google Workspace
+> **v3.0.0** — Automatise les opérations d'administration Google Workspace
 > déclenchées par les formulaires Jira Service Management.
 
 *[English version below](#jira-service-management--google-workspace-gateway)*
@@ -10,12 +10,12 @@
 ## Présentation
 
 Quand un agent JSM valide un ticket (arrivée, départ, demande d'accès,
-réinitialisation de mot de passe…), Jira Automation envoie un webhook POST
-vers cette webapp Google Apps Script. Le routeur identifie l'action demandée,
-vérifie l'authentification et les données, puis exécute l'opération via
-l'Admin SDK — le tout sans intervention manuelle.
+réinitialisation de mot de passe, demande de Drive partagé…), Jira Automation
+envoie un webhook POST vers cette webapp Google Apps Script. Le routeur
+identifie l'action demandée, vérifie l'authentification et les données, puis
+exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 
-### Actions disponibles
+### Actions disponibles (43 actions)
 
 | Action | Description | Fenêtre |
 |---|---|---|
@@ -53,15 +53,26 @@ l'Admin SDK — le tout sans intervention manuelle.
 | `DESACTIVATION_REPONSE_ABSENCE` | Désactive la réponse d'absence automatique | Standard |
 | `TRANSFERT_EMAILS` | Redirige les e-mails entrants vers une autre adresse | Standard |
 | `ARRET_TRANSFERT_EMAILS` | Désactive la redirection automatique des e-mails | Standard |
-| **Drive** | | |
+| **Diagnostic & Support** | | |
+| `INFO_COMPTE` | Retourne la fiche diagnostic complète d'un compte (statut, 2FA, OU, groupes, transferts, licences, dernier login) | Permanente |
+| **Drive & Drives partagés** | | |
 | `TRANSFERT_DRIVE` | Transfère la propriété des fichiers Drive à un autre utilisateur | Standard |
-| **Licences** | | |
+| `CREATION_DRIVE_PARTAGE` | Crée un nouveau Shared Drive et lui assigne son gestionnaire initial | Standard |
+| `AJOUT_MEMBRE_DRIVE_PARTAGE` | Ajoute un membre ou un groupe à un Drive partagé avec rôle (organizer, fileOrganizer, commenter, reader) | Standard |
+| `RETRAIT_MEMBRE_DRIVE_PARTAGE` | Révoque l'accès d'un membre à un Drive partagé | Permanente |
+| **Calendriers** | | |
+| `PARTAGE_CALENDRIER` | Accorde l'accès à un agenda Google Calendar (lecture, modification, gestion) | Standard |
+| `RETRAIT_PARTAGE_CALENDRIER` | Révoque l'accès d'un collaborateur à un agenda | Permanente |
+| **Licences & Archivage** | | |
 | `ATTRIBUTION_LICENCE` | Attribue une licence Workspace à un utilisateur | Standard |
 | `RETRAIT_LICENCE` | Libère la licence d'un utilisateur (facturée tant qu'assignée) | Standard |
+| `ARCHIVAGE_COMPTE` | Archive un compte : déplacement dans `/Archives`, libération licence standard et attribution licence Archived User | Standard |
 | **Groupes d'action** (séquences orchestrées) | | |
 | `ARRIVEE_COLLABORATEUR` | Onboarding : création du compte + licence + groupes + alias, dans l'ordre | Standard |
 | `DEPART_COLLABORATEUR` | Offboarding : transferts + délégation + retrait groupes + suspension + retrait licence | Permanente |
 | `RETOUR_ABSENCE` | Coupe réponse d'absence, transfert et délégation posés au départ | Standard |
+| `URGENCE_COMPROMISSION` | Kill-switch sécurité : suspension + déconnexion + révocation OAuth + blocage appareils | Permanente |
+| `MUTATION_INTERNE` | Mobilité interne : déplacement OU + profil RH + retrait anciens groupes + ajout nouveaux groupes | Standard |
 
 > ⚙️ Les actions **Messagerie** nécessitent un compte de service avec
 > délégation de domaine (voir section « Actions Gmail »).
@@ -355,7 +366,7 @@ MIT — Voir le fichier LICENSE pour les détails.
 
 # Jira Service Management → Google Workspace gateway
 
-> **v2.8.0** — Automates Google Workspace administration operations triggered
+> **v3.0.0** — Automates Google Workspace administration operations triggered
 > by Jira Service Management forms.
 
 ## Overview
@@ -368,8 +379,8 @@ without manual intervention.
 
 ### Available actions
 
-25 actions are available across 7 categories: accounts, groups, aliases,
-security, mobile devices, email (⚙️ requires service account), and Drive.
+43 actions are available across 11 categories: accounts, groups, aliases,
+security, mobile devices, email (⚙️ requires service account), account diagnosis & support, Shared Drives, Google Calendar, licenses & archiving, and orchestrated sequences.
 See the French section above for the complete table.
 
 **Standard window**: immediate execution during admin hours (Mon–Fri
