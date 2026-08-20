@@ -636,7 +636,39 @@ function listerAppareilsUtilisateur_(email) {
     }
   }
 
-  // 3. Complément Cloud Identity Devices API (flottes d'entreprise Android Enterprise / iOS DEP)
+  // 3. Si toujours aucun résultat, parcours direct du parc mobile global (sans query) avec filtrage local
+  if (appareils.length === 0) {
+    try {
+      pageToken = null;
+      let pages = 0;
+      const userPrefix = emailPropre.split('@')[0];
+      do {
+        const options = { projection: 'FULL', maxResults: 100 };
+        if (pageToken) options.pageToken = pageToken;
+        const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
+        if (reponse.mobiledevices) {
+          reponse.mobiledevices.forEach(function (d) {
+            const emailsApp = (d.email || []).map(function (e) { return String(e).toLowerCase().trim(); });
+            const nomsApp = (d.name || []).map(function (n) { return String(n).toLowerCase().trim(); });
+            const emailMatch = emailsApp.indexOf(emailPropre) !== -1 || emailsApp.some(function (e) { return e.indexOf(userPrefix) === 0; });
+            const nomMatch = nomsApp.some(function (n) { return n.indexOf(userPrefix) !== -1; });
+            if (emailMatch || nomMatch) {
+              if (!appareils.some(function (exist) { return exist.resourceId === d.resourceId; })) {
+                d.source = 'Admin Directory MDM (Scan parc)';
+                appareils.push(d);
+              }
+            }
+          });
+        }
+        pageToken = reponse.nextPageToken;
+        pages++;
+      } while (pageToken && pages < 10 && appareils.length === 0);
+    } catch (err) {
+      console.warn('Erreur lors du scan global des appareils mobiles : ' + err.message);
+    }
+  }
+
+  // 4. Complément Cloud Identity Devices API (flottes d'entreprise Android Enterprise / iOS DEP)
   try {
     const ciAppareils = listerAppareilsCloudIdentity_(emailPropre);
     ciAppareils.forEach(function (ci) {

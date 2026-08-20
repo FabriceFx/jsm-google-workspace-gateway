@@ -488,3 +488,58 @@ function admin_aPropos() {
     ];
     console.log(lignes.join('\n'));
 }
+
+/**
+ * Diagnostic direct des terminaux mobiles et synchronisations dans l'annuaire Google.
+ * À exécuter depuis l'éditeur Apps Script pour inspecter le retour brut des APIs Google.
+ *
+ * @param {string=} emailTest Adresse e-mail à inspecter (optionnel).
+ */
+function setup_diagnostiquerMobile(emailTest) {
+    assertAdminUI_();
+    const email = emailTest || Session.getActiveUser().getEmail();
+    console.log('════ DIAGNOSTIC MOBILE POUR : ' + email + ' ════');
+
+    // 1. Test AdminDirectory.Mobiledevices.list brut
+    try {
+        console.log('--- 1. Appel AdminDirectory.Mobiledevices.list (recherche globale) ---');
+        const repGlobale = AdminDirectory.Mobiledevices.list('my_customer', {
+            projection: 'FULL',
+            maxResults: 10
+        });
+        const total = (repGlobale.mobiledevices || []).length;
+        console.log('Nombre de mobiles trouvés sur la 1ère page globale : ' + total);
+        if (total > 0) {
+            console.log('Exemple de mobile brut dans l\'annuaire : ', JSON.stringify(repGlobale.mobiledevices[0]));
+        }
+    } catch (err) {
+        console.error('Erreur AdminDirectory.Mobiledevices.list : ' + err.message);
+    }
+
+    // 2. Test recherche spécifique par email
+    try {
+        console.log('--- 2. Appel listerAppareilsUtilisateur_ pour ' + email + ' ---');
+        const appareils = listerAppareilsUtilisateur_(email);
+        console.log('Appareils retournés pour ' + email + ' : ' + appareils.length);
+        appareils.forEach(function (app, idx) {
+            console.log('Appareil #' + (idx + 1) + ' : ' +
+                (app.model || app.type) + ' | ' + app.os + ' | Statut: ' + app.status +
+                ' | lastSync: ' + app.lastSync + ' | firstSync: ' + app.firstSync + ' | Source: ' + app.source);
+        });
+    } catch (err) {
+        console.error('Erreur listerAppareilsUtilisateur_ : ' + err.message);
+    }
+
+    // 3. Test des jetons OAuth mobiles
+    try {
+        console.log('--- 3. Appel AdminDirectory.Tokens.list pour ' + email + ' ---');
+        const repTokens = AdminDirectory.Tokens.list(email);
+        const tokens = repTokens.items || [];
+        console.log('Nombre d\'applications/tokens OAuth trouvés : ' + tokens.length);
+        tokens.forEach(function (t) {
+            console.log('Token : ' + (t.displayText || t.clientId) + ' (anonyme: ' + !!t.anonymous + ')');
+        });
+    } catch (err) {
+        console.error('Erreur AdminDirectory.Tokens.list : ' + err.message);
+    }
+}
