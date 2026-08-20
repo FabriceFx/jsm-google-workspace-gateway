@@ -365,6 +365,7 @@ Toutes les autres actions fonctionnent uniquement avec l'Admin SDK.
 90 administration.gs         Fonctions de pilotage manuel
 91 tests.gs                  Tests (unitaires + diagnostics manuels)
 ui_test.html                 Console WebApp, simulateur & banc d'essai
+presentation.html            Présentation visuelle & schéma d'architecture interactif
 ```
 
 ## Sécurité

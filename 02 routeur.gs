@@ -191,6 +191,12 @@ function doGet(e) {
         });
     }
 
+    if (e && e.parameter && (e.parameter.page === 'presentation' || e.parameter.vue === 'presentation')) {
+        return HtmlService.createHtmlOutputFromFile('presentation')
+            .setTitle('Passerelle JSM → Google Workspace — Présentation & Schéma Directeur')
+            .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.DEFAULT);
+    }
+
     // XFrameOptionsMode.DEFAULT (et non ALLOWALL) : l'interface déclenche des
     // actions d'administration, elle ne doit pas être encadrable par un site
     // tiers (protection anti-clickjacking).

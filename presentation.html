@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passerelle JSM → Workspace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,400;0,500;0,700;1,400&family=Roboto+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg: #F8F9FA;
+    --surface: #FFFFFF;
+    --ink: #202124;
+    --muted: #5F6368;
+    --line: #DADCE0;
+    --accent: #1A73E8;
+    --accent-ink: #174EA6;
+    --accent-soft: #E8F0FE;
+    --amber: #B05A00;
+    --amber-soft: #FEF7E0;
+    --chip-bg: #F1F3F4;
+    --g-blue: #4285F4;
+    --g-red: #EA4335;
+    --g-yellow: #FBBC04;
+    --g-green: #34A853;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #202124;
+      --surface: #292A2D;
+      --ink: #E8EAED;
+      --muted: #9AA0A6;
+      --line: #3C4043;
+      --accent: #8AB4F8;
+      --accent-ink: #AECBFA;
+      --accent-soft: #1F3355;
+      --amber: #F5B942;
+      --amber-soft: #33290F;
+      --chip-bg: #35363A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #202124;
+    --surface: #292A2D;
+    --ink: #E8EAED;
+    --muted: #9AA0A6;
+    --line: #3C4043;
+    --accent: #8AB4F8;
+    --accent-ink: #AECBFA;
+    --accent-soft: #1F3355;
+    --amber: #F5B942;
+    --amber-soft: #33290F;
+    --chip-bg: #35363A;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Roboto", "Helvetica Neue", Arial, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.6;
+    margin: 0;
+    padding: 0 0 72px;
+  }
+
+  .appbar {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+    padding: 13px 24px;
+  }
+  .logo-dots { display: flex; gap: 5px; }
+  .logo-dots span { width: 9px; height: 9px; border-radius: 50%; }
+  .logo-dots .b { background: var(--g-blue); }
+  .logo-dots .r { background: var(--g-red); }
+  .logo-dots .y { background: var(--g-yellow); }
+  .logo-dots .g { background: var(--g-green); }
+  .appbar-title {
+    font-family: "Google Sans", "Roboto", sans-serif;
+    font-size: 1.05rem; font-weight: 500;
+  }
+  .appbar-title span { color: var(--muted); font-weight: 400; }
+  .version-pill {
+    margin-left: auto;
+    font-family: "Google Sans", "Roboto", sans-serif;
+    font-size: 0.75rem; font-weight: 500;
+    color: var(--accent-ink);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: 3px 12px;
+  }
+
+  main {
+    max-width: 880px; margin: 0 auto; padding: 44px 20px 0;
+    display: flex; flex-direction: column; gap: 52px;
+  }
+
+  h1, h2, h3 {
+    font-family: "Google Sans", "Roboto", sans-serif;
+    line-height: 1.2;
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 { font-size: clamp(1.7rem, 4vw, 2.35rem); font-weight: 500; letter-spacing: -0.005em; }
+  h2 { font-size: clamp(1.2rem, 3vw, 1.45rem); font-weight: 500; }
+  p { margin: 0; max-width: 70ch; }
+  .muted { color: var(--muted); }
+  header p.lede { margin-top: 16px; font-size: 1.02rem; color: var(--muted); }
+
+  section { display: flex; flex-direction: column; gap: 16px; }
+  .kicker {
+    align-self: flex-start;
+    font-family: "Google Sans", "Roboto", sans-serif;
+    font-size: 0.8rem; font-weight: 500;
+    border-radius: 999px;
+    padding: 4px 14px;
+    background: var(--chip-bg);
+    color: var(--muted);
+  }
+  .kicker.now { background: var(--amber-soft); color: var(--amber); }
+  .kicker.next { background: var(--accent-soft); color: var(--accent-ink); }
+
+  figure {
+    margin: 4px 0 0;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 22px 18px 14px;
+    overflow-x: auto;
+  }
+  figure svg { display: block; min-width: 640px; max-width: 100%; height: auto; margin: 0 auto; }
+  figcaption {
+    font-size: 0.85rem; color: var(--muted);
+    padding-top: 12px; margin-top: 8px;
+    border-top: 1px solid var(--line);
+    max-width: none;
+  }
+
+  .pains { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
+  .pains li {
+    font-size: 0.84rem;
+    background: var(--amber-soft);
+    color: var(--amber);
+    border-radius: 999px;
+    padding: 4px 14px;
+  }
+
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-top: 2px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 18px 16px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .card h3, .extra h3 { font-size: 0.98rem; font-weight: 500; display: flex; align-items: center; gap: 9px; }
+  .card h3::before {
+    content: ""; width: 9px; height: 9px; border-radius: 50%; flex: none;
+  }
+  .card:nth-child(1) h3::before { background: var(--g-blue); }
+  .card:nth-child(2) h3::before { background: var(--g-red); }
+  .card:nth-child(3) h3::before { background: var(--g-yellow); }
+  .card:nth-child(4) h3::before { background: var(--g-green); }
+  .card p { font-size: 0.89rem; color: var(--muted); }
+
+  .extras { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 640px) { .extras { grid-template-columns: 1fr; } }
+  .extra {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 8px;
+    padding: 18px 16px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .extra p { font-size: 0.89rem; color: var(--muted); }
+  code {
+    font-family: "Roboto Mono", monospace;
+    font-size: 0.8em;
+    background: var(--chip-bg);
+    border-radius: 4px;
+    padding: 1px 6px;
+  }
+
+  .catalog { display: flex; flex-wrap: wrap; gap: 8px; }
+  .catalog span {
+    font-size: 0.84rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 4px 14px;
+  }
+  .catalog span b { font-weight: 500; color: var(--accent-ink); }
+
+  footer { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 18px; }
+
+  .svg-amber { color: var(--amber); }
+  .svg-accent { color: var(--accent); }
+</style>
+</head>
+<body>
+
+<div class="appbar">
+  <div class="logo-dots"><span class="b"></span><span class="r"></span><span class="y"></span><span class="g"></span></div>
+  <div class="appbar-title">Passerelle <span>JSM → Google Workspace · Admin</span></div>
+  <span class="version-pill">v3.1.0</span>
+</div>
+
+<main>
+  <header>
+    <h1>Du ticket validé à l'action exécutée, sans intervention manuelle</h1>
+    <p class="lede">Aujourd'hui, une demande d'administration Workspace (arrivée, départ, accès, mot de passe…)
+    circule par e-mails, formulaires Google et scripts épars avant d'être exécutée à la main dans la console.
+    La passerelle branche Jira Service Management directement sur l'Admin SDK&nbsp;: l'agent valide le ticket,
+    l'action s'exécute, le ticket reçoit le compte rendu.</p>
+  </header>
+
+  <section>
+    <span class="kicker now">Aujourd'hui</span>
+    <h2>Trois canaux parallèles, un fil conducteur inexistant</h2>
+    <p class="muted">La même demande peut arriver par e-mail, par Google Forms ou déclencher un script isolé.
+    Dans tous les cas, quelqu'un doit relire, ressaisir puis cliquer dans la console — et la trace se disperse
+    entre boîtes mail, onglets Sheets et mémoire des admins.</p>
+
+    <figure>
+      <svg viewBox="0 0 860 372" role="img" aria-label="Circuit actuel : les demandes arrivent par e-mail, Google Forms ou scripts isolés, convergent vers un traitement manuel dans la console d'administration, et la réponse au demandeur repart par e-mail sans suivi.">
+        <defs>
+          <marker id="fa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="fw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" class="svg-amber" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- Demandeur -->
+        <rect x="24" y="140" width="150" height="64" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="99" y="167" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">Collaborateur / RH</text>
+        <text x="99" y="186" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">demandes au fil de l'eau</text>
+
+        <!-- Canaux -->
+        <rect x="268" y="36" width="216" height="64" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="376" y="63" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">E-mails au support</text>
+        <text x="376" y="82" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">tri et réponses à la main</text>
+
+        <rect x="268" y="148" width="216" height="64" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="376" y="175" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">Google Forms → Sheets</text>
+        <text x="376" y="194" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">saisie libre, puis relecture</text>
+
+        <rect x="268" y="260" width="216" height="64" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="376" y="287" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">Scripts épars</text>
+        <text x="376" y="306" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">lancés manuellement, sans ticket</text>
+
+        <!-- Console -->
+        <rect x="608" y="132" width="228" height="88" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="722" y="163" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">Console d'administration</text>
+        <text x="722" y="182" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">clics manuels,</text>
+        <text x="722" y="198" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">compte par compte</text>
+
+        <!-- Demandeur -> canaux -->
+        <line x1="174" y1="156" x2="262" y2="72" stroke="currentColor" stroke-width="1.4" marker-end="url(#fa)"/>
+        <line x1="174" y1="172" x2="262" y2="178" stroke="currentColor" stroke-width="1.4" marker-end="url(#fa)"/>
+        <line x1="174" y1="188" x2="262" y2="288" stroke="currentColor" stroke-width="1.4" marker-end="url(#fa)"/>
+
+        <!-- Canaux -> console, avec ressaisie -->
+        <g class="svg-amber">
+          <line x1="484" y1="70" x2="602" y2="152" stroke="currentColor" stroke-width="1.4" marker-end="url(#fw)"/>
+          <text x="556" y="94" text-anchor="middle" font-size="11" font-weight="500" fill="currentColor">ressaisie</text>
+          <line x1="484" y1="178" x2="602" y2="176" stroke="currentColor" stroke-width="1.4" marker-end="url(#fw)"/>
+          <text x="546" y="168" text-anchor="middle" font-size="11" font-weight="500" fill="currentColor">recopie</text>
+          <line x1="484" y1="288" x2="602" y2="206" stroke="currentColor" stroke-width="1.4" marker-end="url(#fw)"/>
+          <text x="560" y="266" text-anchor="middle" font-size="11" font-weight="500" fill="currentColor">copier-coller</text>
+
+          <!-- Retour au demandeur -->
+          <path d="M 722 220 L 722 348 L 99 348 L 99 210" fill="none" stroke="currentColor" stroke-width="1.4" stroke-dasharray="5 5" marker-end="url(#fw)"/>
+          <text x="410" y="340" text-anchor="middle" font-size="11" font-weight="500" fill="currentColor">réponse par e-mail « quand c'est fait » — aucun statut consultable</text>
+        </g>
+      </svg>
+      <figcaption>Chaque canal impose une ressaisie avant l'exécution manuelle. La demande, la décision et
+      l'action ne sont reliées nulle part.</figcaption>
+    </figure>
+
+    <ul class="pains">
+      <li>trace dispersée (mails, onglets)</li>
+      <li>double saisie et fautes de frappe</li>
+      <li>statut invisible pour le demandeur</li>
+      <li>dépend de la disponibilité d'un admin</li>
+      <li>étapes oubliées sur les départs / arrivées</li>
+    </ul>
+  </section>
+
+  <section>
+    <span class="kicker next">Avec la passerelle</span>
+    <h2>Un seul flux, tracé de bout en bout</h2>
+    <p class="muted">Le portail JSM devient le guichet unique. Quand l'agent valide le ticket, Jira Automation
+    envoie un webhook à la passerelle Apps Script, qui contrôle, exécute via l'Admin SDK, journalise, puis
+    revient commenter et résoudre le ticket. Personne ne ressaisit rien.</p>
+
+    <figure>
+      <svg viewBox="0 0 780 552" role="img" aria-label="Flux automatisé : une demande sur le portail JSM validée par l'agent déclenche un webhook Jira Automation vers la passerelle Apps Script, qui authentifie, valide, exécute via l'Admin SDK dans Google Workspace, journalise dans un Sheet d'audit et poste le compte rendu sur le ticket.">
+        <defs>
+          <marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+          <marker id="gc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" class="svg-accent" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- Demandeurs -->
+        <rect x="300" y="12" width="180" height="32" rx="16" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.8"/>
+        <text x="390" y="33" text-anchor="middle" font-size="12" fill="currentColor">Collaborateur · RH · IT</text>
+        <line x1="390" y1="44" x2="390" y2="58" stroke="currentColor" stroke-width="1.4" marker-end="url(#ga)"/>
+
+        <!-- Portail JSM -->
+        <rect x="230" y="62" width="320" height="62" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="390" y="88" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">Portail JSM — ticket</text>
+        <text x="390" y="107" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">formulaire structuré, champs contrôlés</text>
+
+        <line x1="390" y1="124" x2="390" y2="158" stroke="currentColor" stroke-width="1.4" marker-end="url(#ga)"/>
+        <text x="400" y="146" font-size="11" fill="currentColor" opacity="0.7">validation par l'agent</text>
+
+        <!-- Jira Automation -->
+        <rect x="230" y="162" width="320" height="54" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="390" y="185" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">Jira Automation</text>
+        <text x="390" y="204" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">règle&nbsp;: ticket validé → appel de la webapp</text>
+
+        <line x1="390" y1="216" x2="390" y2="250" stroke="currentColor" stroke-width="1.4" marker-end="url(#ga)"/>
+        <text x="400" y="238" font-size="11" fill="currentColor" opacity="0.7">webhook POST · secret partagé</text>
+
+        <!-- Passerelle -->
+        <g class="svg-accent">
+          <rect x="230" y="254" width="320" height="144" rx="8" fill="currentColor" opacity="0.08"/>
+          <rect x="230" y="254" width="320" height="144" rx="8" fill="none" stroke="currentColor" stroke-width="1.7"/>
+          <text x="390" y="281" text-anchor="middle" font-size="13.5" font-weight="500" fill="currentColor">Passerelle Apps Script</text>
+        </g>
+        <g>
+          <rect x="250" y="296" width="136" height="34" rx="17" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
+          <text x="318" y="317" text-anchor="middle" font-size="11.5" fill="currentColor">authentification</text>
+          <rect x="394" y="296" width="136" height="34" rx="17" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
+          <text x="462" y="317" text-anchor="middle" font-size="11.5" fill="currentColor">validation des données</text>
+          <rect x="250" y="344" width="136" height="34" rx="17" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
+          <text x="318" y="365" text-anchor="middle" font-size="11.5" fill="currentColor">registre&nbsp;: 48 actions</text>
+          <rect x="394" y="344" width="136" height="34" rx="17" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
+          <text x="462" y="365" text-anchor="middle" font-size="11.5" fill="currentColor">créneaux + file d'attente</text>
+        </g>
+
+        <line x1="390" y1="398" x2="390" y2="432" stroke="currentColor" stroke-width="1.4" marker-end="url(#ga)"/>
+        <text x="400" y="420" font-size="11" fill="currentColor" opacity="0.7">Admin SDK</text>
+
+        <!-- Workspace -->
+        <rect x="230" y="436" width="320" height="66" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="390" y="463" text-anchor="middle" font-size="13" font-weight="500" fill="currentColor">Google Workspace</text>
+        <text x="390" y="483" text-anchor="middle" font-size="10.5" fill="currentColor" opacity="0.65">comptes · groupes · Gmail · Drive · agendas · licences · appareils</text>
+
+        <!-- Audit -->
+        <line x1="550" y1="326" x2="600" y2="326" stroke="currentColor" stroke-width="1.4" marker-end="url(#ga)"/>
+        <text x="575" y="316" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.7">trace</text>
+        <rect x="604" y="292" width="164" height="68" rx="8" fill="none" stroke="currentColor" stroke-width="1.4"/>
+        <text x="686" y="319" text-anchor="middle" font-size="12.5" font-weight="500" fill="currentColor">Journal d'audit</text>
+        <text x="686" y="338" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">Sheet + alertes e-mail</text>
+
+        <!-- Callback -->
+        <g class="svg-accent">
+          <path d="M 230 326 L 140 326 Q 116 326 116 302 L 116 117 Q 116 93 140 93 L 222 93"
+                fill="none" stroke="currentColor" stroke-width="1.5" stroke-dasharray="6 5" marker-end="url(#gc)"/>
+          <text transform="rotate(-90 100 210)" x="100" y="210" text-anchor="middle" font-size="11" font-weight="500" fill="currentColor">compte rendu + résolution auto</text>
+        </g>
+      </svg>
+      <figcaption>Le flux bleu en pointillés est le retour automatique&nbsp;: la passerelle poste une note interne
+      sur le ticket (résultat, horodatage) et peut le passer à «&nbsp;Résolu&nbsp;». Le demandeur suit tout depuis JSM.</figcaption>
+    </figure>
+  </section>
+
+  <section>
+    <span class="kicker">Ce que ça change</span>
+    <h2>Quatre gains immédiats</h2>
+    <div class="cards">
+      <div class="card">
+        <h3>Guichet unique</h3>
+        <p>Une seule porte d'entrée&nbsp;: le portail JSM. Plus de demandes en fil de mail, de Forms
+        orphelins ni de scripts à lancer soi-même.</p>
+      </div>
+      <div class="card">
+        <h3>Zéro ressaisie</h3>
+        <p>Les champs du formulaire JSM partent tels quels dans le webhook. Ce que le demandeur saisit
+        est ce que l'Admin SDK exécute.</p>
+      </div>
+      <div class="card">
+        <h3>Traçabilité complète</h3>
+        <p>Chaque opération est liée à un ticket, horodatée dans le journal d'audit et commentée
+        en retour sur le ticket. Qui, quoi, quand&nbsp;: toujours retrouvable.</p>
+      </div>
+      <div class="card">
+        <h3>Délai en minutes</h3>
+        <p>L'exécution suit la validation de l'agent, sans attendre qu'un admin soit disponible
+        pour cliquer dans la console.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="kicker">Au-delà du déclenchement</span>
+    <h2>Ce que la passerelle apporte en plus des scripts actuels</h2>
+    <div class="extras">
+      <div class="extra">
+        <h3>Sécurité encadrée</h3>
+        <p>Secret partagé sur le webhook, validation stricte des données, confirmation obligatoire pour les
+        suppressions, et erreurs typées renvoyées lisiblement à l'agent JSM.</p>
+      </div>
+      <div class="extra">
+        <h3>Créneaux et file d'attente</h3>
+        <p>Les actions sensibles ne s'exécutent que dans les fenêtres d'administration (jours fériés compris).
+        Hors créneau, la demande est mise en file et rejouée automatiquement — le ticket est prévenu.</p>
+      </div>
+      <div class="extra">
+        <h3>Orchestrations métier</h3>
+        <p>Des séquences complètes en un ticket&nbsp;: <code>ARRIVEE_COLLABORATEUR</code>,
+        <code>DEPART_COLLABORATEUR</code>, <code>MUTATION_INTERNE</code>,
+        <code>URGENCE_COMPROMISSION</code>… chaque étape dans le bon ordre, sans oubli.</p>
+      </div>
+      <div class="extra">
+        <h3>Un catalogue, pas des scripts épars</h3>
+        <p>48 actions déclarées dans un registre unique, avec les mêmes contrôles, le même journal et le même
+        retour Jira — au lieu de scripts isolés à maintenir un par un.</p>
+      </div>
+    </div>
+    <div class="catalog">
+      <span><b>Comptes</b> création · profil · OU · renommage</span>
+      <span><b>Groupes</b> ajout · retrait · cycle de vie · modération</span>
+      <span><b>Sécurité</b> suspension · sessions · 2FA · tokens</span>
+      <span><b>Messagerie</b> délégation · absence · transfert · signatures</span>
+      <span><b>Drive</b> transfert · Drives partagés</span>
+      <span><b>Agendas</b> partages · salles & ressources</span>
+      <span><b>Licences</b> attribution · archivage</span>
+      <span><b>Appareils</b> effacement · blocage · approbation</span>
+    </div>
+  </section>
+
+  <footer>
+    La console d'administration reste disponible pour les cas hors catalogue&nbsp;; tout le reste passe par le
+    ticket JSM. Détail des 48 actions et de la configuration&nbsp;: voir le README du projet.
+  </footer>
+</main>
+</body>
+</html>
