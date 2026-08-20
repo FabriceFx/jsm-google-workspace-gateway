@@ -539,17 +539,51 @@ function envoyerIdentifiants_(destinataire, compte, motDePasse, ticketKey) {
  * @return {!Array<!Object>} Liste des appareils (peut être vide).
  */
 function listerAppareilsUtilisateur_(email) {
+  const emailPropre = String(email || '').toLowerCase().trim();
   const appareils = [];
   let pageToken = null;
-  do {
-    const options = { query: 'email:' + email, maxResults: 100 };
-    if (pageToken) options.pageToken = pageToken;
-    const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
-    if (reponse.mobiledevices) {
-      reponse.mobiledevices.forEach(function (d) { appareils.push(d); });
+
+  // 1. Recherche directe par adresse e-mail
+  try {
+    do {
+      const options = { query: 'email:' + emailPropre, maxResults: 100 };
+      if (pageToken) options.pageToken = pageToken;
+      const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
+      if (reponse.mobiledevices) {
+        reponse.mobiledevices.forEach(function (d) { appareils.push(d); });
+      }
+      pageToken = reponse.nextPageToken;
+    } while (pageToken);
+  } catch (err) {
+    console.warn('Erreur lors de la recherche des appareils mobiles pour ' + emailPropre + ' : ' + err.message);
+  }
+
+  // 2. Si aucun résultat et que l'adresse contient un @, repli par préfixe utilisateur
+  if (appareils.length === 0 && emailPropre.indexOf('@') !== -1) {
+    const userPart = emailPropre.split('@')[0];
+    try {
+      pageToken = null;
+      do {
+        const options = { query: 'email:' + userPart + '*', maxResults: 100 };
+        if (pageToken) options.pageToken = pageToken;
+        const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
+        if (reponse.mobiledevices) {
+          reponse.mobiledevices.forEach(function (d) {
+            const emailsApp = (d.email || []).map(function (e) { return String(e).toLowerCase().trim(); });
+            if (emailsApp.indexOf(emailPropre) !== -1 || emailsApp.some(function (e) { return e.indexOf(userPart) === 0; })) {
+              if (!appareils.some(function (exist) { return exist.resourceId === d.resourceId; })) {
+                appareils.push(d);
+              }
+            }
+          });
+        }
+        pageToken = reponse.nextPageToken;
+      } while (pageToken);
+    } catch (err) {
+      console.warn('Erreur lors du repli de recherche mobile pour ' + userPart + ' : ' + err.message);
     }
-    pageToken = reponse.nextPageToken;
-  } while (pageToken);
+  }
+
   return appareils;
 }
 

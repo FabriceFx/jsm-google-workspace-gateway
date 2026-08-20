@@ -64,33 +64,65 @@ function actionInfoCompte_(data, ctx) {
     // Non bloquant si licensing API non configurée ou compte sans licence
   }
 
-  // Appareils mobiles & synchronisation smartphone
+  const emailPrincipal = (utilisateur.primaryEmail || data.email_cible).toLowerCase().trim();
+
+  // Appareils mobiles & synchronisation smartphone (MDM / Google Sync)
   let appareils = [];
   let derniereSyncMobileDate = null;
   let appareilsResume = [];
+  let erreurAppareils = null;
   try {
-    appareils = listerAppareilsUtilisateur_(data.email_cible);
+    appareils = listerAppareilsUtilisateur_(emailPrincipal);
+    if (appareils.length === 0 && data.email_cible.toLowerCase().trim() !== emailPrincipal) {
+      appareils = listerAppareilsUtilisateur_(data.email_cible.toLowerCase().trim());
+    }
     appareils.forEach(function (d) {
-      const syncDate = d.lastSync ? new Date(d.lastSync) : null;
+      let syncDate = null;
+      if (d.lastSync) {
+        const parsed = new Date(d.lastSync);
+        if (!isNaN(parsed.getTime())) syncDate = parsed;
+      }
       if (syncDate && (!derniereSyncMobileDate || syncDate > derniereSyncMobileDate)) {
         derniereSyncMobileDate = syncDate;
       }
       const nomAppareil = [d.model || d.type || 'Appareil', d.os ? '(' + d.os + ')' : ''].filter(Boolean).join(' ');
       const statutApp = d.status === 'APPROVED' ? '✅ Approuvé' : (d.status === 'BLOCKED' ? '⛔ Bloqué' : (d.status || 'Actif'));
-      const syncStr = syncDate ? formaterDate_(syncDate) : 'Aucune synchro';
-      appareilsResume.push(nomAppareil + ' [' + statutApp + '] — synchro : ' + syncStr);
+      const syncStr = syncDate ? formaterDate_(syncDate) : 'Date de synchro inconnue';
+      appareilsResume.push(nomAppareil + ' [' + statutApp + '] — dernière synchro : ' + syncStr);
     });
   } catch (err) {
-    // Non bloquant si aucun appareil ou erreur API
+    erreurAppareils = err.message;
+    console.warn('[%s] Erreur lecture appareils mobiles pour %s : %s', ctx.traceId, emailPrincipal, err.message);
+  }
+
+  // Applications tierces et jetons OAuth (dont applications mobiles sans MDM)
+  let tokensList = [];
+  let tokensMobiles = [];
+  try {
+    const repTokens = AdminDirectory.Tokens.list(emailPrincipal);
+    tokensList = (repTokens.items || []).map(function (t) {
+      return t.displayText || t.clientId;
+    });
+    tokensMobiles = (repTokens.items || []).filter(function (t) {
+      const nom = (t.displayText || '').toLowerCase();
+      return nom.includes('android') || nom.includes('ios') || nom.includes('iphone') ||
+        nom.includes('ipad') || nom.includes('phone') || nom.includes('gmail') ||
+        nom.includes('mobile') || nom.includes('outlook');
+    }).map(function (t) {
+      return t.displayText || t.clientId;
+    });
+  } catch (err) {
+    // Non bloquant si non autorisé
   }
 
   // Formatage des dates
   const formatIso = function (iso) {
     if (!iso) return 'Jamais connecté';
     try {
-      return formaterDate_(new Date(iso));
+      const d = new Date(iso);
+      return isNaN(d.getTime()) ? String(iso) : formaterDate_(d);
     } catch (e) {
-      return iso;
+      return String(iso);
     }
   };
 
@@ -101,7 +133,12 @@ function actionInfoCompte_(data, ctx) {
   const manager = (utilisateur.relations || []).filter(function (r) { return r.type === 'manager'; })[0];
 
   // Calcul de la dernière activité réelle (Web vs Smartphone)
-  const webLoginDate = utilisateur.lastLoginTime ? new Date(utilisateur.lastLoginTime) : null;
+  let webLoginDate = null;
+  if (utilisateur.lastLoginTime) {
+    const parsedWeb = new Date(utilisateur.lastLoginTime);
+    if (!isNaN(parsedWeb.getTime())) webLoginDate = parsedWeb;
+  }
+
   let activiteGlobaleStr = 'Jamais connecté';
   if (derniereSyncMobileDate && webLoginDate) {
     activiteGlobaleStr = derniereSyncMobileDate > webLoginDate
@@ -113,8 +150,14 @@ function actionInfoCompte_(data, ctx) {
     activiteGlobaleStr = formaterDate_(webLoginDate) + ' (via Web)';
   }
 
+  const flotteStr = appareilsResume.length
+    ? '\n   ' + appareilsResume.join('\n   ')
+    : (tokensMobiles.length
+      ? 'Non enrôlé MDM (Accès direct OAuth détecté : ' + tokensMobiles.join(', ') + ')'
+      : (erreurAppareils ? 'Erreur de consultation API : ' + erreurAppareils : 'Aucun smartphone ou appareil détecté'));
+
   const lignes = [
-    '════ FICHE DIAGNOSTIC COMPTE : ' + data.email_cible + ' ════',
+    '════ FICHE DIAGNOSTIC COMPTE : ' + emailPrincipal + ' ════',
     '• Nom : ' + nomComplet,
     '• Statut compte : ' + (utilisateur.suspended ? '⛔ SUSPENDU' : (utilisateur.archived ? '📦 ARCHIVÉ' : '✅ ACTIF')),
     '• Unité organisationnelle (OU) : ' + (utilisateur.orgUnitPath || '/'),
@@ -122,19 +165,20 @@ function actionInfoCompte_(data, ctx) {
     '• Changement mot de passe au prochain login : ' + (utilisateur.changePasswordAtNextLogin ? 'Oui' : 'Non'),
     '• Dernière activité globale : ' + activiteGlobaleStr,
     '  ├─ Connexion Web / Navigateur : ' + formatIso(utilisateur.lastLoginTime),
-    '  └─ Synchronisation Mobile (Smartphones) : ' + (derniereSyncMobileDate ? formaterDate_(derniereSyncMobileDate) : 'Aucun mobile actif'),
+    '  └─ Synchronisation Mobile (Smartphones) : ' + (derniereSyncMobileDate ? formaterDate_(derniereSyncMobileDate) : (tokensMobiles.length ? 'Actif via OAuth (' + tokensMobiles.join(', ') + ')' : 'Aucune synchro récente')),
     '• Création du compte : ' + formatIso(utilisateur.creationTime),
     '• Poste / Service : ' + (org.title || 'Non renseigné') + ' / ' + (org.department || 'Non renseigné'),
     '• Manager : ' + (manager ? manager.value : 'Non renseigné'),
     '• Licences : ' + (licences.length ? licences.join(', ') : 'Standard / Non listée'),
-    '• Groupes directes (' + groupes.length + ') : ' + (groupes.length ? groupes.join(', ') : 'Aucun'),
-    '• Flotte mobile (' + appareils.length + ') : ' + (appareilsResume.length ? '\n   ' + appareilsResume.join('\n   ') : 'Aucun smartphone enregistré')
+    '• Groupes directs (' + groupes.length + ') : ' + (groupes.length ? groupes.join(', ') : 'Aucun'),
+    '• Flotte mobile (' + appareils.length + ') : ' + flotteStr,
+    '• Applications OAuth autorisées (' + tokensList.length + ') : ' + (tokensList.length ? tokensList.join(', ') : 'Aucune')
   ];
 
   const resume = lignes.join('\n');
 
   return {
-    target: data.email_cible,
+    target: emailPrincipal,
     message: resume,
     details: {
       primaryEmail: utilisateur.primaryEmail,
@@ -159,7 +203,9 @@ function actionInfoCompte_(data, ctx) {
           status: d.status,
           lastSync: d.lastSync
         };
-      })
+      }),
+      tokensMobiles: tokensMobiles,
+      tokensList: tokensList
     }
   };
 }
