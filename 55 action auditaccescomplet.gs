@@ -102,6 +102,33 @@ function actionAuditAccesComplet_(data, ctx) {
     });
   } catch (e) {}
 
+  // 6. Drives partagés (Directs & Hérités)
+  let drivesDirects = [];
+  let drivesGroupes = [];
+  try {
+    const tousEmails = new Set([primaryEmail, emailCible]);
+    if (Array.isArray(utilisateur.aliases)) {
+      utilisateur.aliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
+    }
+    const groupesSet = new Set(groupes.map(function (g) { return String(g).toLowerCase().trim(); }));
+    const tousDrives = listerTousDrivesPartages_(ctx.traceId);
+
+    tousDrives.forEach(function (d) {
+      const perms = listerPermissionsFichierOuDrive_(d.id, ctx.traceId);
+      perms.forEach(function (p) {
+        if (p.deleted) return;
+        const pEmail = String(p.emailAddress || '').toLowerCase().trim();
+        if (p.type === 'user' && pEmail && tousEmails.has(pEmail)) {
+          drivesDirects.push(d.name + ' [' + p.role + ']');
+        } else if (p.type === 'group' && pEmail && groupesSet.has(pEmail)) {
+          drivesGroupes.push(d.name + ' [via ' + pEmail + ' - ' + p.role + ']');
+        }
+      });
+    });
+  } catch (eDrive) {
+    console.warn('[%s] Erreur audit Drives : %s', ctx.traceId, eDrive.message);
+  }
+
   const nomComplet = (utilisateur.name && (utilisateur.name.fullName ||
     ((utilisateur.name.givenName || '') + ' ' + (utilisateur.name.familyName || '')))) || 'N/A';
   const org = (utilisateur.organizations && utilisateur.organizations[0]) || {};
@@ -118,6 +145,10 @@ function actionAuditAccesComplet_(data, ctx) {
     '',
     '─── PERMÈTRE DES GROUPES (' + groupes.length + ') ───',
     groupes.length ? '  • ' + groupes.join('\n  • ') : '  (Aucun groupe direct)',
+    '',
+    '─── DRIVES PARTAGÉS (' + (drivesDirects.length + drivesGroupes.length) + ') ───',
+    '  • Accès directs (' + drivesDirects.length + ') : ' + (drivesDirects.length ? '\n    - ' + drivesDirects.join('\n    - ') : 'Aucun'),
+    '  • Accès via groupes (' + drivesGroupes.length + ') : ' + (drivesGroupes.length ? '\n    - ' + drivesGroupes.join('\n    - ') : 'Aucun'),
     '',
     '─── MESSAGERIE & DÉLÉGATIONS GMAIL ───',
     '  • Délégués ayant accès à la boîte : ' + (delegations.length ? delegations.join(', ') : 'Aucun'),
@@ -143,6 +174,8 @@ function actionAuditAccesComplet_(data, ctx) {
       isEnrolledIn2Sv: !!utilisateur.isEnrolledIn2Sv,
       groupes: groupes,
       licences: licences,
+      drivesDirects: drivesDirects,
+      drivesGroupes: drivesGroupes,
       delegations: delegations,
       transferts: transferts,
       appareils: appareilsResume,

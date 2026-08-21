@@ -1007,3 +1007,240 @@ function appelLicensingApi_(methode, chemin, payload) {
   if (code === 204 || !reponse.getContentText()) return null;
   return JSON.parse(reponse.getContentText());
 }
+
+/**
+ * Énumère tous les Drives partagés accessibles par le domaine ou par l'administrateur.
+ *
+ * Utilise en priorité le service avancé Drive v3 (Drive.Drives.list), avec double
+ * balayage (useDomainAdminAccess: true pour le domaine complet + appel standard pour
+ * les Drives personnels/externes), et bascule automatique en REST via UrlFetchApp si nécessaire.
+ *
+ * @param {string=} traceId Identifiant de corrélation pour les logs.
+ * @return {!Array<!{id: string, name: string}>} Liste dédoublonnée des Drives partagés.
+ */
+function listerTousDrivesPartages_(traceId) {
+  const drivesMap = new Map();
+  const token = ScriptApp.getOAuthToken();
+  const useAdvanced = (typeof Drive !== 'undefined' && Drive.Drives && typeof Drive.Drives.list === 'function');
+
+  // Stratégie A : Service avancé Drive.Drives.list
+  if (useAdvanced) {
+    // A.1 : Tous les Drives partagés du domaine via useDomainAdminAccess: true
+    try {
+      let pageToken = null;
+      do {
+        const options = { pageSize: 100, useDomainAdminAccess: true, fields: 'nextPageToken, drives(id, name)' };
+        if (pageToken) options.pageToken = pageToken;
+        const rep = Drive.Drives.list(options);
+        const liste = rep.drives || rep.items || [];
+        for (let i = 0; i < liste.length; i++) {
+          const d = liste[i];
+          if (d && d.id) drivesMap.set(d.id, { id: d.id, name: d.name || d.id });
+        }
+        pageToken = rep.nextPageToken || null;
+      } while (pageToken);
+    } catch (errAdmin) {
+      console.warn('[%s] Drive.Drives.list (admin) : %s', traceId || '-', errAdmin.message);
+    }
+
+    // A.2 : Drives où le déployeur est membre direct (sans useDomainAdminAccess)
+    try {
+      let pageToken = null;
+      do {
+        const options = { pageSize: 100, fields: 'nextPageToken, drives(id, name)' };
+        if (pageToken) options.pageToken = pageToken;
+        const rep = Drive.Drives.list(options);
+        const liste = rep.drives || rep.items || [];
+        for (let i = 0; i < liste.length; i++) {
+          const d = liste[i];
+          if (d && d.id && !drivesMap.has(d.id)) {
+            drivesMap.set(d.id, { id: d.id, name: d.name || d.id });
+          }
+        }
+        pageToken = rep.nextPageToken || null;
+      } while (pageToken);
+    } catch (errStd) {
+      console.warn('[%s] Drive.Drives.list (standard) : %s', traceId || '-', errStd.message);
+    }
+  }
+
+  // Stratégie B : Fallback REST si aucun Drive trouvé ou si service avancé absent
+  if (drivesMap.size === 0) {
+    const urlsToTry = [
+      'https://www.googleapis.com/drive/v3/drives?pageSize=100&useDomainAdminAccess=true&fields=nextPageToken,drives(id,name)',
+      'https://www.googleapis.com/drive/v3/drives?pageSize=100&fields=nextPageToken,drives(id,name)'
+    ];
+
+    for (let u = 0; u < urlsToTry.length; u++) {
+      let pageToken = null;
+      do {
+        let url = urlsToTry[u];
+        if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
+
+        try {
+          const rep = UrlFetchApp.fetch(url, {
+            method: 'GET',
+            headers: { Authorization: 'Bearer ' + token },
+            muteHttpExceptions: true
+          });
+
+          if (rep.getResponseCode() === 200) {
+            const data = JSON.parse(rep.getContentText());
+            const liste = data.drives || data.items || [];
+            for (let i = 0; i < liste.length; i++) {
+              const d = liste[i];
+              if (d && d.id && !drivesMap.has(d.id)) {
+                drivesMap.set(d.id, { id: d.id, name: d.name || d.id });
+              }
+            }
+            pageToken = data.nextPageToken || null;
+          } else {
+            pageToken = null;
+          }
+        } catch (eRest) {
+          console.warn('[%s] Erreur REST Drive.drives : %s', traceId || '-', eRest.message);
+          pageToken = null;
+        }
+      } while (pageToken);
+    }
+  }
+
+  return Array.from(drivesMap.values());
+}
+
+/**
+ * Récupère toutes les permissions d'un Drive partagé ou d'un fichier.
+ *
+ * Tente d'abord avec useDomainAdminAccess: true, puis sans en cas de refus.
+ *
+ * @param {string} fileId Identifiant du Shared Drive ou fichier.
+ * @param {string=} traceId Identifiant de trace.
+ * @return {!Array<!Object>} Liste des permissions trouvées.
+ */
+function listerPermissionsFichierOuDrive_(fileId, traceId) {
+  const token = ScriptApp.getOAuthToken();
+  const perms = [];
+  const useAdvanced = (typeof Drive !== 'undefined' && Drive.Permissions && typeof Drive.Permissions.list === 'function');
+
+  // Essai 1 : Service avancé avec useDomainAdminAccess: true
+  if (useAdvanced) {
+    try {
+      let pageToken = null;
+      do {
+        const options = {
+          supportsAllDrives: true,
+          useDomainAdminAccess: true,
+          fields: 'nextPageToken, permissions(id, emailAddress, role, type, deleted, displayName)'
+        };
+        if (pageToken) options.pageToken = pageToken;
+        const rep = Drive.Permissions.list(fileId, options);
+        const list = rep.permissions || rep.items || [];
+        for (let i = 0; i < list.length; i++) perms.push(list[i]);
+        pageToken = rep.nextPageToken || null;
+      } while (pageToken);
+      return perms;
+    } catch (e1) {
+      // Fallback sans useDomainAdminAccess
+      try {
+        let pageToken = null;
+        do {
+          const options = {
+            supportsAllDrives: true,
+            fields: 'nextPageToken, permissions(id, emailAddress, role, type, deleted, displayName)'
+          };
+          if (pageToken) options.pageToken = pageToken;
+          const rep = Drive.Permissions.list(fileId, options);
+          const list = rep.permissions || rep.items || [];
+          for (let i = 0; i < list.length; i++) perms.push(list[i]);
+          pageToken = rep.nextPageToken || null;
+        } while (pageToken);
+        return perms;
+      } catch (e2) {
+        console.warn('[%s] Erreur Drive.Permissions.list sur %s : %s', traceId || '-', fileId, e2.message);
+      }
+    }
+  }
+
+  // Essai 2 : REST via UrlFetchApp
+  const queries = [
+    'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '/permissions?supportsAllDrives=true&useDomainAdminAccess=true&fields=nextPageToken,permissions(id,emailAddress,role,type,deleted,displayName)',
+    'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '/permissions?supportsAllDrives=true&fields=nextPageToken,permissions(id,emailAddress,role,type,deleted,displayName)'
+  ];
+
+  for (let q = 0; q < queries.length; q++) {
+    let pageToken = null;
+    let succes = false;
+    do {
+      let url = queries[q];
+      if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
+      try {
+        const rep = UrlFetchApp.fetch(url, {
+          method: 'GET',
+          headers: { Authorization: 'Bearer ' + token },
+          muteHttpExceptions: true
+        });
+        if (rep.getResponseCode() === 200) {
+          succes = true;
+          const data = JSON.parse(rep.getContentText());
+          const list = data.permissions || data.items || [];
+          for (let i = 0; i < list.length; i++) perms.push(list[i]);
+          pageToken = data.nextPageToken || null;
+        } else {
+          pageToken = null;
+        }
+      } catch (eRest) {
+        pageToken = null;
+      }
+    } while (pageToken);
+    if (succes && perms.length > 0) break;
+  }
+
+  return perms;
+}
+
+/**
+ * Supprime une permission spécifique sur un Shared Drive ou un fichier.
+ *
+ * @param {string} fileId Identifiant du Drive partagé.
+ * @param {string} permissionId Identifiant de la permission.
+ * @param {string=} traceId Identifiant de trace.
+ * @return {boolean} true si supprimé avec succès.
+ */
+function supprimerPermissionFichierOuDrive_(fileId, permissionId, traceId) {
+  const token = ScriptApp.getOAuthToken();
+  const useAdvanced = (typeof Drive !== 'undefined' && Drive.Permissions && typeof Drive.Permissions.remove === 'function');
+
+  if (useAdvanced) {
+    try {
+      Drive.Permissions.remove(fileId, permissionId, { supportsAllDrives: true, useDomainAdminAccess: true });
+      return true;
+    } catch (e1) {
+      try {
+        Drive.Permissions.remove(fileId, permissionId, { supportsAllDrives: true });
+        return true;
+      } catch (e2) {
+        console.warn('[%s] Erreur Drive.Permissions.remove : %s', traceId || '-', e2.message);
+      }
+    }
+  }
+
+  // Fallback REST
+  const urls = [
+    'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '/permissions/' + encodeURIComponent(permissionId) + '?supportsAllDrives=true&useDomainAdminAccess=true',
+    'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(fileId) + '/permissions/' + encodeURIComponent(permissionId) + '?supportsAllDrives=true'
+  ];
+
+  for (let i = 0; i < urls.length; i++) {
+    try {
+      const rep = UrlFetchApp.fetch(urls[i], {
+        method: 'DELETE',
+        headers: { Authorization: 'Bearer ' + token },
+        muteHttpExceptions: true
+      });
+      const code = rep.getResponseCode();
+      if (code === 200 || code === 204) return true;
+    } catch (e) {}
+  }
+
+  return false;
+}

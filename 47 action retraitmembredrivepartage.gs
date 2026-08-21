@@ -31,34 +31,31 @@ function actionRetirerMembreDrivePartage_(data, ctx) {
   const driveId = String(data.drive_id).trim();
   const emailCible = String(data.email_cible).toLowerCase().trim();
 
-  // 1. Lister les permissions du Drive pour trouver l'ID de permission
-  const urlList = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(driveId) +
-    '/permissions?supportsAllDrives=true&fields=permissions(id,emailAddress,role)';
+  // Récupération des alias éventuels de l'utilisateur
+  const tousEmails = new Set();
+  tousEmails.add(emailCible);
+  try {
+    const user = findUser_(emailCible);
+    if (user) {
+      if (user.primaryEmail) tousEmails.add(String(user.primaryEmail).toLowerCase().trim());
+      if (Array.isArray(user.aliases)) {
+        user.aliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
+      }
+      if (Array.isArray(user.nonEditableAliases)) {
+        user.nonEditableAliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
+      }
+    }
+  } catch (e) {}
 
-  const repList = UrlFetchApp.fetch(urlList, {
-    method: 'GET',
-    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-    muteHttpExceptions: true
+  // 1. Lister les permissions du Drive pour trouver la permission cible
+  const perms = listerPermissionsFichierOuDrive_(driveId, ctx.traceId);
+  const permsCibles = perms.filter(function (p) {
+    if (p.deleted) return false;
+    const pEmail = String(p.emailAddress || '').toLowerCase().trim();
+    return tousEmails.has(pEmail);
   });
 
-  const codeList = repList.getResponseCode();
-  const txtList = repList.getContentText();
-
-  if (codeList === 404) {
-    throw new AppError_('NOT_FOUND', 'Drive partagé (' + driveId + ') introuvable.', 404);
-  }
-  if (codeList >= 400) {
-    let errMsg = txtList;
-    try { errMsg = JSON.parse(txtList).error.message; } catch (e) {}
-    throw new AppError_('DRIVE_API_ERROR', 'Impossible de lire les permissions du Drive partagé : ' + errMsg, codeList);
-  }
-
-  const perms = (JSON.parse(txtList).permissions || []);
-  const permCible = perms.filter(function (p) {
-    return String(p.emailAddress || '').toLowerCase() === emailCible;
-  })[0];
-
-  if (!permCible) {
+  if (permsCibles.length === 0) {
     return {
       idempotent: true,
       target: emailCible,
@@ -66,26 +63,21 @@ function actionRetirerMembreDrivePartage_(data, ctx) {
     };
   }
 
-  // 2. Supprimer la permission
-  const urlDel = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(driveId) +
-    '/permissions/' + encodeURIComponent(permCible.id) + '?supportsAllDrives=true';
+  // 2. Supprimer la ou les permissions directes
+  const supprIds = [];
+  for (let i = 0; i < permsCibles.length; i++) {
+    const perm = permsCibles[i];
+    const ok = supprimerPermissionFichierOuDrive_(driveId, perm.id, ctx.traceId);
+    if (ok) supprIds.push(perm.id);
+  }
 
-  const repDel = UrlFetchApp.fetch(urlDel, {
-    method: 'DELETE',
-    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
-    muteHttpExceptions: true
-  });
-
-  const codeDel = repDel.getResponseCode();
-  if (codeDel === 204 || codeDel === 200) {
+  if (supprIds.length > 0) {
     return {
       target: emailCible,
       message: 'Accès de ' + emailCible + ' révoqué du Drive partagé (' + driveId + ').',
-      details: { driveId: driveId, permissionId: permCible.id }
+      details: { driveId: driveId, permissionsSupprimees: supprIds }
     };
   }
 
-  let delErrMsg = repDel.getContentText();
-  try { delErrMsg = JSON.parse(delErrMsg).error.message; } catch (e) {}
-  throw new AppError_('DRIVE_API_ERROR', 'Échec du retrait de la permission : ' + delErrMsg, codeDel);
+  throw new AppError_('DRIVE_API_ERROR', 'Échec du retrait de la permission sur le Drive partagé (' + driveId + ').', 500);
 }
