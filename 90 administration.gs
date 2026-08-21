@@ -360,6 +360,31 @@ function admin_verifierApis() {
         return 'accessible';
     }));
 
+    // 7. Google Drive & Drives partagés (Admin Access)
+    lignes.push(testerApi_('Drive / Drives partagés', function () {
+        var rep = UrlFetchApp.fetch(
+            'https://www.googleapis.com/drive/v3/drives?pageSize=1&useDomainAdminAccess=true',
+            {
+                headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+                muteHttpExceptions: true
+            });
+        var code = rep.getResponseCode();
+        if (code >= 400) {
+            var msg = '';
+            try { msg = JSON.parse(rep.getContentText()).error.message; }
+            catch (e) { msg = rep.getContentText(); }
+            throw new Error('HTTP ' + code + ' — ' + msg);
+        }
+        var data = JSON.parse(rep.getContentText());
+        return 'accessible (' + (data.drives || []).length + ' drive(s) lu(s))';
+    }));
+
+    // 8. Google Calendar / Ressources
+    lignes.push(testerApi_('Calendar / Ressources', function () {
+        var r = AdminDirectory.Resources.Calendars.list('my_customer', { maxResults: 1 });
+        return 'accessible (' + ((r.items || []).length) + ' ressource(s) lue(s))';
+    }));
+
     lignes.push('', 'Rappel : ce test ne modifie rien. Les ❌ indiquent un scope non ' +
         'autorisé (réautoriser après mise à jour du manifeste) ou un droit manquant.');
     console.log(lignes.join('\n'));
