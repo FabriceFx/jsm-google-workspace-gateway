@@ -107,7 +107,7 @@ function actionCreerUtilisateur_(data, ctx) {
   }
 
   // Diffusion du mot de passe hors réponse HTTP (cf. envoyerIdentifiants_).
-  const envoye = envoyerIdentifiants_(destinataire, email, motDePasse, ctx.ticketKey);
+  const envoye = envoyerIdentifiants_(destinataire, email, motDePasse, ctx.ticketKey, 'CREATION');
   if (!envoye) {
     throw new AppError_('NOTIFY_FAILED',
       'Compte ' + email + ' créé avec succès (OU : ' + nouvelUtilisateur.orgUnitPath +

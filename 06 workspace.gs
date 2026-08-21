@@ -524,33 +524,42 @@ function requireDestinataireSecret_(data) {
 }
 
 /**
- * Transmet un mot de passe temporaire par e-mail.
+ * Envoie les identifiants ou le nouveau mot de passe temporaire par e-mail sécurisé.
  *
- * Choix de conception : le mot de passe n'est JAMAIS renvoyé dans la réponse
- * HTTP, car Jira le recopierait dans le commentaire du ticket — donc dans un
- * historique consultable et indexé. Il part vers NOTIFY_EMAIL (ou le manager
- * indiqué dans le ticket), qui le transmet hors canal.
+ * Le mot de passe ne passe JAMAIS dans le corps de la réponse HTTP, car Jira le
+ * recopierait dans le commentaire du ticket — donc dans un historique consultable
+ * et indexé. Il part vers NOTIFY_EMAIL (ou le manager indiqué dans le ticket),
+ * qui le transmet hors canal.
  *
  * @param {string} destinataire Adresse du destinataire.
  * @param {string} compte Compte concerné.
  * @param {string} motDePasse Mot de passe temporaire.
  * @param {string} ticketKey Référence du ticket.
+ * @param {('CREATION'|'RESET')=} typeOperation Type d'opération ('CREATION' par défaut ou 'RESET').
  * @return {boolean} true si l'envoi a réussi.
  */
-function envoyerIdentifiants_(destinataire, compte, motDePasse, ticketKey) {
-    return envoyerEmailCooperl_(destinataire,
-        '[' + ticketKey + '] Identifiants provisoires — ' + compte, {
+function envoyerIdentifiants_(destinataire, compte, motDePasse, ticketKey, typeOperation) {
+    const estReset = (typeOperation === 'RESET');
+    const sujet = estReset
+        ? '[' + ticketKey + '] Réinitialisation de mot de passe — ' + compte
+        : '[' + ticketKey + '] Identifiants provisoires — ' + compte;
+    const titre = estReset
+        ? 'Mot de passe réinitialisé'
+        : 'Compte Workspace créé';
+    const description = estReset
+        ? 'Le mot de passe du compte ci-dessous a été réinitialisé à la suite de votre demande. ' +
+          'Ce mot de passe est temporaire : son changement est obligatoire dès la prochaine connexion.'
+        : 'Le compte ci-dessous a été créé à la suite de votre demande. ' +
+          'Le mot de passe est provisoire : son changement est imposé à la première connexion.';
+
+    return envoyerEmailCooperl_(destinataire, sujet, {
         sousTitre: 'Ticket ' + ticketKey,
-        titre: 'Compte Workspace créé',
-        paragraphes: [
-            'Le compte ci-dessous a été créé à la suite de votre demande. ' +
-            'Le mot de passe est provisoire : son changement est imposé à la ' +
-            'première connexion.'
-        ],
+        titre: titre,
+        paragraphes: [description],
         encadres: [
             { label: 'Adresse du compte', valeur: adresseStylisee_(compte) },
             {
-                label: 'Mot de passe provisoire',
+                label: estReset ? 'Nouveau mot de passe temporaire' : 'Mot de passe provisoire',
                 // Police à chasse fixe : évite toute confusion de lecture entre
                 // caractères voisins au moment de la transmission orale.
                 valeur: '<span style="font-family:Consolas,Menlo,monospace;' +

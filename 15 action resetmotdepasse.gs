@@ -65,7 +65,7 @@ function actionReinitialiserMotDePasse_(data, ctx) {
   );
 
   const envoye = envoyerIdentifiants_(
-    destinataire, data.email_cible, motDePasse, ctx.ticketKey);
+    destinataire, data.email_cible, motDePasse, ctx.ticketKey, 'RESET');
 
   if (!envoye) {
     throw new AppError_('NOTIFY_FAILED',

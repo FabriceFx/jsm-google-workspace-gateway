@@ -22,6 +22,7 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 - **Configuration de groupes (`CONFIG_GROUPE`)** : Implémentation de `requireGroup_()` dans `06 workspace.gs` avec typage `GROUP_NOT_FOUND` (404) et `DIRECTORY_ERROR` (502).
 - **Retrait membre Drive partagé (`RETRAIT_MEMBRE_DRIVE_PARTAGE`)** : Remplacement de `findUser_()` par `getUserOrNull_()` pour la résolution fiable des alias.
 - **Archivage de compte (`ARCHIVAGE_COMPTE`)** : Application effective du statut `archived: true` et `suspended: true`, ordonnancement strict de l'attribution de la licence archive avant la libération de la licence standard, et levée d'erreurs réelles en cas d'échec.
+- **Notification de réinitialisation de mot de passe (`RESET_MOT_DE_PASSE`)** : Personnalisation du gabarit d'e-mail envoyé au manager/destinataire (`envoyerIdentifiants_` avec type `RESET` : titre *« Mot de passe réinitialisé »*, sujet clair et explications adaptées) au lieu d'afficher à tort *« Compte Workspace créé »*.
 - **Départ collaborateur (`40 groupe departcollaborateur.gs`)** : Verrouillage des étapes préalables Gmail en `obligatoire: true` pour ne jamais suspendre prématurément un compte dont les transferts/délégations ont échoué, garantissant la réussite du rejeu automatique par Jira.
 
 ### Robustesse & Qualité
