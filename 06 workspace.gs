@@ -192,7 +192,6 @@ function estErreurGroupeDynamique_(err) {
     const m = String((err && err.message) || err).toUpperCase();
     return m.indexOf('CONDITION NOT MET') !== -1 ||
            m.indexOf('CONDITION_NOT_MET') !== -1 ||
-           m.indexOf('PRECONDITION') !== -1 ||
            m.indexOf('DYNAMIC') !== -1 ||
            m.indexOf('CANNOT MUTATE') !== -1 ||
            m.indexOf('CANNOT_MUTATE') !== -1 ||
@@ -204,6 +203,27 @@ function estErreurGroupeDynamique_(err) {
            m.indexOf('MANAGED AUTOMATICALLY') !== -1 ||
            m.indexOf('INVALID MEMBER TYPE') !== -1 ||
            m.indexOf('INVALID_MEMBER_TYPE') !== -1;
+}
+
+/**
+ * Récupère un groupe Google Workspace par son adresse, ou lève une erreur GROUP_NOT_FOUND (404).
+ *
+ * @param {string} emailGroupe Adresse du groupe.
+ * @return {!Object} Ressource Group de l'Admin SDK.
+ * @throws {AppError_} 404 si le groupe n'existe pas, 502 si erreur Directory.
+ */
+function requireGroup_(emailGroupe) {
+    const emailPropre = String(emailGroupe || '').toLowerCase().trim();
+    try {
+        return AdminDirectory.Groups.get(emailPropre);
+    } catch (err) {
+        const errTraduite = traduireErreurAdmin_(err);
+        if (errTraduite) throw errTraduite;
+        if (estNotFound_(err)) {
+            throw new AppError_('GROUP_NOT_FOUND', "Le groupe '" + emailPropre + "' n'existe pas.", 404);
+        }
+        throw new AppError_('DIRECTORY_ERROR', 'Erreur lors de la vérification du groupe : ' + (err.message || err), 502);
+    }
 }
 
 /**
@@ -549,44 +569,44 @@ function envoyerIdentifiants_(destinataire, compte, motDePasse, ticketKey) {
 
 /**
  * Liste les appareils mobiles enregistrés pour un utilisateur via AdminDirectory.Mobiledevices.
+ * Sécurité stricte : seuls les appareils associés EXACTEMENT à l'adresse e-mail
+ * principale ou à l'un des alias vérifiés de l'utilisateur sont retenus. Aucun matching
+ * partiel (préfixe, sous-chaîne ou homonyme) n'est toléré pour éviter d'effacer le
+ * mobile d'un autre utilisateur.
+ *
  * @param {string} email Adresse de l'utilisateur.
- * @return {!Array<!Object>} Liste des appareils (peut être vide).
+ * @return {!Array<!Object>} Liste des appareils correspondants.
  */
 function listerAppareilsUtilisateur_(email) {
   const emailPropre = String(email || '').toLowerCase().trim();
-  const appareils = [];
-  let pageToken = null;
+  if (!emailPropre) return [];
 
-  // 1. Recherche directe via Admin Directory Mobiledevices avec projection: 'FULL'
-  try {
-    do {
-      const options = {
-        query: 'email:' + emailPropre,
-        projection: 'FULL',
-        maxResults: 100
-      };
-      if (pageToken) options.pageToken = pageToken;
-      const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
-      if (reponse.mobiledevices) {
-        reponse.mobiledevices.forEach(function (d) {
-          d.source = 'Admin Directory MDM';
-          appareils.push(d);
-        });
-      }
-      pageToken = reponse.nextPageToken;
-    } while (pageToken);
-  } catch (err) {
-    console.warn('Erreur lors de la recherche des appareils mobiles pour ' + emailPropre + ' : ' + err.message);
+  // Récupération de l'ensemble des adresses exactes de l'utilisateur (principal + alias)
+  const tousEmails = new Set();
+  tousEmails.add(emailPropre);
+  const user = getUserOrNull_(emailPropre);
+  if (user) {
+    if (user.primaryEmail) tousEmails.add(String(user.primaryEmail).toLowerCase().trim());
+    if (Array.isArray(user.aliases)) {
+      user.aliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
+    }
+    if (Array.isArray(user.nonEditableAliases)) {
+      user.nonEditableAliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
+    }
   }
 
-  // 2. Si aucun résultat, tentative élargie par préfixe utilisateur
-  if (appareils.length === 0 && emailPropre.indexOf('@') !== -1) {
-    const userPart = emailPropre.split('@')[0];
+  const appareils = [];
+  const resourceIdsVus = new Set();
+  const emailsArray = Array.from(tousEmails);
+
+  // 1. Recherche ciblée par requête email exacte pour chaque adresse de l'utilisateur
+  for (let e = 0; e < emailsArray.length; e++) {
+    const adresse = emailsArray[e];
     try {
-      pageToken = null;
+      let pageToken = null;
       do {
         const options = {
-          query: 'email:' + userPart + '*',
+          query: 'email:' + adresse,
           projection: 'FULL',
           maxResults: 100
         };
@@ -594,9 +614,11 @@ function listerAppareilsUtilisateur_(email) {
         const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
         if (reponse.mobiledevices) {
           reponse.mobiledevices.forEach(function (d) {
-            const emailsApp = (d.email || []).map(function (e) { return String(e).toLowerCase().trim(); });
-            if (emailsApp.indexOf(emailPropre) !== -1 || emailsApp.some(function (e) { return e.indexOf(userPart) === 0; })) {
-              if (!appareils.some(function (exist) { return exist.resourceId === d.resourceId; })) {
+            if (d && d.resourceId && !resourceIdsVus.has(d.resourceId)) {
+              const emailsApp = (d.email || []).map(function (em) { return String(em).toLowerCase().trim(); });
+              // Correspondance stricte : l'un des e-mails du mobile doit être dans tousEmails
+              if (emailsApp.some(function (em) { return tousEmails.has(em); })) {
+                resourceIdsVus.add(d.resourceId);
                 d.source = 'Admin Directory MDM';
                 appareils.push(d);
               }
@@ -606,39 +628,7 @@ function listerAppareilsUtilisateur_(email) {
         pageToken = reponse.nextPageToken;
       } while (pageToken);
     } catch (err) {
-      console.warn('Erreur lors du repli de recherche mobile pour ' + userPart + ' : ' + err.message);
-    }
-  }
-
-  // 3. Si toujours aucun résultat, parcours direct du parc mobile global (sans query) avec filtrage local
-  if (appareils.length === 0) {
-    try {
-      pageToken = null;
-      let pages = 0;
-      const userPrefix = emailPropre.split('@')[0];
-      do {
-        const options = { projection: 'FULL', maxResults: 100 };
-        if (pageToken) options.pageToken = pageToken;
-        const reponse = AdminDirectory.Mobiledevices.list('my_customer', options);
-        if (reponse.mobiledevices) {
-          reponse.mobiledevices.forEach(function (d) {
-            const emailsApp = (d.email || []).map(function (e) { return String(e).toLowerCase().trim(); });
-            const nomsApp = (d.name || []).map(function (n) { return String(n).toLowerCase().trim(); });
-            const emailMatch = emailsApp.indexOf(emailPropre) !== -1 || emailsApp.some(function (e) { return e.indexOf(userPrefix) === 0; });
-            const nomMatch = nomsApp.some(function (n) { return n.indexOf(userPrefix) !== -1; });
-            if (emailMatch || nomMatch) {
-              if (!appareils.some(function (exist) { return exist.resourceId === d.resourceId; })) {
-                d.source = 'Admin Directory MDM (Scan parc)';
-                appareils.push(d);
-              }
-            }
-          });
-        }
-        pageToken = reponse.nextPageToken;
-        pages++;
-      } while (pageToken && pages < 10 && appareils.length === 0);
-    } catch (err) {
-      console.warn('Erreur lors du scan global des appareils mobiles : ' + err.message);
+      console.warn('Erreur lors de la recherche des appareils mobiles pour ' + adresse + ' : ' + err.message);
     }
   }
 

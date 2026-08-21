@@ -34,18 +34,16 @@ function actionRetirerMembreDrivePartage_(data, ctx) {
   // Récupération des alias éventuels de l'utilisateur
   const tousEmails = new Set();
   tousEmails.add(emailCible);
-  try {
-    const user = findUser_(emailCible);
-    if (user) {
-      if (user.primaryEmail) tousEmails.add(String(user.primaryEmail).toLowerCase().trim());
-      if (Array.isArray(user.aliases)) {
-        user.aliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
-      }
-      if (Array.isArray(user.nonEditableAliases)) {
-        user.nonEditableAliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
-      }
+  const user = getUserOrNull_(emailCible);
+  if (user) {
+    if (user.primaryEmail) tousEmails.add(String(user.primaryEmail).toLowerCase().trim());
+    if (Array.isArray(user.aliases)) {
+      user.aliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
     }
-  } catch (e) {}
+    if (Array.isArray(user.nonEditableAliases)) {
+      user.nonEditableAliases.forEach(function (a) { if (a) tousEmails.add(String(a).toLowerCase().trim()); });
+    }
+  }
 
   // 1. Lister les permissions du Drive pour trouver la permission cible
   const perms = listerPermissionsFichierOuDrive_(driveId, ctx.traceId);

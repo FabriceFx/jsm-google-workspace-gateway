@@ -59,9 +59,7 @@ function actionMutationInterne_(data, ctx) {
     {
       nom: 'RETRAIT_ANCIENS_GROUPES',
       si: function (d) {
-        return d.retirer_anciens_groupes === true ||
-          String(d.retirer_anciens_groupes).toLowerCase() === 'true' ||
-          String(d.retirer_anciens_groupes).toLowerCase() === 'oui';
+        return boolDeFormulaire_(d.retirer_anciens_groupes, false);
       },
       fn: function (d, c) {
         return actionRetirerTousGroupes_({ email_cible: d.email_cible }, c);

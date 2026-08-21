@@ -108,6 +108,8 @@ function test_unitaires() {
     groupe_('sanitizeData_', testSanitizeData_);
     groupe_('construireProfilPatch_', testConstruireProfilPatch_);
     groupe_('traduireErreurAdmin_', testTraduireErreurAdmin_);
+    groupe_('estErreurGroupeDynamique_', testEstErreurGroupeDynamique_);
+    groupe_('toutes les specs et handlers', testTousHandlersRegistre_);
 
     const s = SUITE_COURANTE;
     const total = s.reussis + s.echecs.length;
@@ -326,6 +328,30 @@ function testTraduireErreurAdmin_() {
         'INVALID_OU', 'OU invalide');
     assert_(traduireErreurAdmin_({ message: 'quelque chose d\'inconnu' }) === null,
         'motif inconnu → null');
+}
+
+function testEstErreurGroupeDynamique_() {
+    assert_(estErreurGroupeDynamique_('Condition not met'), 'Condition not met → true');
+    assert_(estErreurGroupeDynamique_('Cannot mutate dynamic group'), 'Cannot mutate dynamic group → true');
+    assert_(estErreurGroupeDynamique_('Invalid member type'), 'Invalid member type → true');
+    assert_(!estErreurGroupeDynamique_('Generic precondition failure'), 'Precondition générique sans condition not met → false');
+    assert_(!estErreurGroupeDynamique_('Not Found 404'), '404 not found → false');
+}
+
+function testTousHandlersRegistre_() {
+    const actionsObj = getActions_();
+    const actionNoms = Object.keys(actionsObj);
+    assert_(actionNoms.length >= 50, 'Registre chargé avec au moins 50 actions (actuel: ' + actionNoms.length + ')');
+    
+    actionNoms.forEach(function (nom) {
+        const spec = actionsObj[nom];
+        assert_(typeof spec.action === 'string' && spec.action.length > 0, nom + ' : nom d\'action valide');
+        assert_(typeof spec.description === 'string' && spec.description.length > 0, nom + ' : description présente');
+        assert_(Array.isArray(spec.required), nom + ' : required est un tableau');
+        assert_(Array.isArray(spec.emails), nom + ' : emails est un tableau');
+        assert_(spec.fenetre === 'STANDARD' || spec.fenetre === 'PERMANENTE', nom + ' : fenêtre valide (STANDARD ou PERMANENTE)');
+        assert_(typeof spec.handler === 'function', nom + ' : handler est une fonction valide');
+    });
 }
 
 // ---------------------------------------------------------------------------

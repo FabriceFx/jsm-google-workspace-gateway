@@ -69,9 +69,20 @@ function actionUrgenceCompromission_(data, ctx) {
     {
       nom: 'BLOCAGE_APPAREIL',
       fn: function (d, c) {
-        return actionBloquerAppareil_({
-          email_cible: d.email_cible
-        }, c);
+        try {
+          return actionBloquerAppareil_({
+            email_cible: d.email_cible
+          }, c);
+        } catch (errApp) {
+          if (errApp && (errApp.code === 'NO_DEVICE' || estNotFound_(errApp))) {
+            return {
+              idempotent: true,
+              target: d.email_cible,
+              message: 'Aucun appareil mobile MDM synchronisé pour ' + d.email_cible + ' (aucun blocage requis).'
+            };
+          }
+          throw errApp;
+        }
       }
     }
   ];

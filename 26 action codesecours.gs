@@ -35,7 +35,16 @@ function SPEC_GENERATION_CODES_SECOURS() {
  * @return {!Object}
  */
 function actionGenererCodesSecours_(data, ctx) {
-  requireUser_(data.email_cible);
+  const utilisateur = requireUser_(data.email_cible);
+
+  // Garde-fou sécurité : interdire la génération de codes de secours 2FA pour
+  // un compte à privilèges (risque de contournement d'authentification forte).
+  if (utilisateur.isAdmin || utilisateur.isDelegatedAdmin) {
+    throw new AppError_('COMPTE_PROTEGE',
+      'Le compte ' + data.email_cible + ' dispose de droits d\'administration : ' +
+      'la génération de codes de secours par ticket est refusée par sécurité. ' +
+      'Générer les codes manuellement depuis la console Google Admin.', 403);
+  }
 
   // Contrôle du destinataire AVANT de révoquer les anciens codes : sinon on
   // détruirait irréversiblement les codes en place sans pouvoir livrer les

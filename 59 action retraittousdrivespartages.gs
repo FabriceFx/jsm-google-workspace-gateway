@@ -137,6 +137,12 @@ function actionRetirerTousDrivesPartages_(data, ctx) {
   const nbRetraits = retraits.length;
   const nbGroupes = conservesViaGroupe.length;
 
+  if (erreurs.length > 0) {
+    throw new AppError_('RETRAIT_PARTIEL',
+      'Retrait incomplet des accès Drives partagés pour ' + primaryEmail + '. ' +
+      'Révoqués : ' + nbRetraits + ' direct(s). En échec : ' + erreurs.join(', '), 502);
+  }
+
   let message = '';
   if (nbRetraits === 0 && nbGroupes === 0) {
     message = primaryEmail + ' n\'a aucun accès (ni direct, ni par groupe) sur les ' + tousLesDrives.length + ' Drives partagés.';
@@ -158,8 +164,7 @@ function actionRetirerTousDrivesPartages_(data, ctx) {
       retraits_effectues: nbRetraits,
       conserves_via_groupe: nbGroupes,
       drives_revoques: retraits,
-      drives_via_groupes: conservesViaGroupe,
-      erreurs: erreurs.length ? erreurs : undefined
+      drives_via_groupes: conservesViaGroupe
     }
   };
 }

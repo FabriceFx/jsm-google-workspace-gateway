@@ -45,16 +45,41 @@ function actionAjouterGroupe_(data, ctx) {
       "Rôle '" + role + "' invalide. Valeurs admises : MEMBER, MANAGER, OWNER.");
   }
 
-  // Un membre peut être un groupe imbriqué : on ne bloque donc pas si
-  // l'adresse cible n'est pas un utilisateur, on laisse l'API arbitrer.
-  if (isMember_(data.email_groupe, data.email_cible)) {
-    return {
-      idempotent: true,
-      target: data.email_cible,
-      message: data.email_cible + ' est déjà membre de ' + data.email_groupe + '.'
-    };
+  // Vérification de l'appartenance existante et mise à jour de rôle si nécessaire
+  try {
+    const membreExistant = AdminDirectory.Members.get(data.email_groupe, data.email_cible);
+    if (membreExistant) {
+      const roleActuel = String(membreExistant.role || 'MEMBER').toUpperCase();
+      if (roleActuel === role) {
+        return {
+          idempotent: true,
+          target: data.email_cible,
+          message: data.email_cible + ' est déjà membre de ' + data.email_groupe + ' (rôle : ' + role + ').'
+        };
+      }
+      // Mise à jour / promotion de rôle
+      AdminDirectory.Members.update(
+        { email: data.email_cible, role: role },
+        data.email_groupe,
+        data.email_cible
+      );
+      return {
+        target: data.email_cible,
+        message: 'Rôle de ' + data.email_cible + ' dans ' + data.email_groupe + ' mis à jour : ' + roleActuel + ' → ' + role + '.'
+      };
+    }
+  } catch (errGet) {
+    if (!estNotFound_(errGet)) {
+      if (estErreurGroupeDynamique_(errGet)) {
+        throw new AppError_('GROUPE_DYNAMIQUE',
+          "Impossible de modifier un membre dans le groupe " + data.email_groupe +
+          " : il s'agit d'un groupe dynamique géré automatiquement par requête d'annuaire.", 400);
+      }
+      throw errGet;
+    }
   }
 
+  // Insertion d'un nouveau membre
   try {
     AdminDirectory.Members.insert(
       { email: data.email_cible, role: role },

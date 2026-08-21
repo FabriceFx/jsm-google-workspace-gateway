@@ -42,7 +42,16 @@ function SPEC_RESET_MOT_DE_PASSE() {
  * @return {!Object}
  */
 function actionReinitialiserMotDePasse_(data, ctx) {
-  requireUser_(data.email_cible);
+  const utilisateur = requireUser_(data.email_cible);
+
+  // Garde-fou sécurité : interdire la réinitialisation de mot de passe sur un compte
+  // administrateur via un ticket Jira pour empêcher les prises de contrôle illégitimes.
+  if (utilisateur.isAdmin || utilisateur.isDelegatedAdmin) {
+    throw new AppError_('COMPTE_PROTEGE',
+      'Le compte ' + data.email_cible + ' dispose de droits d\'administration : ' +
+      'la réinitialisation de mot de passe par ticket est refusée par sécurité. ' +
+      'Réaliser l\'opération manuellement depuis la console Google Admin.', 403);
+  }
 
   // Contrôle du destinataire AVANT d'écraser le mot de passe : sans lui, on
   // déconnecterait l'utilisateur sans que personne ne détienne le nouveau

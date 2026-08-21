@@ -415,7 +415,7 @@ function signatureEmailHtml_(p) {
       ';">' + contenu + '</div>';
   };
   // Signature posée sur fond blanc : seul le logo bleu y est conforme.
-  const url = getLogoVariante_() === 'BLEU' ? getLogoUrl_() : '';
+  const url = p.logoUrl || (getLogoVariante_() === 'BLEU' ? getLogoUrl_() : '');
 
   return '' +
 '<table role="presentation" cellpadding="0" cellspacing="0" border="0" ' +
@@ -502,30 +502,14 @@ function genererSignatureHtml_(u, options) {
   if (opts.telephone) phones.push(opts.telephone);
   const telStr = phones.filter(Boolean).join(' | ');
 
-  const logoUrl = opts.logoUrl || getProp_('LOGO_URL') ||
-    'https://lh3.googleusercontent.com/d/1w6nS8mY_cooperl_logo';
+  const logoUrl = opts.logoUrl || getLogoUrl_();
 
-  const html = [
-    '<div style="font-family:' + CHARTE.POLICE + ';font-size:13px;color:' + CHARTE.TEXTE + ';line-height:18px;">',
-    '  <table border="0" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-family:' + CHARTE.POLICE + ';">',
-    '    <tr>',
-    '      <td style="padding-right:15px;vertical-align:top;border-right:2px solid ' + CHARTE.BLEU + ';">',
-    '        <div style="font-size:15px;font-weight:700;color:' + CHARTE.BLEU + ';">' + echapper_(nom) + '</div>',
-    poste ? '        <div style="font-size:13px;font-weight:600;color:' + CHARTE.TEXTE + ';">' + echapper_(poste) + '</div>' : '',
-    service ? '        <div style="font-size:12px;color:' + CHARTE.TEXTE_SECONDAIRE + ';">' + echapper_(service) + ' — ' + echapper_(societe) + '</div>' : '',
-    '      </td>',
-    '      <td style="padding-left:15px;vertical-align:top;">',
-    telStr ? '        <div style="font-size:12px;color:' + CHARTE.TEXTE + ';">📞 ' + echapper_(telStr) + '</div>' : '',
-    email ? '        <div style="font-size:12px;color:' + CHARTE.BLEU + ';">✉️ <a href="mailto:' + echapper_(email) + '" style="color:' + CHARTE.BLEU + ';text-decoration:none;">' + echapper_(email) + '</a></div>' : '',
-    '        <div style="font-size:12px;color:' + CHARTE.TEXTE_SECONDAIRE + ';">🌐 <a href="https://' + CHARTE.SITE + '" style="color:' + CHARTE.TEXTE_SECONDAIRE + ';text-decoration:none;">' + CHARTE.SITE + '</a></div>',
-    '      </td>',
-    '    </tr>',
-    '  </table>',
-    '  <div style="padding-top:8px;font-size:10px;color:' + CHARTE.TEXTE_SECONDAIRE + ';font-style:italic;">',
-    '    ' + CHARTE.SIEGE,
-    '  </div>',
-    '</div>'
-  ].filter(Boolean).join('\n');
-
-  return html;
+  return signatureEmailHtml_({
+    nom: nom,
+    fonction: poste ? (service ? poste + ' — ' + service : poste) : service,
+    telephone: telStr,
+    email: email,
+    entite: societe !== 'Cooperl' ? societe : undefined,
+    logoUrl: logoUrl
+  });
 }

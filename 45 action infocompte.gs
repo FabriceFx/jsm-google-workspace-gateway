@@ -33,35 +33,49 @@ function SPEC_INFO_COMPTE() {
 function actionInfoCompte_(data, ctx) {
   const utilisateur = requireUser_(data.email_cible, undefined, 'full');
 
-  // Groupes directs dont l'utilisateur est membre
+  // Groupes directs dont l'utilisateur est membre (avec pagination)
   let groupes = [];
   try {
-    const repGroupes = AdminDirectory.Groups.list({
-      userKey: data.email_cible,
-      maxResults: 100
-    });
-    groupes = (repGroupes.groups || []).map(function (g) {
-      return g.email;
-    }).sort();
+    let pageToken = null;
+    do {
+      const options = { userKey: data.email_cible, maxResults: 100 };
+      if (pageToken) options.pageToken = pageToken;
+      const repGroupes = AdminDirectory.Groups.list(options);
+      if (repGroupes.groups) {
+        repGroupes.groups.forEach(function (g) {
+          if (g.email) groupes.push(g.email);
+        });
+      }
+      pageToken = repGroupes.nextPageToken;
+    } while (pageToken);
+    groupes.sort();
   } catch (err) {
     console.warn('[%s] Impossible de lister les groupes pour %s : %s',
       ctx.traceId, data.email_cible, err.message);
   }
 
-  // Licences associées
+  // Licences associées (recherche par SKU direct)
   let licences = [];
   try {
-    const custId = getProp_('LICENSE_CUSTOMER_ID') ||
-      (getProp_('ALLOWED_DOMAINS').split(',')
-        .map(function (d) { return d.trim(); }).filter(Boolean)[0] || '');
-    if (custId) {
-      const prod = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
-      const repLic = appelLicensingApi_('GET',
-        'product/' + encodeURIComponent(prod) + '/users/' + encodeURIComponent(data.email_cible), null);
-      if (repLic && repLic.skuId) licences.push(repLic.skuName || repLic.skuId);
-    }
+    const prod = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
+    const skuPrincipal = getProp_('LICENSE_SKU_ID');
+    const skuArchive = getProp_('LICENSE_ARCHIVE_SKU_ID');
+    const skusATester = [skuPrincipal, skuArchive, 'Google-Apps-For-Business', '1010020020', '1010060001'].filter(Boolean);
+    const skusVus = new Set();
+
+    skusATester.forEach(function (sku) {
+      if (skusVus.has(sku)) return;
+      skusVus.add(sku);
+      try {
+        const repLic = appelLicensingApi_('GET',
+          'product/' + encodeURIComponent(prod) + '/sku/' + encodeURIComponent(sku) + '/user/' + encodeURIComponent(data.email_cible), null);
+        if (repLic && repLic.skuId) {
+          licences.push(repLic.skuName || repLic.skuId);
+        }
+      } catch (eLic) {}
+    });
   } catch (err) {
-    // Non bloquant si licensing API non configurée ou compte sans licence
+    // Non bloquant si licensing API non configurée
   }
 
   const emailPrincipal = (utilisateur.primaryEmail || data.email_cible).toLowerCase().trim();

@@ -3,6 +3,33 @@
 Tous les changements notables de ce projet sont documentés ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [3.3.1] — 2026-08-21
+
+### Assainissement & Sécurisation Globale (Audit de Code)
+
+> **La robustesse industrielle sans angles morts.** Une sécurité hermétique sur les comptes à privilèges, un contrôle strict sur la flotte mobile et la garantie que chaque action répond avec une exactitude totale.
+
+### Sécurité & Contrôles d'Accès
+
+- **Garde-fou `COMPTE_PROTEGE`** : Interdiction formelle (HTTP 403) de réinitialiser le mot de passe (`RESET_MOT_DE_PASSE`) ou de générer des codes de secours 2FA (`GENERATION_CODES_SECOURS`) pour tout compte administrateur (`isAdmin` / `isDelegatedAdmin`) via un ticket JSM.
+- **Flotte mobile MDM (`06 workspace.gs`)** : Élimination complète des correspondances partielles et par préfixe sur les appareils mobiles. Seule l'égalité stricte sur l'adresse e-mail principale ou les alias vérifiés de l'utilisateur est retenue.
+- **Révocation Drives partagés (`RETRAIT_TOUS_DRIVES_PARTAGES`)** : Levée systématique de `RETRAIT_PARTIEL` (HTTP 502) en cas d'erreur de révocation sur un ou plusieurs Drives, garantissant le rejeu automatique par Jira.
+
+### Corrections de Bugs Bloquants
+
+- **Configuration de groupes (`CONFIG_GROUPE`)** : Implémentation de `requireGroup_()` dans `06 workspace.gs` avec typage `GROUP_NOT_FOUND` (404) et `DIRECTORY_ERROR` (502).
+- **Retrait membre Drive partagé (`RETRAIT_MEMBRE_DRIVE_PARTAGE`)** : Remplacement de `findUser_()` par `getUserOrNull_()` pour la résolution fiable des alias.
+- **Archivage de compte (`ARCHIVAGE_COMPTE`)** : Application effective du statut `archived: true` et `suspended: true`, ordonnancement strict de l'attribution de la licence archive avant la libération de la licence standard, et levée d'erreurs réelles en cas d'échec.
+
+### Robustesse & Qualité
+
+- **Manifeste `appsscript.json`** : Ajout du scope OAuth `"https://www.googleapis.com/auth/script.scriptapp"` pour la gestion dynamique des déclencheurs de file d'attente.
+- **Groupes Google (`AJOUT_GROUPE`)** : Prise en compte de la promotion de rôle (`MEMBER` → `MANAGER`/`OWNER`) via `AdminDirectory.Members.update` pour les membres déjà existants.
+- **Parsing de date ISO** : Utilisation systématique de `parseDateIso_()` dans le routeur et la file d'attente pour éliminer les ambiguïtés jour/mois.
+- **Support des agendas de ressources** : Autorisation des domaines `@resource.calendar.google.com` et sous-domaines Calendar dans la validation de sécurité.
+- **Dédoublonnage Drive partagé** : Dérivation du `requestId` depuis `ctx.requestId` pour l'idempotence des créations.
+- **Banc de tests étendu (`91 tests.gs`)** : Validation automatisée de l'intégralité des 50 handlers et spécifications du registre (385 assertions unitaires).
+
 ## [3.3.0] — 2026-08-21
 
 ### Purge des informations de récupération & Cap des 50 Actions

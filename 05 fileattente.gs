@@ -74,8 +74,8 @@ function enfilerAction_(ctx, data, planning) {
     let prevu = null;
     let estProgramme = false;
     if (data.date_execution) {
-        const dProg = new Date(data.date_execution);
-        if (!isNaN(dProg.getTime()) && dProg > new Date()) {
+        const dProg = parseDateIso_(data.date_execution);
+        if (dProg && dProg > new Date()) {
             prevu = dProg;
             estProgramme = true;
         }
@@ -255,6 +255,13 @@ function traiterFileAttente() {
                     ctx.traceId, ctx.action, ctx.ticketKey, err.message);
                 if (definitif) {
                     alertes.push('ÉCHEC — ' + ctx.ticketKey + ' / ' + ctx.action + ' : ' + err.message);
+                    // Callback Jira automatique en cas d'échec définitif
+                    notifierJiraCallback_(data.issue_key || row[COL.TICKET], {
+                        status: 'error',
+                        message: 'Échec d\'exécution différée après ' + CONFIG.MAX_TENTATIVES + ' tentatives : ' + err.message,
+                        error: err.name || 'QUEUE_FAILED',
+                        details: { action: ctx.action, tentative: tentative, traceId: ctx.traceId }
+                    }, ctx, false);
                 }
             }
         }

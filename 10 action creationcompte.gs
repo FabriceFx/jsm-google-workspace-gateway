@@ -67,6 +67,10 @@ function actionCreerUtilisateur_(data, ctx) {
     };
   }
 
+  // Contrôle impératif du destinataire avant de créer le compte : sans lui,
+  // personne ne recevrait le mot de passe initial.
+  const destinataire = requireDestinataireSecret_(data);
+
   const motDePasse = generatePassword_();
 
   // Le profil (nom, poste, service, société, téléphones, manager, adresse,
@@ -103,20 +107,22 @@ function actionCreerUtilisateur_(data, ctx) {
   }
 
   // Diffusion du mot de passe hors réponse HTTP (cf. envoyerIdentifiants_).
-  const destinataire = data.manager_email || getProp_('NOTIFY_EMAIL');
   const envoye = envoyerIdentifiants_(destinataire, email, motDePasse, ctx.ticketKey);
+  if (!envoye) {
+    throw new AppError_('NOTIFY_FAILED',
+      'Compte ' + email + ' créé avec succès (OU : ' + nouvelUtilisateur.orgUnitPath +
+      ') mais l\'envoi des identifiants à ' + destinataire + ' a échoué. ' +
+      'Vérifier le quota d\'envoi ou réinitialiser le mot de passe manuellement.', 500);
+  }
 
   return {
     target: email,
     message: 'Compte ' + email + ' créé dans ' + nouvelUtilisateur.orgUnitPath + '. ' +
-      (envoye
-        ? 'Mot de passe provisoire envoyé à ' + destinataire + '.'
-        : 'ATTENTION : aucun destinataire configuré pour le mot de passe — ' +
-          'utiliser la console Admin pour le réinitialiser.'),
+      'Mot de passe provisoire envoyé à ' + destinataire + '.',
     details: {
       userId: cree.id,
       orgUnitPath: nouvelUtilisateur.orgUnitPath,
-      password_sent_to: envoye ? destinataire : null
+      password_sent_to: destinataire
     }
   };
 }

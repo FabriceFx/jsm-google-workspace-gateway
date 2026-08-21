@@ -59,7 +59,8 @@ function doPost(e) {
         const planning = resoudrePlanning_(ctx.action, spec);
         const ouvert = estOuvert_(maintenant, planning);
         const forcage = (payload.force_immediat === true || payload.force_immediat === 'true');
-        const aDateFuture = !!(data.date_execution && !isNaN(new Date(data.date_execution).getTime()) && new Date(data.date_execution) > maintenant);
+        const dateProg = data.date_execution ? parseDateIso_(data.date_execution) : null;
+        const aDateFuture = !!(dateProg && dateProg > maintenant);
 
         if (!ouvert && forcage && !aDateFuture) {
             // Dérogation explicite : tracée, et conditionnée à un motif écrit.

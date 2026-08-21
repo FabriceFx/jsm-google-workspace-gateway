@@ -40,27 +40,46 @@ function actionAuditAccesComplet_(data, ctx) {
   const utilisateur = requireUser_(emailCible, undefined, 'full');
   const primaryEmail = (utilisateur.primaryEmail || emailCible).toLowerCase();
 
-  // 1. Diagnostic de base & Groupes
+  // 1. Diagnostic de base & Groupes (avec pagination)
   let groupes = [];
   try {
-    const repGroupes = AdminDirectory.Groups.list({ userKey: primaryEmail, maxResults: 200 });
-    groupes = (repGroupes.groups || []).map(function (g) { return g.email; }).sort();
+    let pageToken = null;
+    do {
+      const options = { userKey: primaryEmail, maxResults: 100 };
+      if (pageToken) options.pageToken = pageToken;
+      const repGroupes = AdminDirectory.Groups.list(options);
+      if (repGroupes.groups) {
+        repGroupes.groups.forEach(function (g) {
+          if (g.email) groupes.push(g.email);
+        });
+      }
+      pageToken = repGroupes.nextPageToken;
+    } while (pageToken);
+    groupes.sort();
   } catch (e) {
     console.warn('[%s] Erreur groupes audit : %s', ctx.traceId, e.message);
   }
 
-  // 2. Licences
+  // 2. Licences (recherche par SKU direct)
   let licences = [];
   try {
-    const custId = getProp_('LICENSE_CUSTOMER_ID') ||
-      (getProp_('ALLOWED_DOMAINS').split(',')
-        .map(function (d) { return d.trim(); }).filter(Boolean)[0] || '');
-    if (custId) {
-      const prod = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
-      const repLic = appelLicensingApi_('GET',
-        'product/' + encodeURIComponent(prod) + '/users/' + encodeURIComponent(primaryEmail), null);
-      if (repLic && repLic.skuId) licences.push(repLic.skuName || repLic.skuId);
-    }
+    const prod = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
+    const skuPrincipal = getProp_('LICENSE_SKU_ID');
+    const skuArchive = getProp_('LICENSE_ARCHIVE_SKU_ID');
+    const skusATester = [skuPrincipal, skuArchive, 'Google-Apps-For-Business', '1010020020', '1010060001'].filter(Boolean);
+    const skusVus = new Set();
+
+    skusATester.forEach(function (sku) {
+      if (skusVus.has(sku)) return;
+      skusVus.add(sku);
+      try {
+        const repLic = appelLicensingApi_('GET',
+          'product/' + encodeURIComponent(prod) + '/sku/' + encodeURIComponent(sku) + '/user/' + encodeURIComponent(primaryEmail), null);
+        if (repLic && repLic.skuId) {
+          licences.push(repLic.skuName || repLic.skuId);
+        }
+      } catch (eLic) {}
+    });
   } catch (e) {}
 
   // 3. Flotte mobile & Synchronisation

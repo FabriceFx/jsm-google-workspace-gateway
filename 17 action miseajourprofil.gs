@@ -20,7 +20,7 @@ function SPEC_MISE_A_JOUR_PROFIL() {
     action: 'MISE_A_JOUR_PROFIL',
     description: 'Met à jour les informations du profil utilisateur.',
     required: ['email_cible'],
-    emails: ['email_cible', 'manager_email', 'email_recuperation'],
+    emails: ['email_cible', 'manager_email', 'email_recuperation', 'email_perso'],
     fenetre: 'STANDARD',
     handler: actionMettreAJourProfil_
   };

@@ -175,10 +175,11 @@ function sanitizeData_(rawData, spec, actionName) {
                 "Adresse e-mail invalide dans le champ '" + field + "' : " + data[field]);
         }
         // La liste blanche ne s'applique qu'aux comptes du domaine, pas aux
-        // adresses personnelles de récupération (perso ou récupération).
+        // adresses personnelles de récupération ni aux identifiants d'agendas de ressources.
         if (allowed.length && CHAMPS_EMAIL_EXEMPTS.indexOf(field) === -1) {
             const domain = email.split('@')[1];
-            if (allowed.indexOf(domain) === -1) {
+            const estAgendaRessource = domain && (domain === 'resource.calendar.google.com' || domain === 'group.calendar.google.com' || domain.endsWith('.calendar.google.com'));
+            if (!estAgendaRessource && allowed.indexOf(domain) === -1) {
                 throw new AppError_('DOMAIN_NOT_ALLOWED',
                     "Domaine '" + domain + "' non autorisé. Domaines admis : " + allowed.join(', '));
             }

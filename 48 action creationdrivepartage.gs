@@ -31,9 +31,9 @@ function SPEC_CREATION_DRIVE_PARTAGE() {
 function actionCreerDrivePartage_(data, ctx) {
   const nomDrive = String(data.nom_drive).trim();
   const gestionnaire = String(data.gestionnaire_email).toLowerCase().trim();
-  const requestId = Utilities.getUuid();
+  const requestId = (ctx && ctx.requestId) ? (String(ctx.requestId).replace(/[^a-zA-Z0-9_-]/g, '') + '-drive') : Utilities.getUuid();
 
-  // 1. Création du Shared Drive
+  // 1. Création du Shared Drive avec déduplication par requestId
   const urlCreate = 'https://www.googleapis.com/drive/v3/drives?requestId=' + encodeURIComponent(requestId);
   const repCreate = UrlFetchApp.fetch(urlCreate, {
     method: 'POST',
@@ -73,8 +73,11 @@ function actionCreerDrivePartage_(data, ctx) {
 
   const codePerm = repPerm.getResponseCode();
   if (codePerm !== 200 && codePerm !== 201) {
-    console.warn('[%s] Drive créé (%s) mais échec de l\'assignation du gestionnaire %s : %s',
-      ctx.traceId, driveId, gestionnaire, repPerm.getContentText());
+    let errPerm = repPerm.getContentText();
+    try { errPerm = JSON.parse(errPerm).error.message; } catch (e) {}
+    throw new AppError_('ASSIGN_MANAGER_FAILED',
+      'Drive partagé « ' + nomDrive + ' » créé (ID : ' + driveId + ') mais l\'assignation du gestionnaire ' +
+      gestionnaire + ' a échoué : ' + errPerm, 502);
   }
 
   return {
