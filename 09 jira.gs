@@ -35,27 +35,41 @@ function notifierJiraCallback_(issueKey, resultat, ctx, estDiffere) {
 
   try {
     const horodatage = formaterDate_(new Date());
+    const estErreur = resultat && (resultat.status === 'error' || !!resultat.error || resultat.success === false);
     const prefixe = estDiffere ? '⏳ *[Exécution différée]* ' : '⚡ *[Exécution immédiate]* ';
-    const actionNom = ctx.action || 'ACTION';
+    const actionNom = (ctx && ctx.action) || 'ACTION';
 
-    const lignes = [
-      prefixe + 'Action Google Workspace *' + actionNom + '* exécutée avec succès le ' + horodatage + ' :',
-      '',
-      '> ' + (resultat.message || 'Opération terminée avec succès.').replace(/\n/g, '\n> '),
-      '',
-      '_Trace ID : ' + (ctx.traceId || 'N/A') + ' | Passerelle v' + CONFIG.VERSION + '_'
-    ];
+    let messageTexte = '';
+    if (estErreur) {
+      const lignes = [
+        prefixe + '❌ *ÉCHEC de l\'action Google Workspace ' + actionNom + '* le ' + horodatage + ' :',
+        '',
+        '> *Erreur :* ' + (resultat.message || 'Échec d\'exécution.').replace(/\n/g, '\n> '),
+        resultat.error ? '> *Code :* `' + resultat.error + '`' : '',
+        '',
+        '_Trace ID : ' + ((ctx && ctx.traceId) || 'N/A') + ' | Passerelle v' + CONFIG.VERSION + ' — Ticket conservé ouvert pour analyse_'
+      ].filter(Boolean);
+      messageTexte = lignes.join('\n');
+    } else {
+      const lignes = [
+        prefixe + 'Action Google Workspace *' + actionNom + '* exécutée avec succès le ' + horodatage + ' :',
+        '',
+        '> ' + (resultat.message || 'Opération terminée avec succès.').replace(/\n/g, '\n> '),
+        '',
+        '_Trace ID : ' + ((ctx && ctx.traceId) || 'N/A') + ' | Passerelle v' + CONFIG.VERSION + '_'
+      ];
+      messageTexte = lignes.join('\n');
+    }
 
-    const messageTexte = lignes.join('\n');
     posterCommentaireJira_(issueKey, messageTexte, true);
 
-    // Résolution automatique si demandée et configurée
-    if (getProp_('JIRA_AUTO_RESOLVE') === 'true') {
+    // Résolution automatique si SUCCÈS UNIQUEMENT (jamais sur une erreur) et activée
+    if (!estErreur && getProp_('JIRA_AUTO_RESOLVE') === 'true') {
       transitionnerTicketJira_(issueKey, ['Terminé', 'Résolu', 'Done', 'Resolved', 'Fermé', 'Closed']);
     }
   } catch (err) {
     console.warn('[%s] Échec de la notification Jira pour %s : %s',
-      ctx.traceId, issueKey, err.message);
+      ctx ? ctx.traceId : 'N/A', issueKey, err.message);
   }
 }
 

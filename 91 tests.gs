@@ -110,6 +110,7 @@ function test_unitaires() {
     groupe_('traduireErreurAdmin_', testTraduireErreurAdmin_);
     groupe_('estErreurGroupeDynamique_', testEstErreurGroupeDynamique_);
     groupe_('toutes les specs et handlers', testTousHandlersRegistre_);
+    groupe_('invocation des 50 handlers', testSmokeInvocationHandlers_);
 
     const s = SUITE_COURANTE;
     const total = s.reussis + s.echecs.length;
@@ -351,6 +352,59 @@ function testTousHandlersRegistre_() {
         assert_(Array.isArray(spec.emails), nom + ' : emails est un tableau');
         assert_(spec.fenetre === 'STANDARD' || spec.fenetre === 'PERMANENTE', nom + ' : fenêtre valide (STANDARD ou PERMANENTE)');
         assert_(typeof spec.handler === 'function', nom + ' : handler est une fonction valide');
+    });
+}
+
+function testSmokeInvocationHandlers_() {
+    const actionsObj = getActions_();
+    const actionNoms = Object.keys(actionsObj);
+    const mockCtx = {
+        action: 'SMOKE_TEST',
+        ticketKey: 'SMOKE-001',
+        requestId: 'SMOKE-001-1',
+        traceId: 'TRACE-SMOKE'
+    };
+    const mockData = {
+        email_cible: 'user.test@cooperl.com',
+        email_source: 'user.test@cooperl.com',
+        email_destination: 'dest@cooperl.com',
+        email_groupe: 'grp_test@cooperl.com',
+        email_manager: 'dest@cooperl.com',
+        email_delegue: 'dest@cooperl.com',
+        prenom: 'Jean',
+        nom: 'Dupont',
+        email_souhaite: 'jean.dupont@cooperl.com',
+        nouvel_email: 'jean.dupont2@cooperl.com',
+        manager_email: 'dest@cooperl.com',
+        alias: 'jean.alias@cooperl.com',
+        nom_groupe: 'Groupe Test',
+        description: 'Groupe test',
+        drive_id: 'drive-123',
+        nom_drive: 'Nouveau Drive',
+        role: 'MEMBER',
+        nouvelle_ou: '/Direction',
+        motif: 'Test unitaire',
+        message: 'Absent du bureau',
+        objet: 'Absence',
+        date_debut: '2026-08-25',
+        date_fin: '2026-08-30',
+        code_batiment: 'BAT-1',
+        nom_ressource: 'Salle Test',
+        type_ressource: 'ROOM',
+        capacite: 10,
+        email_ressource: 'salle.test@resource.calendar.google.com'
+    };
+
+    actionNoms.forEach(function (nom) {
+        const spec = actionsObj[nom];
+        try {
+            // Invocation protégée pour vérifier qu'aucune ReferenceError / fonction inexistante n'est présente
+            spec.handler(Object.assign({}, mockData), Object.assign({}, mockCtx, { action: nom }));
+            assert_(true, nom + ' : handler invoqué sans ReferenceError');
+        } catch (err) {
+            const estBugReference = (err instanceof ReferenceError) || (err instanceof TypeError && err.message.indexOf('is not a function') !== -1);
+            assert_(!estBugReference, nom + ' : aucune fonction manquante (reçu ' + (err.name || 'Error') + ' : ' + err.message + ')');
+        }
     });
 }
 

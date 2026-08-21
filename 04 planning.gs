@@ -213,17 +213,22 @@ function estJourFerie_(date) {
  */
 function parseDateIso_(valeur, champ) {
   var s = String(valeur).trim();
-  var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s);
   var libelle = champ ? " (champ '" + champ + "')" : '';
+
+  // Supporte 'yyyy-MM-dd' ainsi que les horodatages ISO complets 'yyyy-MM-ddTHH:mm' ou 'yyyy-MM-dd HH:mm'
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(s);
   if (!m) {
     throw new AppError_('INVALID_DATE',
       "Date invalide" + libelle + " : '" + valeur + "'. Format attendu : " +
-      'yyyy-MM-dd (ex. 2026-08-15).');
+      'yyyy-MM-dd (ex. 2026-08-15) ou yyyy-MM-ddTHH:mm.');
   }
+
   var annee = Number(m[1]), mois = Number(m[2]), jour = Number(m[3]);
-  var d = new Date(annee, mois - 1, jour);
-  // Un jour hors borne (ex. 2026-02-31) est « recalé » par Date : on le détecte
-  // en vérifiant que les composantes n'ont pas changé.
+  var heure = m[4] !== undefined ? Number(m[4]) : 0;
+  var minute = m[5] !== undefined ? Number(m[5]) : 0;
+  var seconde = m[6] !== undefined ? Number(m[6]) : 0;
+
+  var d = new Date(annee, mois - 1, jour, heure, minute, seconde);
   if (d.getFullYear() !== annee || d.getMonth() !== mois - 1 || d.getDate() !== jour) {
     throw new AppError_('INVALID_DATE',
       "Date inexistante" + libelle + " : '" + valeur + "'.");

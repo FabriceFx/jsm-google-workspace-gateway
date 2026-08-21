@@ -599,6 +599,8 @@ function listerAppareilsUtilisateur_(email) {
   const resourceIdsVus = new Set();
   const emailsArray = Array.from(tousEmails);
 
+  const erreurs = [];
+
   // 1. Recherche ciblée par requête email exacte pour chaque adresse de l'utilisateur
   for (let e = 0; e < emailsArray.length; e++) {
     const adresse = emailsArray[e];
@@ -629,7 +631,13 @@ function listerAppareilsUtilisateur_(email) {
       } while (pageToken);
     } catch (err) {
       console.warn('Erreur lors de la recherche des appareils mobiles pour ' + adresse + ' : ' + err.message);
+      erreurs.push(adresse + ' : ' + err.message);
     }
+  }
+
+  // Si toutes les requêtes ont échoué par erreur technique (quota, 403, panne), lever l'erreur au lieu de prétendre qu'aucun appareil n'existe
+  if (erreurs.length === emailsArray.length && appareils.length === 0) {
+    throw new AppError_('MOBILE_API_ERROR', 'Impossible de consulter les appareils mobiles : ' + erreurs.join(', '), 502);
   }
 
   return appareils;
@@ -643,7 +651,7 @@ function listerAppareilsUtilisateur_(email) {
  *     'admin_account_wipe', 'approve', 'block'.
  * @param {string=} deviceId Si fourni, cible un seul appareil.
  * @return {!{traites: number, appareils: !Array<!Object>}}
- * @throws {AppError_} Si aucun appareil n'est trouvé.
+ * @throws {AppError_} Si aucun appareil n'est trouvé ou si une action échoue partiellement.
  */
 function actionSurAppareils_(email, action, deviceId) {
   const appareils = listerAppareilsUtilisateur_(email);
@@ -664,15 +672,28 @@ function actionSurAppareils_(email, action, deviceId) {
       }).join(', '), 404);
   }
 
+  const traites = [];
+  const erreurs = [];
+
   cibles.forEach(function (d) {
-    AdminDirectory.Mobiledevices.action({ action: action }, 'my_customer', d.resourceId);
+    try {
+      AdminDirectory.Mobiledevices.action({ action: action }, 'my_customer', d.resourceId);
+      traites.push({ resourceId: d.resourceId, model: d.model || '', type: d.type || '' });
+    } catch (errAction) {
+      console.warn('Échec action %s sur mobile %s : %s', action, d.resourceId, errAction.message);
+      erreurs.push((d.model || d.resourceId) + ' : ' + errAction.message);
+    }
   });
 
+  if (erreurs.length > 0) {
+    throw new AppError_('ACTION_APPAREILS_PARTIELLE',
+      'Action ' + action + ' incomplète sur les appareils mobiles de ' + email + '. ' +
+      'Réussi : ' + traites.length + '. En échec : ' + erreurs.join(', '), 502);
+  }
+
   return {
-    traites: cibles.length,
-    appareils: cibles.map(function (d) {
-      return { resourceId: d.resourceId, model: d.model || '', type: d.type || '' };
-    })
+    traites: traites.length,
+    appareils: traites
   };
 }
 
@@ -999,19 +1020,20 @@ function appelLicensingApi_(methode, chemin, payload) {
 }
 
 /**
- * Énumère tous les Drives partagés accessibles par le domaine ou par l'administrateur.
+ * Énumère tous les Drives partagés (Shared Drives) de l'organisation.
  *
- * Utilise en priorité le service avancé Drive v3 (Drive.Drives.list), avec double
- * balayage (useDomainAdminAccess: true pour le domaine complet + appel standard pour
- * les Drives personnels/externes), et bascule automatique en REST via UrlFetchApp si nécessaire.
+ * Utilise le service avancé Drive v3 avec useDomainAdminAccess: true (accès administrateur
+ * global sur tous les Drives du domaine), et complète par les Drives accessibles directement.
  *
- * @param {string=} traceId Identifiant de corrélation pour les logs.
+ * @param {string=} traceId Identifiant de trace.
  * @return {!Array<!{id: string, name: string}>} Liste dédoublonnée des Drives partagés.
+ * @throws {AppError_} Si l'API Drive est inaccessible (quota, 403, panne).
  */
 function listerTousDrivesPartages_(traceId) {
   const drivesMap = new Map();
   const token = ScriptApp.getOAuthToken();
   const useAdvanced = (typeof Drive !== 'undefined' && Drive.Drives && typeof Drive.Drives.list === 'function');
+  const erreurs = [];
 
   // Stratégie A : Service avancé Drive.Drives.list
   if (useAdvanced) {
@@ -1031,6 +1053,7 @@ function listerTousDrivesPartages_(traceId) {
       } while (pageToken);
     } catch (errAdmin) {
       console.warn('[%s] Drive.Drives.list (admin) : %s', traceId || '-', errAdmin.message);
+      erreurs.push('Admin SDK Drive : ' + errAdmin.message);
     }
 
     // A.2 : Drives où le déployeur est membre direct (sans useDomainAdminAccess)
@@ -1051,6 +1074,7 @@ function listerTousDrivesPartages_(traceId) {
       } while (pageToken);
     } catch (errStd) {
       console.warn('[%s] Drive.Drives.list (standard) : %s', traceId || '-', errStd.message);
+      erreurs.push('Standard SDK Drive : ' + errStd.message);
     }
   }
 
@@ -1086,13 +1110,22 @@ function listerTousDrivesPartages_(traceId) {
             pageToken = data.nextPageToken || null;
           } else {
             pageToken = null;
+            if (rep.getResponseCode() >= 400 && rep.getResponseCode() !== 404) {
+              erreurs.push('REST (' + rep.getResponseCode() + ') : ' + rep.getContentText());
+            }
           }
         } catch (eRest) {
           console.warn('[%s] Erreur REST Drive.drives : %s', traceId || '-', eRest.message);
+          erreurs.push('REST : ' + eRest.message);
           pageToken = null;
         }
       } while (pageToken);
     }
+  }
+
+  if (drivesMap.size === 0 && erreurs.length > 0 && useAdvanced) {
+    // Toutes les méthodes ont échoué par erreur technique
+    throw new AppError_('DRIVE_API_ERROR', 'Impossible d\'énumérer les Drives partagés : ' + erreurs[0], 502);
   }
 
   return Array.from(drivesMap.values());
@@ -1106,11 +1139,13 @@ function listerTousDrivesPartages_(traceId) {
  * @param {string} fileId Identifiant du Shared Drive ou fichier.
  * @param {string=} traceId Identifiant de trace.
  * @return {!Array<!Object>} Liste des permissions trouvées.
+ * @throws {AppError_} Si la consultation des permissions échoue par erreur API.
  */
 function listerPermissionsFichierOuDrive_(fileId, traceId) {
   const token = ScriptApp.getOAuthToken();
   const perms = [];
   const useAdvanced = (typeof Drive !== 'undefined' && Drive.Permissions && typeof Drive.Permissions.list === 'function');
+  const erreurs = [];
 
   // Essai 1 : Service avancé avec useDomainAdminAccess: true
   if (useAdvanced) {
@@ -1130,6 +1165,7 @@ function listerPermissionsFichierOuDrive_(fileId, traceId) {
       } while (pageToken);
       return perms;
     } catch (e1) {
+      erreurs.push('Admin SDK: ' + e1.message);
       // Fallback sans useDomainAdminAccess
       try {
         let pageToken = null;
@@ -1147,6 +1183,7 @@ function listerPermissionsFichierOuDrive_(fileId, traceId) {
         return perms;
       } catch (e2) {
         console.warn('[%s] Erreur Drive.Permissions.list sur %s : %s', traceId || '-', fileId, e2.message);
+        erreurs.push('Standard SDK: ' + e2.message);
       }
     }
   }
@@ -1177,12 +1214,21 @@ function listerPermissionsFichierOuDrive_(fileId, traceId) {
           pageToken = data.nextPageToken || null;
         } else {
           pageToken = null;
+          if (rep.getResponseCode() >= 400 && rep.getResponseCode() !== 404) {
+            erreurs.push('REST HTTP ' + rep.getResponseCode() + ' : ' + rep.getContentText());
+          }
         }
       } catch (eRest) {
+        console.warn('[%s] Erreur REST Drive.permissions sur %s : %s', traceId || '-', fileId, eRest.message);
+        erreurs.push('REST: ' + eRest.message);
         pageToken = null;
       }
     } while (pageToken);
-    if (succes && perms.length > 0) break;
+    if (succes) return perms;
+  }
+
+  if (erreurs.length > 0 && perms.length === 0) {
+    throw new AppError_('DRIVE_PERMS_ERROR', 'Impossible de consulter les permissions du Drive ' + fileId + ' : ' + erreurs[0], 502);
   }
 
   return perms;

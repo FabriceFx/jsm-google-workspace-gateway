@@ -39,25 +39,28 @@ function SPEC_AJOUT_GROUPE() {
  * @return {!Object}
  */
 function actionAjouterGroupe_(data, ctx) {
-  const role = String(data.role || 'MEMBER').toUpperCase();
+  const roleFourni = data.role ? String(data.role).toUpperCase().trim() : null;
+  const role = roleFourni || 'MEMBER';
   if (['MEMBER', 'MANAGER', 'OWNER'].indexOf(role) === -1) {
     throw new AppError_('INVALID_ROLE',
       "Rôle '" + role + "' invalide. Valeurs admises : MEMBER, MANAGER, OWNER.");
   }
 
-  // Vérification de l'appartenance existante et mise à jour de rôle si nécessaire
+  // Vérification de l'appartenance existante :
+  // Si le membre existe déjà et qu'aucun rôle spécifique n'a été demandé,
+  // on préserve son rôle actuel (évite de rétrograder un OWNER en MEMBER).
   try {
     const membreExistant = AdminDirectory.Members.get(data.email_groupe, data.email_cible);
     if (membreExistant) {
       const roleActuel = String(membreExistant.role || 'MEMBER').toUpperCase();
-      if (roleActuel === role) {
+      if (!roleFourni || roleActuel === role) {
         return {
           idempotent: true,
           target: data.email_cible,
-          message: data.email_cible + ' est déjà membre de ' + data.email_groupe + ' (rôle : ' + role + ').'
+          message: data.email_cible + ' est déjà membre de ' + data.email_groupe + ' (rôle : ' + roleActuel + ').'
         };
       }
-      // Mise à jour / promotion de rôle
+      // Mise à jour explicite du rôle (ex: promotion MEMBER → MANAGER / OWNER)
       AdminDirectory.Members.update(
         { email: data.email_cible, role: role },
         data.email_groupe,

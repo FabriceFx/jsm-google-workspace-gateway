@@ -66,7 +66,7 @@ function actionAuditAccesComplet_(data, ctx) {
     const prod = getProp_('LICENSE_PRODUCT_ID', 'Google-Apps');
     const skuPrincipal = getProp_('LICENSE_SKU_ID');
     const skuArchive = getProp_('LICENSE_ARCHIVE_SKU_ID');
-    const skusATester = [skuPrincipal, skuArchive, 'Google-Apps-For-Business', '1010020020', '1010060001'].filter(Boolean);
+    const skusATester = [skuPrincipal, skuArchive].concat(CONFIG.SKUS_COMMUNS || []).filter(Boolean);
     const skusVus = new Set();
 
     skusATester.forEach(function (sku) {

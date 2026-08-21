@@ -73,7 +73,9 @@ const CONFIG = Object.freeze({
     '4': [['08:30', '12:30'], ['13:30', '17:30']],
     '5': [['08:30', '12:30'], ['13:30', '16:30']],  // vendredi
     '6': []                                         // samedi
-  }
+  },
+  /** SKUs de licences Workspace courants (pour les détections et rapports). */
+  SKUS_COMMUNS: Object.freeze(['1010020020', '1010060001', 'Google-Apps-For-Business'])
 });
 
 /**

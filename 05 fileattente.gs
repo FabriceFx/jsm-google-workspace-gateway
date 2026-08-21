@@ -261,7 +261,7 @@ function traiterFileAttente() {
                         message: 'Échec d\'exécution différée après ' + CONFIG.MAX_TENTATIVES + ' tentatives : ' + err.message,
                         error: err.name || 'QUEUE_FAILED',
                         details: { action: ctx.action, tentative: tentative, traceId: ctx.traceId }
-                    }, ctx, false);
+                    }, ctx, true);
                 }
             }
         }

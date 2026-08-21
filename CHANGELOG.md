@@ -12,23 +12,26 @@ Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 ### Sécurité & Contrôles d'Accès
 
 - **Garde-fou `COMPTE_PROTEGE`** : Interdiction formelle (HTTP 403) de réinitialiser le mot de passe (`RESET_MOT_DE_PASSE`) ou de générer des codes de secours 2FA (`GENERATION_CODES_SECOURS`) pour tout compte administrateur (`isAdmin` / `isDelegatedAdmin`) via un ticket JSM.
-- **Flotte mobile MDM (`06 workspace.gs`)** : Élimination complète des correspondances partielles et par préfixe sur les appareils mobiles. Seule l'égalité stricte sur l'adresse e-mail principale ou les alias vérifiés de l'utilisateur est retenue.
-- **Révocation Drives partagés (`RETRAIT_TOUS_DRIVES_PARTAGES`)** : Levée systématique de `RETRAIT_PARTIEL` (HTTP 502) en cas d'erreur de révocation sur un ou plusieurs Drives, garantissant le rejeu automatique par Jira.
+- **Flotte mobile MDM (`06 workspace.gs`)** : Élimination complète des correspondances partielles et par préfixe sur les appareils mobiles. Seule l'égalité stricte sur l'adresse e-mail principale ou les alias vérifiés est retenue. Signalement d'échec partiel (`ACTION_APPAREILS_PARTIELLE` HTTP 502) et propagation des pannes d'API.
+- **Révocation Drives partagés (`RETRAIT_TOUS_DRIVES_PARTAGES`)** : Levée systématique de `RETRAIT_PARTIEL` (HTTP 502) en cas d'erreur de révocation, et levée d'erreur (`DRIVE_API_ERROR` / `DRIVE_PERMS_ERROR`) si l'énumération ou l'accès aux permissions échoue au lieu de prétendre qu'aucun accès n'existe.
 
-### Corrections de Bugs Bloquants
+### Corrections de Bugs Bloquants & Régressions
 
+- **Callback d'échec Jira (`09 jira.gs` & `05 fileattente.gs`)** : Distinction stricte entre succès et échec (`estErreur`). En cas d'échec de file d'attente, publication d'un message explicite préfixé ❌, conservation impérative du ticket ouvert (pas d'auto-résolution abusive) et marquage en exécution différée (`estDiffere=true`).
+- **Groupes Google (`AJOUT_GROUPE`)** : La mise à jour de rôle (`AdminDirectory.Members.update`) n'est déclenchée que si le champ `role` est **explicitement fourni** dans la demande. Un ticket banal sans rôle préserve le rôle existant (évite toute rétrogradation accidentelle d'un `OWNER` ou `MANAGER` en `MEMBER`).
 - **Configuration de groupes (`CONFIG_GROUPE`)** : Implémentation de `requireGroup_()` dans `06 workspace.gs` avec typage `GROUP_NOT_FOUND` (404) et `DIRECTORY_ERROR` (502).
 - **Retrait membre Drive partagé (`RETRAIT_MEMBRE_DRIVE_PARTAGE`)** : Remplacement de `findUser_()` par `getUserOrNull_()` pour la résolution fiable des alias.
 - **Archivage de compte (`ARCHIVAGE_COMPTE`)** : Application effective du statut `archived: true` et `suspended: true`, ordonnancement strict de l'attribution de la licence archive avant la libération de la licence standard, et levée d'erreurs réelles en cas d'échec.
+- **Départ collaborateur (`40 groupe departcollaborateur.gs`)** : Verrouillage des étapes préalables Gmail en `obligatoire: true` pour ne jamais suspendre prématurément un compte dont les transferts/délégations ont échoué, garantissant la réussite du rejeu automatique par Jira.
 
 ### Robustesse & Qualité
 
 - **Manifeste `appsscript.json`** : Ajout du scope OAuth `"https://www.googleapis.com/auth/script.scriptapp"` pour la gestion dynamique des déclencheurs de file d'attente.
-- **Groupes Google (`AJOUT_GROUPE`)** : Prise en compte de la promotion de rôle (`MEMBER` → `MANAGER`/`OWNER`) via `AdminDirectory.Members.update` pour les membres déjà existants.
-- **Parsing de date ISO** : Utilisation systématique de `parseDateIso_()` dans le routeur et la file d'attente pour éliminer les ambiguïtés jour/mois.
+- **Support étendu des dates ISO (`04 planning.gs`)** : `parseDateIso_()` accepte désormais les formats `yyyy-MM-dd`, `yyyy-MM-ddTHH:mm` et `yyyy-MM-dd HH:mm` provenant des automatisations Jira.
+- **Centralisation des SKU de licences (`00 config.gs`)** : Constante partagée `CONFIG.SKUS_COMMUNS` évitant la duplication et la divergence entre les actions d'audit et d'information compte.
 - **Support des agendas de ressources** : Autorisation des domaines `@resource.calendar.google.com` et sous-domaines Calendar dans la validation de sécurité.
 - **Dédoublonnage Drive partagé** : Dérivation du `requestId` depuis `ctx.requestId` pour l'idempotence des créations.
-- **Banc de tests étendu (`91 tests.gs`)** : Validation automatisée de l'intégralité des 50 handlers et spécifications du registre (385 assertions unitaires).
+- **Banc de tests étendu & Smoke Test Complet (`91 tests.gs`)** : Validation automatisée de l'intégralité des 50 handlers avec exécution directe en bac à sable (**435 assertions unitaires validées à 100%**).
 
 ## [3.3.0] — 2026-08-21
 

@@ -60,6 +60,7 @@ function actionDepartCollaborateur_(data, ctx) {
     {
       nom: 'TRANSFERT_EMAILS',
       si: function () { return !!destTransfert; },
+      obligatoire: true,
       fn: function (d, c) {
         return actionTransfererEmails_({
           email_cible: d.email_cible,
@@ -71,6 +72,7 @@ function actionDepartCollaborateur_(data, ctx) {
     {
       nom: 'DELEGATION_EMAIL',
       si: function (d) { return !!d.email_manager; },
+      obligatoire: true,
       fn: function (d, c) {
         return actionDeleguerEmail_({
           email_cible: d.email_cible,
