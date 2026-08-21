@@ -1,19 +1,67 @@
 # Passerelle Jira Service Management → Google Workspace
 
-> **v3.2.0** — Automatise les opérations d'administration Google Workspace
-> déclenchées par les formulaires Jira Service Management.
+[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](CHANGELOG.md)
+[![Actions](https://img.shields.io/badge/catalogue-49_actions-green.svg)](#actions-disponibles-49-actions)
+[![Google Workspace](https://img.shields.io/badge/Google_Workspace-Admin_SDK-4285F4.svg)](https://developers.google.com/admin-sdk)
+[![Jira Cloud](https://img.shields.io/badge/Jira_Cloud-Automation_REST-0052CC.svg)](https://www.atlassian.com/software/jira/service-management)
+[![Licence](https://img.shields.io/badge/licence-MIT-purple.svg)](LICENSE)
+
+> **v3.2.0** — Automatise 100% des opérations d'administration Google Workspace déclenchées par les formulaires Jira Service Management, avec file d'attente ouvrable, exécution programmée à date future et boucle de retour fermée sur les tickets.
 
 *[English version below](#jira-service-management--google-workspace-gateway)*
 
 ---
 
+## Sommaire
+
+1. [Présentation & Architecture](#présentation)
+2. [Catalogue des 49 Actions](#actions-disponibles-49-actions)
+3. [Groupes d'Actions (Séquences Orchestrées)](#groupes-daction)
+4. [Console WebApp & Les 4 Onglets](#console-webapp-interactive--les-4-onglets)
+5. [Prérequis & Activation des API Google Cloud](#prérequis--activation-des-api-google-cloud)
+6. [Installation & Déploiement](#installation)
+7. [Paramètres du Script (Propriétés)](#propriétés-du-script)
+8. [Configuration Jira Automation](#configuration-côté-jira)
+9. [Actions Gmail & Compte de Service](#actions-gmail-configuration-avancée)
+10. [Tests & Recette](#tests--recette)
+11. [Sécurité](#sécurité)
+12. [Auteur & Licence](#auteur)
+
+---
+
 ## Présentation
 
-Quand un agent JSM valide un ticket (arrivée, départ, demande d'accès,
-réinitialisation de mot de passe, demande de Drive partagé…), Jira Automation
-envoie un webhook POST vers cette webapp Google Apps Script. Le routeur
-identifie l'action demandée, vérifie l'authentification et les données, puis
-exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
+Lorsqu'un agent ou gestionnaire valide une demande sur le portail Jira Service Management (arrivée d'un collaborateur, départ, mobilité, réinitialisation de mot de passe, création de Drive partagé, réservation de salle, signature officielle...), **Jira Automation** transmet un webhook `POST` sécurisé à la passerelle Google Apps Script.
+
+Le routeur authentifie la requête à temps constant, valide les paramètres, applique les fenêtres d'administration ou la programmation future, exécute l'action via l'Admin SDK Google Workspace, consigne la trace dans le journal d'audit et vient commenter/résoudre automatiquement le ticket Jira.
+
+### Schéma d'Architecture Globale
+
+```mermaid
+flowchart TD
+    A["👤 Demandeur (Portail JSM)"] --> B["🎫 Ticket JSM (Validation Agent)"]
+    B --> C["⚡ Jira Automation (Webhook POST)"]
+    C --> D["🛡️ Passerelle Apps Script (Routeur & Auth Token)"]
+    
+    D --> E{"Créneau d'exécution ?"}
+    E -- "Hors créneau Standard" --> F["📥 File d'attente (Google Sheets)"]
+    F --> G["⏰ Trigger récurrent (15 min)"]
+    G --> D
+    
+    E -- "Créneau OK ou Permanente" --> H["⚙️ Registre : 49 Actions & Groupes"]
+    
+    H --> I["🏢 Google Workspace Admin SDK"]
+    H --> J["📁 Google Drive API v3 (Shared Drives)"]
+    H --> K["📧 Gmail API (Signatures, Délégations, Absence)"]
+    H --> L["📅 Google Calendar API (Ressources & Salles)"]
+    H --> M["💳 Enterprise License Manager"]
+    
+    I & J & K & L & M --> N["📋 Journal d'audit (Google Sheets)"]
+    N --> O["💬 Callback Jira (Note interne & Clôture)"]
+    O --> B
+```
+
+---
 
 ### Actions disponibles (49 actions)
 
@@ -28,7 +76,7 @@ exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 | **Groupes** | | |
 | `AJOUT_GROUPE` | Ajoute un utilisateur à un groupe (MEMBER, MANAGER, OWNER) | Standard |
 | `RETRAIT_GROUPE` | Retire un utilisateur d'un groupe | Permanente |
-| `RETRAIT_TOUS_GROUPES` | Retire un utilisateur de tous ses groupes directs | Permanente |
+| `RETRAIT_TOUS_GROUPES` | Retire un utilisateur de tous ses groupes directs (ignore gracieusement les groupes dynamiques) | Permanente |
 | `CREATION_GROUPE` | Crée un nouveau groupe Google | Standard |
 | `SUPPRESSION_GROUPE` | Supprime un groupe (confirmation obligatoire) | Standard |
 | `LISTE_MEMBRES_GROUPE` | Liste les membres d'un groupe (lecture seule) | Permanente |
@@ -43,11 +91,11 @@ exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 | `DECONNEXION_FORCEE` | Déconnecte toutes les sessions (le compte reste actif) | Permanente |
 | `REVOCATION_TOKENS_APPS` | Révoque les accès des applications tierces | Permanente |
 | `GENERATION_CODES_SECOURS` | Génère de nouveaux codes 2FA (anciens révoqués) | Standard |
-| **Appareils mobiles** | | |
+| **Appareils mobiles (MDM)** | | |
 | `EFFACEMENT_APPAREIL` | Efface à distance un appareil (vol, perte) | Permanente |
 | `BLOCAGE_APPAREIL` | Bloque un appareil suspect | Permanente |
 | `APPROBATION_APPAREIL` | Approuve un nouvel appareil en attente | Standard |
-| **Messagerie** ⚙️ | | |
+| **Messagerie & Identité** ⚙️ | | |
 | `SIGNATURE_EMAIL` | Déploie automatiquement la signature HTML officielle Gmail (charte d'entreprise) ou personnalisée | Standard |
 | `DELEGATION_EMAIL` | Donne accès à la boîte mail d'un utilisateur à un délégué | Standard |
 | `RETRAIT_DELEGATION_EMAIL` | Retire l'accès d'un délégué à une boîte mail | Standard |
@@ -75,163 +123,102 @@ exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 | `ARCHIVAGE_COMPTE` | Archive un compte : déplacement dans `/Archives`, libération licence standard et attribution licence Archived User | Standard |
 | **Groupes d'action** (séquences orchestrées) | | |
 | `ARRIVEE_COLLABORATEUR` | Onboarding : création du compte + licence + groupes + alias, dans l'ordre | Standard |
-| `DEPART_COLLABORATEUR` | Offboarding : transferts + délégation + retrait groupes + suspension + retrait licence | Permanente |
+| `DEPART_COLLABORATEUR` | Offboarding : transferts + délégation + transfert Drive + retrait groupes + retrait Drives partagés + suspension + retrait licence | Permanente |
 | `RETOUR_ABSENCE` | Coupe réponse d'absence, transfert et délégation posés au départ | Standard |
 | `URGENCE_COMPROMISSION` | Kill-switch sécurité : suspension + déconnexion + révocation OAuth + blocage appareils | Permanente |
 | `MUTATION_INTERNE` | Mobilité interne : déplacement OU + profil RH + retrait anciens groupes + ajout nouveaux groupes | Standard |
 
-> ⚙️ Les actions **Messagerie** nécessitent un compte de service avec
-> délégation de domaine (voir section « Actions Gmail »).
+> ⚙️ Les actions **Messagerie** nécessitent un compte de service avec délégation de domaine (voir section « Actions Gmail »).
 >
-> 👥 **Groupes dynamiques** : un groupe dont l'appartenance est calculée
-> automatiquement par une requête (membres dérivés des attributs des comptes)
-> **n'accepte ni ajout ni retrait manuel** de membre. `AJOUT_GROUPE` et
-> `RETRAIT_GROUPE` renvoient alors un message explicite `GROUPE_DYNAMIQUE`
-> (au lieu d'une erreur brute), et `RETRAIT_TOUS_GROUPES` **saute** ces groupes
-> sans les compter en échec (listés dans `details.dynamiques`). Pour changer
-> l'appartenance, ajuster les attributs du compte (service, OU…) ou la règle du
-> groupe dans la console d'administration.
+> 👥 **Groupes dynamiques** : un groupe dont l'appartenance est calculée automatiquement par une règle d'annuaire n'accepte aucun ajout ni retrait manuel. La passerelle intercepte ce cas sans échec bloquant.
 >
-> 🧩 Les **attributs personnalisés** (création et mise à jour de profil)
-> peuvent être fournis de deux façons, combinables : un objet JSON
-> `custom_schemas` (`{"NomSchema": {"Champ": valeur}}`), ou des **champs plats**
-> plus simples pour Jira et les listes déroulantes (`rh_matricule`, `rh_statut`,
-> `rh_site_paie`, `rh_cse`, `acces_jira`, `acces_confluence`, `acces_lumapps`…),
-> repliés dans les bons schémas via `MAPPING_SCHEMAS_PERSO` (00_Config.gs — **à
-> adapter à vos schémas**). Les schémas doivent **exister au préalable** dans la
-> console d'administration (Annuaire > Gérer les attributs personnalisés).
->
-> 🏢 La console propose des **listes déroulantes dynamiques** pour l'unité
-> organisationnelle (OU) et le bâtiment (buildingId), peuplées en direct depuis
-> Google. Le bâtiment nécessite le scope
-> `admin.directory.resource.calendar.readonly` (réautoriser après mise à jour du
-> manifeste).
->
-> 📝 **Modifier les valeurs des listes déroulantes** : tout est regroupé dans
-> l'objet `LISTES`, en tête du `<script>` de `ui_test.html` (bloc « LISTES
-> DÉROULANTES — SEUL ENDROIT À MODIFIER »). Format : `{ val: 'valeur envoyée',
-> txt: 'texte affiché' }`. Une **liste vide `[]`** rend le champ en saisie libre
-> (et, pour l'OU, en liste dynamique). Concernés : `societe`, `centre_cout`,
-> `statut`, `cse`, `fonction_transversale`, `ou`, plus les listes techniques
-> (`role_groupe`, `type_effacement`…).
->
-> 💡 **Listes alimentées depuis l'annuaire** : `societe`, `departement`,
-> `centre_cout`, `org_description`, `statut`, `cse`, `fonction_transversale`
-> s'affichent en **menus déroulants** peuplés avec les valeurs déjà présentes
-> dans les comptes (comme l'OU). Priorité : une liste curée dans `LISTES` (non
-> vide) l'emporte ; sinon la liste dynamique s'affiche. Les valeurs sont
-> extraites en **une seule** énumération de l'annuaire, **mise en cache 6 h**
-> (attention : elles reflètent les données telles quelles, variantes/fautes
-> comprises). `admin_viderCacheSuggestions()` force le rafraîchissement.
+> 📅 **Programmation future (`date_execution`)** : vous pouvez passer une date ISO 8601 (ex. `"2026-09-30T18:00:00Z"`) dans le payload pour déclencher l'action à une date/heure exacte.
 
-**Fenêtre Standard** : exécution immédiate pendant les créneaux d'administration
-(lun.–ven. 8h30–17h30, sauf jours fériés français). Hors créneau, la demande
-est mise en file d'attente pour exécution automatique au prochain créneau.
+---
 
-**Fenêtre Permanente** : exécution immédiate 24 h/24, 7 j/7. Réservée aux
-actions de sécurité (suspension, retrait d'accès) et aux lectures qui ne
-doivent jamais être différées.
+## Console WebApp Interactive & Les 4 Onglets
 
-### Groupes d'action
+En ouvrant l'URL de votre application web (`https://script.google.com/macros/s/.../exec`) dans votre navigateur, vous disposez d'un centre de contrôle complet en **Material Design 3** :
 
-Un **groupe d'action** enchaîne plusieurs actions atomiques dans le bon ordre,
-en un seul ticket. Sa valeur n'est pas seulement d'économiser des tickets :
-c'est d'**encoder la séquence correcte** que l'agent devrait sinon connaître de
-tête (par exemple, sur un départ, poser transferts et délégation *pendant que le
-compte est actif*, et suspendre *en dernier*).
+1. 🧪 **Onglet 1 — Console d'administration** :
+   * Formulaire interactif pour tester en temps réel les **49 actions**.
+   * Bouton « Remplir avec un exemple » pour tester chaque action en 1 clic.
+   * Sécurité étanche : accès réservé aux e-mails déclarés dans `ADMIN_UI_EMAILS`.
+2. 📋 **Onglet 2 — Banc d'Essai & Recette** :
+   * Matrice de qualification opérationnelle couvrant les 49 actions.
+   * Sélecteur de statut (🟢 *Validé*, 🟡 *À tester*, 🔴 *Anomalie*, ⚪ *Non applicable*) et saisie d'observations persistées dans le script.
+   * Bouton « Exporter le bilan » pour générer le PV de recette officiel en Markdown.
+3. 📖 **Onglet 3 — Guide d'Intégration JSM** :
+   * Documentation interactive pour configurer vos règles Jira Automation.
+   * Exemples de payloads JSON pré-remplis avec les Smart Values Atlassian.
+4. 📊 **Onglet 4 — Présentation & Schéma Directeur** :
+   * Visualisation comparative entre l'ancien traitement manuel dispersé et le flux unique automatisé.
+   * Schémas SVG interactifs et synthèse des 4 gains majeurs.
 
-- Les groupes **réutilisent** les handlers atomiques : aucune logique dupliquée.
-- Ils héritent de leur **idempotence** — rejouer un groupe est sûr (les étapes
-  déjà faites se signalent, les étapes en échec sont réessayées).
-- Politique **continue-on-error avec rapport** : on fait le maximum ; le détail
-  étape par étape figure dans `details.etapes`, et toute étape en échec fait
-  remonter un statut d'erreur récapitulatif à Jira (pour relance).
+---
 
-Groupes disponibles : `ARRIVEE_COLLABORATEUR` (onboarding),
-`DEPART_COLLABORATEUR` (offboarding), `RETOUR_ABSENCE`, `URGENCE_COMPROMISSION` (kill-switch sécurité), `MUTATION_INTERNE` (mobilité interne RH).
+## Prérequis & Activation des API Google Cloud
 
-## Prérequis
+Pour que l'ensemble des 49 actions fonctionnent, les API Google Cloud suivantes doivent être actives dans votre projet GCP :
 
-- Un projet Google Apps Script avec le **service avancé Admin SDK API** activé
-- Un compte Google Workspace avec les **droits d'administration** nécessaires
-  (super-admin ou admin délégué avec droits utilisateurs et groupes)
-- Un **classeur Google Sheets** pour le journal d'audit et la file d'attente
-- Une règle **Jira Automation** configurée pour envoyer un webhook POST
+| API Google | Utilisation dans la passerelle | Activation dans GCP |
+|---|---|---|
+| **Admin SDK API** | Gestion des comptes, unités organisationnelles, groupes et appareils | **Services > Admin SDK API > Ajouter** dans Apps Script |
+| **Google Drive API (v3)** | Drives partagés (`RETRAIT_TOUS_DRIVES_PARTAGES`, création, membres) | [Activer l'API Google Drive](https://console.developers.google.com/apis/api/drive.googleapis.com/overview) |
+| **Enterprise License Manager API** | Attribution et libération des licences Workspace | [Activer l'API License Manager](https://console.developers.google.com/apis/api/licensing.googleapis.com/overview) |
+| **Groups Settings API** | Configuration et modération des groupes (`CONFIG_GROUPE`) | Incluse dans les scopes du projet |
+| **Google Calendar API** | Salles de réunion et partages d'agendas | Incluse dans les scopes du projet |
+
+---
 
 ## Installation
 
-1. **Créer le projet Apps Script**
-   Copier l'ensemble des fichiers `.gs` dans un nouveau projet Apps Script.
+1. **Créer le projet Apps Script** : Cloner ou copier les fichiers `.gs` et `.html` dans votre projet.
+2. **Configurer le fuseau horaire** : Dans Paramètres du projet → Fuseau horaire : `Europe/Paris`.
+3. **Générer le secret d'authentification** : Exécuter la fonction `setup_genererToken()`.
+4. **Installer le déclencheur** : Exécuter `setup_installerDeclencheur()` pour créer le trigger de file d'attente (toutes les 15 min).
+5. **Déployer l'application web** :
+   * **Déployer > Nouveau déploiement > Application Web**.
+   * Exécuter en tant que : *Moi-même*.
+   * Qui a accès : *Tout le monde* (requis pour les webhooks Jira, sécurisé par `SECRET_TOKEN` et `ADMIN_UI_EMAILS`).
 
-2. **Activer le service avancé**
-   Dans l'éditeur Apps Script : **Services > Admin SDK API > Ajouter**.
+---
 
-3. **Configurer le fuseau horaire**
-   Paramètres du projet → Fuseau horaire : `Europe/Paris`.
+## Propriétés du script
 
-4. **Générer le secret d'authentification**
-   Exécuter `setup_genererToken()` depuis l'éditeur. Copier le token affiché
-   dans les logs.
+À renseigner dans **Paramètres du projet > Propriétés du script** :
 
-5. **Renseigner les propriétés du script**
-   Paramètres du projet → Propriétés du script :
+| Propriété | Obligatoire | Description |
+|---|---|---|
+| `SECRET_TOKEN` | ✅ | Jeton secret partagé pour authentifier les requêtes Jira |
+| `AUDIT_SHEET_ID` | ✅ | Identifiant du classeur Google Sheets d'audit et file d'attente |
+| `ALLOWED_DOMAINS` | ✅ | Domaines Workspace autorisés (ex: `cooperl.com, filiale.fr`) |
+| `ADMIN_UI_EMAILS` | ✅ (console) | Adresses e-mail autorisées à utiliser la console Web (séparées par virgules) |
+| `NOTIFY_EMAIL` | Recommandé | E-mail recevant les alertes et mots de passe temporaires |
+| `JIRA_BASE_URL` | Optionnel | URL Jira Cloud (ex: `https://mon-domaine.atlassian.net`) pour callbacks |
+| `JIRA_USER_EMAIL` | Optionnel | E-mail du compte de service Jira pour les commentaires |
+| `JIRA_API_TOKEN` | Optionnel | Jeton d'API REST Jira Cloud |
+| `JIRA_AUTO_RESOLVE` | Optionnel | `true` pour passer automatiquement les tickets Jira à « Résolu » |
+| `LICENSE_SKU_ID` | Optionnel | SKU de licence Workspace par défaut (ex. `1010020020`) |
+| `LICENSE_SKU_ARCHIVE` | Optionnel | SKU de licence d'archivage Google Vault (ex. `1010020030`) |
+| `DEFAULT_OU` | Optionnel | Unité organisationnelle par défaut (ex: `/Collaborateurs`) |
+| `SERVICE_ACCOUNT_EMAIL` | Optionnel | E-mail du compte de service DWD (requis pour actions Gmail) |
+| `SERVICE_ACCOUNT_KEY` | Optionnel | Clé privée PEM du compte de service |
 
-   | Propriété | Obligatoire | Description |
-   |---|---|---|
-   | `SECRET_TOKEN` | ✅ | Généré à l'étape 4 (authentification du webhook) |
-   | `AUDIT_SHEET_ID` | ✅ | ID du classeur Google Sheets d'audit et file d'attente |
-   | `ALLOWED_DOMAINS` | ✅ | Domaines Workspace autorisés, séparés par des virgules |
-   | `ADMIN_UI_EMAILS` | ✅ (console) | Adresses admin autorisées à utiliser la console de test, séparées par des virgules |
-   | `NOTIFY_EMAIL` | Recommandé | Adresse de notification (anomalies, mots de passe) |
-   | `JIRA_BASE_URL` | Optionnel | URL de base Jira Cloud (ex: `https://mon-domaine.atlassian.net`) pour les callbacks automatiques |
-   | `JIRA_USER_EMAIL` | Optionnel | E-mail du compte de service / admin Jira pour le callback |
-   | `JIRA_API_TOKEN` | Optionnel | Jeton d'API REST Jira Cloud |
-   | `JIRA_AUTO_RESOLVE` | Optionnel | `true` pour passer automatiquement les tickets Jira à l'état Résolu après exécution |
-   | `LICENSE_SKU_ID` | Optionnel | SKU de licence par défaut (actions de licence). Voir `admin_listerLicences()` |
-   | `LICENSE_SKU_ARCHIVE` | Optionnel | SKU de licence d'archivage Google Vault (ex. `1010020030`) pour `ARCHIVAGE_COMPTE` |
-   | `LICENSE_PRODUCT_ID` | Optionnel | Produit de licence (défaut `Google-Apps`) |
-   | `LICENSE_CUSTOMER_ID` | Optionnel | Client pour lister les licences (domaine principal). À défaut, 1er `ALLOWED_DOMAINS` |
-   | `DEFAULT_OU` | Optionnel | Unité organisationnelle par défaut (ex. `/Collaborateurs`) |
-   | `LOGO_URL` | Optionnel | URL publique du logo d'entreprise pour les e-mails et signatures |
-   | `LOGO_VARIANTE` | Optionnel | `BLANC` (défaut) ou `BLEU` selon le fichier hébergé |
-   | `RESPECT_JOURS_FERIES` | Optionnel | `true` (défaut) ou `false` |
-   | `JOURS_FERMETURE` | Optionnel | Dates ISO de fermeture entreprise, séparées par des virgules |
-   | `SERVICE_ACCOUNT_EMAIL` | Optionnel | E-mail du compte de service avec DWD (actions Gmail & Signatures) |
-   | `SERVICE_ACCOUNT_KEY` | Optionnel | Clé privée PEM du compte de service |
-
-6. **Installer le déclencheur**
-   Exécuter `setup_installerDeclencheur()` pour créer le trigger de vidange
-   de la file d'attente (toutes les 15 minutes par défaut).
-
-7. **Déployer la webapp**
-   Déployer → Nouveau déploiement → Application Web.
-   Exécuter en tant que : *vous-même*. Accès : *tout le monde*.
-
-   > ⚠️ **Sécurité de la console.** L'accès *tout le monde* est requis par le
-   > webhook : Jira appelle `doPost` sans session Google, l'authentification y
-   > reposant sur le `SECRET_TOKEN`. La **même URL** sert aussi la console
-   > d'administration (`doGet` + fonctions `google.script.run`), qui s'exécutent
-   > avec **vos droits d'administration**. Ces fonctions sont donc protégées par
-   > un contrôle d'identité (`assertAdminUI_`) : seul le propriétaire du script
-   > (depuis l'éditeur) et les adresses listées dans **`ADMIN_UI_EMAILS`**
-   > peuvent les invoquer. **Renseignez `ADMIN_UI_EMAILS`** avec les adresses
-   > des administrateurs habilités, sans quoi la console reste inutilisable
-   > depuis le navigateur (par sécurité).
-
-8. **Configurer Jira Automation**
-   Créer une règle avec l'action « Send web request » pointant vers l'URL
-   du déploiement, en POST, Content-Type `application/json`.
-
-9. **Vérifier**
-   Exécuter `setup_verifierConfiguration()` pour contrôler que tout est en place.
+---
 
 ## Configuration côté Jira
 
-Le webhook doit envoyer un JSON de cette forme :
+Dans votre règle **Jira Automation** (sur validation du ticket) :
+* **Action** : *Send web request*
+* **Méthode** : `POST`
+* **URL** : `URL_DE_VOTRE_DEPLOIEMENT_WEBAPP`
+* **Headers** : `Content-Type: application/json`
+* **Custom data (JSON)** :
 
 ```json
 {
-  "secret_token": "votre-token",
+  "secret_token": "votre-secret-token",
   "action": "CREATION_COMPTE",
   "ticket_key": "{{issue.key}}",
   "request_id": "{{issue.key}}-{{now.epochMillis}}",
@@ -244,172 +231,7 @@ Le webhook doit envoyer un JSON de cette forme :
 }
 ```
 
-Champs optionnels avancés :
-- `date_execution` : `"2026-09-30T18:00:00Z"` pour programmer l'exécution automatique à une date et heure future.
-- `force_immediat` : `true` pour forcer l'exécution hors créneau d'administration.
-- `motif_urgence` : obligatoire si `force_immediat` est vrai (tracé dans l'audit).
-- `issue_key` : clé du ticket Jira pour le callback automatique de note interne et clôture.
-
-## Ajouter une action
-
-1. Créer un fichier `1x action monaction.gs` contenant :
-   - Une fonction `SPEC_MON_ACTION()` retournant la spécification
-   - Une fonction handler exécutant l'opération
-
-2. Ajouter `SPEC_MON_ACTION` dans `declarationsFormulaires_()` de
-   [01 registre.gs](01%20registre.gs). C'est le **seul** fichier existant à
-   modifier.
-
-3. Vérifier avec `test_verifierRegistre()`.
-
-## Tests, Console WebApp & Présentation Interactive
-
-Vous pouvez tester l'ensemble du système **avant même de configurer Jira** :
-
-### 1. Console WebApp Interactive & Banc d'Essai
-En ouvrant l'URL du déploiement WebApp (`https://script.google.com/macros/s/.../exec`) directement dans votre navigateur web, vous accédez à :
-- **Onglet 1 — Console d'administration** : sélection dynamique parmi les **48 actions**, formulaires intelligents pré-remplis (« Remplir avec un exemple »), test d'exécution programmée et exécution réelle.
-- **Onglet 2 — Banc d'Essai & Recette** : matrice de qualification opérationnelle des 48 actions avec sélecteurs de conformité (🟢 Validé, 🟡 À tester, 🔴 Anomalie), suivi du taux d'achèvement et export du PV de recette.
-- **Onglet 3 — Guide d'Intégration JSM** : documentation Jira Automation générée dynamiquement avec les composants JSON prêts à copier-coller.
-- **Présentation & Schéma Directeur** (`?page=presentation` ou via le bouton d'en-tête) : synthèse visuelle et schémas d'architecture SVG interactifs.
-
-*(Note : pour obtenir la réponse de supervision JSON à destination de vos outils de monitoring, ajoutez `?format=json` à l'URL).*
-
-### 2. Fonctions de test Apps Script
-
-| Fonction | Rôle |
-|---|---|
-| `test_unitaires()` | **Suite de tests automatiques** (assertions pures, 79 tests, aucun effet réel) |
-| `setup_verifierConfiguration()` | Diagnostic complet de la configuration |
-| `admin_verifierApis()` | **Smoke test des API** en lecture seule (Directory, Gmail, Licensing, Data Transfer, Calendar) |
-| `admin_viderCacheSuggestions()` | Force le rafraîchissement des autocomplétions (après nettoyage de données) |
-| `test_verifierRegistre()` | Validation du catalogue des actions |
-| `test_verifierPlanning()` | Simulation des créneaux sur 7 jours |
-| `test_casDErreur()` | Vérifie les garde-fous (token, action, champs) par assertions |
-| `test_apercuEmails()` | Envoi d'e-mails de test à votre adresse (**⚠️ effet réel**) |
-| `test_simulerCreationCompteReelle()` | Simulation de bout en bout (**⚠️ crée un vrai compte** ; désactivée par défaut) |
-
-## Actions Gmail (configuration avancée)
-
-Les actions **DELEGATION_EMAIL**, **REPONSE_ABSENCE** et **TRANSFERT_EMAILS**
-modifient les paramètres Gmail d'un autre utilisateur. Contrairement à l'Admin
-SDK, la Gmail API exige une autorisation *au nom de* l'utilisateur cible :
-
-1. Créer un compte de service dans le projet GCP lié au script
-2. Activer la délégation de domaine (*domain-wide delegation*) pour ce compte
-   dans la console d'administration (Sécurité > API Controls)
-3. Autoriser les scopes :
-   - `https://www.googleapis.com/auth/gmail.settings.basic`
-   - `https://www.googleapis.com/auth/gmail.settings.sharing`
-4. Télécharger la clé JSON du compte de service
-5. Renseigner dans les propriétés du script :
-   - `SERVICE_ACCOUNT_EMAIL` : l'adresse du compte de service
-   - `SERVICE_ACCOUNT_KEY` : le contenu du champ `private_key` du fichier JSON
-
-Sans cette configuration, les 3 actions Gmail renvoient une erreur explicite.
-Toutes les autres actions fonctionnent uniquement avec l'Admin SDK.
-
-## Structure des fichiers
-
-```
-00 config.gs                 Constantes, accès PropertiesService
-01 registre.gs               Catalogue des actions, validation des specs
-02 routeur.gs                doPost / doGet, exécuteur sous verrou
-03 securite.gs               Auth, validation, AppError_, réponse JSON
-04 planning.gs               Créneaux horaires, jours fériés français
-05 fileattente.gs            File d'attente persistante (Google Sheets)
-06 workspace.gs              Briques Admin SDK, Gmail API, traduction erreurs
-07 journal.gs                Journal d'audit, notifications d'anomalies
-08 email.gs                  Gabarit e-mail chartée Cooperl (signatures incluses)
-09 jira.gs                   Module de callback & notifications Jira Cloud
-10 action creationcompte     Création de compte Workspace
-11 action ajoutgroupe        Ajout à un groupe
-12 action retraitgroupe      Retrait d'un groupe
-13 action suspension         Suspension + révocation de sessions
-14 action reactivation       Réactivation de compte
-15 action resetmotdepasse    Réinitialisation de mot de passe
-16 action changementou       Changement d'unité organisationnelle
-17 action miseajourprofil    Mise à jour du profil (nom, poste, manager…)
-18 action renommercompte     Changement d'adresse e-mail
-19 action suppressioncompte  Suppression définitive de compte
-20 action ajoutalias         Ajout d'alias e-mail
-21 action retraitalias       Retrait d'alias e-mail
-22 action effacementappareil Effacement à distance d'appareil mobile
-23 action blocageappareil    Blocage d'appareil mobile
-24 action approbationappareil Approbation d'appareil mobile
-25 action revocationtokens   Révocation des apps tierces
-26 action codesecours        Génération de codes 2FA
-27 action deconnexionforcee  Déconnexion de toutes les sessions
-28 action delegationemail    Délégation de boîte mail
-29 action reponseabsence     Réponse d'absence automatique
-30 action transfertemails    Redirection d'e-mails
-31 action transfertdrive     Transfert de propriété Drive
-32 action creationgroupe     Création de groupe
-33 action suppressiongroupe  Suppression de groupe
-34 action listemembregroupe  Liste des membres d'un groupe
-35 action retraittousgroupes Retrait de tous les groupes (offboarding)
-36 action arretreponseabsence Désactivation de la réponse d'absence
-37 action arrettransfertemails Arrêt de la redirection d'e-mails
-38 action retraitdelegation  Retrait d'une délégation de boîte mail
-39 orchestration.gs          Helper des groupes d'action (executerEtapes_)
-40 groupe departcollaborateur Groupe d'action : offboarding complet
-41 groupe retourabsence      Groupe d'action : retour d'absence
-42 action attributionlicence Attribution d'une licence Workspace
-43 action retraitlicence     Libération d'une licence Workspace
-44 groupe arriveecollaborateur Groupe d'action : onboarding complet
-45 action infocompte.gs      Fiche d'identité et diagnostic de compte
-46 action ajoutmembredrivepartage.gs Ajout de membre sur Drive partagé
-47 action retraitmembredrivepartage.gs Retrait de membre sur Drive partagé
-48 action creationdrivepartage.gs Création de Drive partagé
-49 action partagecalendrier.gs Partage et délégation d'agenda
-50 action retraitpartagecalendrier.gs Révocation de partage d'agenda
-51 groupe urgencecompromission.gs Groupe d'action : kill-switch sécurité
-52 groupe mutationinterne.gs Groupe d'action : mobilité interne RH
-53 action archivagecompte.gs Déclassement et licence Archived User
-54 action signatureemail.gs  Signature d'e-mail automatique (charte Gmail)
-55 action auditaccescomplet.gs Revue consolidée de tout le patrimoine d'accès
-56 action configgroupe.gs    Configuration et modération des groupes (API Groups Settings)
-57 action creationressourcecalendrier.gs Création de ressource de calendrier / salle
-58 action suppressionressourcecalendrier.gs Suppression de ressource de calendrier
-59 action retraittousdrivespartages.gs Révocation globale des accès directs aux Drives partagés
-90 administration.gs         Fonctions de pilotage manuel
-91 tests.gs                  Tests (unitaires + diagnostics manuels)
-ui_test.html                 Console WebApp, simulateur & banc d'essai
-presentation.html            Présentation visuelle & schéma d'architecture interactif
-```
-
-## Sécurité
-
-- Les secrets sont stockés dans `PropertiesService`, jamais dans le code
-- L'authentification utilise une comparaison à **temps constant**
-- Les mots de passe ne transitent **jamais** dans la réponse HTTP
-- Tout contenu externe est **échappé** avant insertion dans du HTML
-- Les erreurs internes ne sont **jamais** exposées à Jira
-
-## Licence
-
-MIT — Voir le fichier LICENSE pour les détails.
-
-## Auteur
-
-**Fabrice Faucheux** — [https://faucheux.bzh](https://faucheux.bzh)
-
----
-
-# Jira Service Management → Google Workspace gateway
-
-> **v3.2.0** — Automates Google Workspace administration operations triggered
-> by Jira Service Management forms.
-
-## Overview
-
-When a JSM agent validates a ticket (onboarding, offboarding, access request,
-password reset, email signature, Shared Drive or Calendar resource creation…), Jira Automation sends a POST webhook to this Google Apps
-Script webapp. The router identifies the requested action, verifies
-authentication and data, then executes the operation via the Admin SDK — all
-without manual intervention.
-
-### Available actions (49 actions)
+### Available Actions (49 actions)
 
 | Action | Description | Window |
 |---|---|---|
@@ -422,7 +244,7 @@ without manual intervention.
 | **Groups** | | |
 | `AJOUT_GROUPE` | Adds a user to a group (MEMBER, MANAGER, OWNER) | Standard |
 | `RETRAIT_GROUPE` | Removes a user from a group | Permanent |
-| `RETRAIT_TOUS_GROUPES` | Removes a user from all direct groups | Permanent |
+| `RETRAIT_TOUS_GROUPES` | Removes a user from all direct groups (gracefully skips dynamic groups) | Permanent |
 | `CREATION_GROUPE` | Creates a new Google Group | Standard |
 | `SUPPRESSION_GROUPE` | Deletes a group (mandatory confirmation) | Standard |
 | `LISTE_MEMBRES_GROUPE` | Lists group members (read-only) | Permanent |
@@ -431,125 +253,128 @@ without manual intervention.
 | `AJOUT_ALIAS` | Adds an email alias to an account | Standard |
 | `RETRAIT_ALIAS` | Removes an email alias from an account | Standard |
 | **Security** | | |
-| `SUSPENSION` | Suspends an account and revokes all active sessions | Permanent |
-| `REACTIVATION` | Reactivates a previously suspended account | Standard |
-| `RESET_MOT_DE_PASSE` | Resets account password with mandatory change at next login | Standard |
-| `DECONNEXION_FORCEE` | Forces sign-out across all sessions (account remains active) | Permanent |
+| `SUSPENSION` | Suspends an account and revokes active sessions | Permanent |
+| `REACTIVATION` | Reactivates a suspended account | Standard |
+| `RESET_MOT_DE_PASSE` | Resets password with mandatory change on next login | Standard |
+| `DECONNEXION_FORCEE` | Signs out all active user sessions (account remains active) | Permanent |
 | `REVOCATION_TOKENS_APPS` | Revokes third-party application OAuth tokens | Permanent |
 | `GENERATION_CODES_SECOURS` | Generates new 2FA backup verification codes | Standard |
-| **Mobile devices** | | |
-| `EFFACEMENT_APPAREIL` | Remote wipes a mobile device (lost or stolen) | Permanent |
-| `BLOCAGE_APPAREIL` | Blocks access for a suspicious mobile device | Permanent |
-| `APPROBATION_APPAREIL` | Approves a pending mobile device registration | Standard |
-| **Email & Messaging** ⚙️ | | |
-| `SIGNATURE_EMAIL` | Automatically deploys company-branded HTML email signature or custom signature | Standard |
+| **Mobile Devices (MDM)** | | |
+| `EFFACEMENT_APPAREIL` | Remotely wipes a mobile device (lost/stolen) | Permanent |
+| `BLOCAGE_APPAREIL` | Blocks a suspicious mobile device | Permanent |
+| `APPROBATION_APPAREIL` | Approves a pending mobile device | Standard |
+| **Email & Identity** ⚙️ | | |
+| `SIGNATURE_EMAIL` | Automatically deploys official company HTML email signature or custom layout | Standard |
 | `DELEGATION_EMAIL` | Grants mailbox delegation access to another user | Standard |
 | `RETRAIT_DELEGATION_EMAIL` | Revokes mailbox delegation access | Standard |
 | `REPONSE_ABSENCE` | Enables automatic out-of-office vacation responder | Standard |
-| `DESACTIVATION_REPONSE_ABSENCE` | Disables vacation responder | Standard |
-| `TRANSFERT_EMAILS` | Enables email forwarding to another address | Standard |
+| `DESACTIVATION_REPONSE_ABSENCE` | Disables out-of-office responder | Standard |
+| `TRANSFERT_EMAILS` | Forwards incoming emails to another address | Standard |
 | `ARRET_TRANSFERT_EMAILS` | Disables automatic email forwarding | Standard |
-| **Diagnostic & Support** | | |
-| `INFO_COMPTE` | Returns diagnostic summary of an account (status, 2FA, OU, groups, last login, mobile sync) | Permanent |
-| `AUDIT_ACCES_COMPLET` | Complete consolidated audit of user access assets (groups, Shared Drives, calendars, delegations, licenses, mobile devices, OAuth tokens) | Permanent |
+| **Diagnostics & Support** | | |
+| `INFO_COMPTE` | Quick identity sheet (status, 2FA, OU, groups, last login, mobile sync) | Permanent |
+| `AUDIT_ACCES_COMPLET` | Consolidated full security audit of all permissions (groups, Shared Drives, calendars, delegations, licenses, OAuth) | Permanent |
 | **Drive & Shared Drives** | | |
-| `TRANSFERT_DRIVE` | Transfers file ownership in Google Drive to another user | Standard |
-| `CREATION_DRIVE_PARTAGE` | Creates a new Shared Drive and assigns its initial manager | Standard |
-| `AJOUT_MEMBRE_DRIVE_PARTAGE` | Adds a user or group to a Shared Drive with specific role | Standard |
-| `RETRAIT_MEMBRE_DRIVE_PARTAGE` | Revokes a member's access from a Shared Drive | Permanent |
-| `RETRAIT_TOUS_DRIVES_PARTAGES` | Bulk removes user from all direct Shared Drive memberships (preserves memberships inherited via groups) | Permanent |
-| **Calendars & Room Resources** | | |
-| `PARTAGE_CALENDRIER` | Shares a Google Calendar with specific permissions | Standard |
+| `TRANSFERT_DRIVE` | Transfers Google Drive file ownership to another user | Standard |
+| `CREATION_DRIVE_PARTAGE` | Creates a new Shared Drive and assigns initial organizer | Standard |
+| `AJOUT_MEMBRE_DRIVE_PARTAGE` | Adds member or group to Shared Drive with role (organizer, fileOrganizer, commenter, reader) | Standard |
+| `RETRAIT_MEMBRE_DRIVE_PARTAGE` | Revokes user or group access from Shared Drive | Permanent |
+| `RETRAIT_TOUS_DRIVES_PARTAGES` | Bulk revocation of all direct user permissions across all Shared Drives (preserves group-inherited access) | Permanent |
+| **Calendars & Meeting Rooms** | | |
+| `PARTAGE_CALENDRIER` | Grants Google Calendar sharing access (read, write, manage) | Standard |
 | `RETRAIT_PARTAGE_CALENDRIER` | Revokes calendar sharing access | Permanent |
-| `CREATION_RESSOURCE_CALENDRIER` | Creates a new bookable meeting room or company equipment resource | Standard |
-| `SUPPRESSION_RESSOURCE_CALENDRIER` | Deletes a calendar resource or meeting room | Standard |
-| **Licensing & Archiving** | | |
+| `CREATION_RESSOURCE_CALENDRIER` | Creates a new bookable meeting room or building resource | Standard |
+| `SUPPRESSION_RESSOURCE_CALENDRIER` | Permanently deletes a calendar resource | Standard |
+| **Licenses & Archiving** | | |
 | `ATTRIBUTION_LICENCE` | Assigns a Workspace license SKU to a user | Standard |
-| `RETRAIT_LICENCE` | Releases a Workspace license SKU | Standard |
-| `ARCHIVAGE_COMPTE` | Archives an account: moves to `/Archives`, frees standard license, and assigns Google Vault Archived User license | Standard |
-| **Orchestrated Action Groups** | | |
-| `ARRIVEE_COLLABORATEUR` | Full onboarding sequence: create account + license + groups + aliases in ordered steps | Standard |
-| `DEPART_COLLABORATEUR` | Full offboarding sequence: forwarding + delegation + remove groups + suspend + release license | Permanent |
-| `RETOUR_ABSENCE` | Disables vacation responder, forwarding and delegation set during departure | Standard |
-| `URGENCE_COMPROMISSION` | Security kill-switch: suspend + sign-out + revoke OAuth tokens + block mobile devices | Permanent |
-| `MUTATION_INTERNE` | Internal mobility: move OU + update HR profile + remove previous groups + add new groups | Standard |
+| `RETRAIT_LICENCE` | Releases a user license (billed while assigned) | Standard |
+| `ARCHIVAGE_COMPTE` | Moves account to `/Archives`, frees standard license, and assigns Archived User SKU | Standard |
+| **Action Groups** (orchestrated sequences) | | |
+| `ARRIVEE_COLLABORATEUR` | Onboarding: account creation + license + groups + aliases in sequence | Standard |
+| `DEPART_COLLABORATEUR` | Offboarding: email forward + delegation + Drive transfer + group removal + Shared Drive revocation + suspension + license release | Permanent |
+| `RETOUR_ABSENCE` | Return from leave: disables vacation responder, forward and delegation | Standard |
+| `URGENCE_COMPROMISSION` | Security kill-switch: suspension + sign-out + token revocation + device block | Permanent |
+| `MUTATION_INTERNE` | Internal transfer: OU move + HR profile update + group rotation | Standard |
 
-> ⚙️ **Email actions** require a GCP Service Account with Domain-Wide Delegation (see "Gmail Service Account Setup" below).
+---
 
-**Scheduled execution**: pass `date_execution: "2026-09-30T18:00:00Z"` in payload to schedule an action or orchestrated group at an exact future date/time.
+## Interactive WebApp Control Center & The 4 Tabs
 
-**Jira closed-loop callback**: automatically adds an internal comment to the Jira ticket (`issue_key`) and can auto-resolve it upon successful completion.
+Opening the deployed WebApp URL in your browser gives you an enterprise **Material Design 3** control center:
 
-**Standard window**: immediate execution during admin hours (Mon–Fri 8:30–17:30, excluding French public holidays). Outside hours, requests are queued for automatic execution at the next open slot.
+1. 🧪 **Tab 1 — Admin Console**:
+   * Interactive execution console for all **49 actions**.
+   * One-click "Fill with example" button to test any action instantly.
+   * Access restricted strictly to emails declared in `ADMIN_UI_EMAILS`.
+2. 📋 **Tab 2 — Test Bench & Acceptance**:
+   * Operational qualification matrix covering all 49 actions.
+   * Status toggles (🟢 *Validated*, 🟡 *Pending*, 🔴 *Defect*, ⚪ *N/A*) and notes persisted across sessions.
+   * One-click "Export Report" to generate an official Markdown acceptance document.
+3. 📖 **Tab 3 — JSM Integration Guide**:
+   * Interactive documentation with copy-pasteable JSON payloads for Jira Automation.
+4. 📊 **Tab 4 — Presentation & Master Architecture**:
+   * Interactive SVG diagrams showing the transformation from manual fragmented tasks to the unified gateway.
 
-**Permanent window**: immediate execution 24/7. Reserved for security actions (suspension, revocation) and read-only operations.
+---
 
-## Prerequisites
+## Prerequisites & Google Cloud API Enablement
 
-- A Google Apps Script project with the **Admin SDK API** advanced service enabled
-- A Google Workspace account with the appropriate **admin privileges**
-  (super-admin or delegated admin with user and group management rights)
-- A **Google Sheets** spreadsheet for the audit log and queue
-- A **Jira Automation** rule configured to send a POST webhook
+Ensure the following APIs are enabled in your Google Cloud Project:
+
+| Google Cloud API | Purpose in Gateway | How to Enable |
+|---|---|---|
+| **Admin SDK API** | User, OU, group, building, and mobile device management | **Services > Admin SDK API > Add** in Apps Script |
+| **Google Drive API (v3)** | Shared Drive management and bulk permission cleanup | [Enable Google Drive API](https://console.developers.google.com/apis/api/drive.googleapis.com/overview) |
+| **Enterprise License Manager API** | Automatic Workspace license assignment & reclamation | [Enable License Manager API](https://console.developers.google.com/apis/api/licensing.googleapis.com/overview) |
+| **Groups Settings API** | Group moderation and external access settings | Included in project OAuth scopes |
+| **Google Calendar API** | Resource rooms and calendar ACL management | Included in project OAuth scopes |
+
+---
 
 ## Setup
 
-1. **Create the Apps Script project**
-   Copy all `.gs` and `.html` files into a new Apps Script project.
+1. **Create Apps Script Project**: Clone or copy `.gs` and `.html` files into your project.
+2. **Set Timezone**: In Project Settings → Time zone: `Europe/Paris`.
+3. **Generate Authentication Secret**: Run `setup_genererToken()` in the editor.
+4. **Install Trigger**: Run `setup_installerDeclencheur()` to enable queue processing (every 15 min).
+5. **Deploy Web App**:
+   * **Deploy > New deployment > Web app**.
+   * Execute as: *Me*.
+   * Who has access: *Anyone* (required for Jira webhooks, secured by `SECRET_TOKEN` and `ADMIN_UI_EMAILS`).
 
-2. **Enable the advanced service**
-   In the Apps Script editor: **Services > Admin SDK API > Add**.
+---
 
-3. **Set the timezone**
-   Project Settings → Time zone: `Europe/Paris`.
+## Script Properties
 
-4. **Generate the authentication secret**
-   Run `setup_genererToken()` from the editor. Copy the token shown in the logs.
+Configure in **Project Settings > Script Properties**:
 
-5. **Set up script properties**
-   Project Settings → Script properties:
+| Property | Required | Description |
+|---|---|---|
+| `SECRET_TOKEN` | ✅ | Shared secret token for webhook bearer authentication |
+| `AUDIT_SHEET_ID` | ✅ | Google Sheets spreadsheet ID for audit trail and queue |
+| `ALLOWED_DOMAINS` | ✅ | Allowed Google Workspace domains (e.g. `cooperl.com, subsidiary.com`) |
+| `ADMIN_UI_EMAILS` | ✅ (console) | Comma-separated admin email addresses authorized to use the web console |
+| `NOTIFY_EMAIL` | Recommended | Email address for alerts and temporary credentials |
+| `JIRA_BASE_URL` | Optional | Jira Cloud base URL (e.g. `https://my-domain.atlassian.net`) for callbacks |
+| `JIRA_USER_EMAIL` | Optional | Jira service account email for commenting |
+| `JIRA_API_TOKEN` | Optional | Jira Cloud REST API token |
+| `JIRA_AUTO_RESOLVE` | Optional | `true` to auto-resolve Jira issues on successful execution |
+| `LICENSE_SKU_ID` | Optional | Default Workspace license SKU (e.g. `1010020020`) |
+| `LICENSE_SKU_ARCHIVE` | Optional | Google Vault Archive SKU (e.g. `1010020030`) for `ARCHIVAGE_COMPTE` |
+| `DEFAULT_OU` | Optional | Default Organisational Unit (e.g. `/Employees`) |
+| `SERVICE_ACCOUNT_EMAIL` | Optional | GCP Service Account email with DWD (required for Gmail actions) |
+| `SERVICE_ACCOUNT_KEY` | Optional | Private key PEM string of the Service Account |
 
-   | Property | Required | Description |
-   |---|---|---|
-   | `SECRET_TOKEN` | ✅ | Generated in step 4 (webhook bearer secret) |
-   | `AUDIT_SHEET_ID` | ✅ | Google Sheets spreadsheet ID for audit log and queue |
-   | `ALLOWED_DOMAINS` | ✅ | Allowed Workspace domains, comma-separated |
-   | `ADMIN_UI_EMAILS` | ✅ (console) | Admin email addresses authorized to use the web console |
-   | `NOTIFY_EMAIL` | Recommended | Notification address (alerts, credentials) |
-   | `JIRA_BASE_URL` | Optional | Jira Cloud instance URL (e.g. `https://domain.atlassian.net`) for callbacks |
-   | `JIRA_USER_EMAIL`| Optional | Jira user email for REST API callback |
-   | `JIRA_API_TOKEN` | Optional | Jira Cloud API token |
-   | `JIRA_AUTO_RESOLVE` | Optional | `true` to auto-resolve Jira issues upon successful execution |
-   | `LICENSE_SKU_ID` | Optional | Default license SKU for assignment. See `admin_listerLicences()` |
-   | `LICENSE_SKU_ARCHIVE` | Optional | Archived User SKU ID (e.g. `1010020030`) for `ARCHIVAGE_COMPTE` |
-   | `LICENSE_PRODUCT_ID` | Optional | License product ID (default `Google-Apps`) |
-   | `LICENSE_CUSTOMER_ID` | Optional | Customer ID for license listing (default: 1st `ALLOWED_DOMAINS`) |
-   | `DEFAULT_OU` | Optional | Default organisational unit (e.g. `/Employees`) |
-   | `LOGO_URL` | Optional | Public URL of company logo for emails and HTML signatures |
-   | `LOGO_VARIANTE` | Optional | `BLANC` (default) or `BLEU` |
-   | `RESPECT_JOURS_FERIES` | Optional | `true` (default) or `false` |
-   | `JOURS_FERMETURE` | Optional | ISO dates for company closure days, comma-separated |
-   | `SERVICE_ACCOUNT_EMAIL` | Optional | GCP Service Account email with DWD (Gmail & Signature actions) |
-   | `SERVICE_ACCOUNT_KEY` | Optional | Private key PEM string of the GCP Service Account |
-
-6. **Install the trigger**
-   Run `setup_installerDeclencheur()` to create the queue processing trigger
-   (every 15 minutes by default).
-
-7. **Deploy the webapp**
-   Deploy → New deployment → Web app.
-   Execute as: *yourself*. Access: *anyone*.
-
-8. **Configure Jira Automation**
-   Create a rule with the "Send web request" action pointing to the deployment
-   URL, as POST, Content-Type `application/json`.
-
-9. **Verify**
-   Run `setup_verifierConfiguration()` to check everything is in place.
+---
 
 ## Jira Webhook Configuration
 
-The Jira Automation rule sends a JSON payload structured as follows:
+In your **Jira Automation** rule:
+* **Action**: *Send web request*
+* **Method**: `POST`
+* **URL**: `YOUR_WEBAPP_DEPLOYMENT_URL`
+* **Headers**: `Content-Type: application/json`
+* **Custom data (JSON)**:
 
 ```json
 {
@@ -566,67 +391,23 @@ The Jira Automation rule sends a JSON payload structured as follows:
 }
 ```
 
-Advanced payload parameters:
-- `date_execution`: ISO 8601 string (e.g. `"2026-09-30T18:00:00Z"`) to schedule automated execution at a specific future date and time.
-- `force_immediat`: `true` to force execution outside standard admin hours.
-- `motif_urgence`: mandatory when `force_immediat` is true (logged for audit).
-- `issue_key`: Jira ticket key for closed-loop callback note and auto-resolution.
-
-## Testing & Interactive WebApp
-
-You can test the entire platform without sending webhooks from Jira:
-
-### 1. Interactive Web Console & Test Bench
-Opening the WebApp deployment URL (`https://script.google.com/macros/s/.../exec`) in your web browser provides:
-- **Tab 1 — Admin Console**: live dynamic execution across all **48 actions** with auto-fill examples and scheduled execution testing.
-- **Tab 2 — Test Bench & Acceptance**: interactive verification matrix for all 48 actions with status selectors (🟢 Validated, 🟡 Pending, 🔴 Defect) and acceptance report export.
-- **Tab 3 — JSM Integration Guide**: live-generated JSON components and automation templates.
-- **Presentation & Architecture Diagram** (`?page=presentation` or top header link): interactive SVG system diagrams and architectural workflow presentation.
-
-*(Note: append `?format=json` to the URL for an automated health check response).*
-
-### 2. Apps Script Test Functions
-
-| Function | Description |
-|---|---|
-| `test_unitaires()` | **Automated unit test suite** (79 assertion tests, zero side-effects) |
-| `setup_verifierConfiguration()` | Complete configuration diagnostic report |
-| `admin_verifierApis()` | **Smoke test of all APIs** in read-only mode |
-| `admin_viderCacheSuggestions()` | Clears auto-completion suggestions cache |
-| `test_verifierRegistre()` | Validates the action catalogue registry |
-| `test_verifierPlanning()` | Simulates admin schedule slots over 7 days |
-
-## Gmail Service Account Setup
-
-Actions modifying Gmail settings (`SIGNATURE_EMAIL`, `DELEGATION_EMAIL`, `REPONSE_ABSENCE`, `TRANSFERT_EMAILS`) require Domain-Wide Delegation (DWD):
-
-1. Create a Service Account in the GCP project linked to the script.
-2. Enable Domain-Wide Delegation in Google Workspace Admin Console (Security > API Controls > Domain-wide Delegation).
-3. Authorize the required OAuth scopes:
-   - `https://www.googleapis.com/auth/gmail.settings.basic`
-   - `https://www.googleapis.com/auth/gmail.settings.sharing`
-4. Download the Service Account JSON key.
-5. Set `SERVICE_ACCOUNT_EMAIL` and `SERVICE_ACCOUNT_KEY` in Script Properties.
-
-## Adding an Action
-
-1. Create a file `1x action myaction.gs` containing:
-   - A `SPEC_MY_ACTION()` specification function.
-   - A handler function implementing the operation.
-2. Register `SPEC_MY_ACTION` in `declarationsFormulaires_()` in [01 registre.gs](01%20registre.gs).
-3. Validate with `test_verifierRegistre()`.
+---
 
 ## Security
 
-- Secrets are stored in `PropertiesService`, never in source code
-- Authentication uses **constant-time** comparison
-- Passwords are **never** returned in the HTTP response
-- All external content is **escaped** before HTML insertion
-- Internal error stack traces are **never** exposed to Jira
+* **Shared Secret & Constant-Time Verification**: Constant-time authentication check (`safeEquals_`) preventing timing attacks.
+* **Strict Identity Control (`assertAdminUI_`)**: All console features require caller email validation against `ADMIN_UI_EMAILS`.
+* **Least Privilege Principle**: Passwords never returned in HTTP payloads, all output systematically HTML-escaped.
+* **Immutable Audit Trail**: Unique `trace_id` logged across Google Sheets and Google Cloud Logging.
+* **Fail-Safe**: Internal error stack traces are never exposed to Jira; user-facing sanitized error messages only.
+
+---
 
 ## License
 
-MIT — See LICENSE file for details.
+MIT — See `LICENSE` file for details.
+
+---
 
 ## Author
 
