@@ -2903,42 +2903,11 @@
       const tbody = document.getElementById('recette-table-body');
       if (!tbody) return;
 
-      const actions = catalogueActions.length > 0 ? catalogueActions : [
-        { action: 'CREATION_COMPTE', description: 'Crée un compte utilisateur Workspace.', required: ['prenom', 'nom', 'email_souhaite'], fenetre: 'STANDARD' },
-        { action: 'CHANGEMENT_OU', description: 'Déplace un compte dans une autre OU.', required: ['email_cible', 'unite_organisationnelle'], fenetre: 'STANDARD' },
-        { action: 'MISE_A_JOUR_PROFIL', description: 'Met à jour les informations du profil.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'RENOMMER_COMPTE', description: 'Change l\'adresse principale.', required: ['email_cible', 'nouvel_email'], fenetre: 'STANDARD', destructive: true },
-        { action: 'SUPPRESSION_COMPTE', description: 'Supprime définitivement un compte.', required: ['email_cible', 'confirmation'], fenetre: 'STANDARD', destructive: true },
-        { action: 'AJOUT_GROUPE', description: 'Ajoute un utilisateur à un groupe.', required: ['email_cible', 'email_groupe'], fenetre: 'STANDARD' },
-        { action: 'RETRAIT_GROUPE', description: 'Retire un utilisateur d\'un groupe.', required: ['email_cible', 'email_groupe'], fenetre: 'PERMANENTE' },
-        { action: 'RETRAIT_TOUS_GROUPES', description: 'Retire un utilisateur de tous ses groupes.', required: ['email_cible'], fenetre: 'PERMANENTE' },
-        { action: 'CREATION_GROUPE', description: 'Crée un nouveau groupe Google.', required: ['email_groupe', 'nom_groupe'], fenetre: 'STANDARD' },
-        { action: 'SUPPRESSION_GROUPE', description: 'Supprime un groupe Google.', required: ['email_groupe', 'confirmation'], fenetre: 'STANDARD', destructive: true },
-        { action: 'LISTE_MEMBRES_GROUPE', description: 'Liste les membres d\'un groupe.', required: ['email_groupe'], fenetre: 'PERMANENTE' },
-        { action: 'AJOUT_ALIAS', description: 'Ajoute un alias e-mail.', required: ['email_cible', 'alias'], fenetre: 'STANDARD' },
-        { action: 'RETRAIT_ALIAS', description: 'Supprime un alias e-mail.', required: ['email_cible', 'alias'], fenetre: 'STANDARD' },
-        { action: 'SUSPENSION', description: 'Suspend un compte.', required: ['email_cible'], fenetre: 'PERMANENTE' },
-        { action: 'REACTIVATION', description: 'Réactive un compte.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'RESET_MOT_DE_PASSE', description: 'Réinitialise le mot de passe.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'DECONNEXION_FORCEE', description: 'Déconnecte toutes les sessions.', required: ['email_cible'], fenetre: 'PERMANENTE' },
-        { action: 'REVOCATION_TOKENS_APPS', description: 'Révoque les tokens OAuth.', required: ['email_cible'], fenetre: 'PERMANENTE' },
-        { action: 'GENERATION_CODES_SECOURS', description: 'Génère de nouveaux codes 2FA.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'EFFACEMENT_APPAREIL', description: 'Efface à distance un appareil.', required: ['email_cible', 'type_effacement'], fenetre: 'PERMANENTE', destructive: true },
-        { action: 'BLOCAGE_APPAREIL', description: 'Bloque un appareil suspect.', required: ['email_cible'], fenetre: 'PERMANENTE' },
-        { action: 'APPROBATION_APPAREIL', description: 'Approuve un appareil en attente.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'DELEGATION_EMAIL', description: 'Délègue une boîte Gmail.', required: ['email_cible', 'email_delegue'], fenetre: 'STANDARD' },
-        { action: 'RETRAIT_DELEGATION_EMAIL', description: 'Retire une délégation Gmail.', required: ['email_cible', 'email_delegue'], fenetre: 'STANDARD' },
-        { action: 'REPONSE_ABSENCE', description: 'Active le répondeur Gmail.', required: ['email_cible', 'message_absence'], fenetre: 'STANDARD' },
-        { action: 'DESACTIVATION_REPONSE_ABSENCE', description: 'Désactive le répondeur Gmail.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'TRANSFERT_EMAILS', description: 'Active la redirection Gmail.', required: ['email_cible', 'email_destination'], fenetre: 'STANDARD' },
-        { action: 'ARRET_TRANSFERT_EMAILS', description: 'Désactive la redirection Gmail.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'TRANSFERT_DRIVE', description: 'Transfère les fichiers Drive.', required: ['email_source', 'email_destination'], fenetre: 'STANDARD', destructive: true },
-        { action: 'ATTRIBUTION_LICENCE', description: 'Attribue une licence Workspace.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'RETRAIT_LICENCE', description: 'Libère une licence Workspace.', required: ['email_cible'], fenetre: 'STANDARD' },
-        { action: 'ARRIVEE_COLLABORATEUR', description: 'Onboarding complet.', required: ['prenom', 'nom', 'email_souhaite'], fenetre: 'STANDARD' },
-        { action: 'DEPART_COLLABORATEUR', description: 'Offboarding complet.', required: ['email_cible'], fenetre: 'PERMANENTE', destructive: true },
-        { action: 'RETOUR_ABSENCE', description: 'Rétablissement post-absence.', required: ['email_cible'], fenetre: 'STANDARD' }
-      ];
+      if (catalogueActions.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 24px; color: var(--text-secondary);"><div class="spinner" style="margin: 0 auto 12px;"></div>Chargement du référentiel...</td></tr>';
+        return;
+      }
+      const actions = catalogueActions;
 
       // Calcul des KPIs
       let nbValides = 0, nbAnomalies = 0, nbATester = 0;
