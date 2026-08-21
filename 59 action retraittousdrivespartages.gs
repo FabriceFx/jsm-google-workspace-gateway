@@ -67,15 +67,27 @@ function actionRetirerTousDrivesPartages_(data, ctx) {
     console.warn('[%s] Impossible de lister les groupes de %s : %s', ctx.traceId, primaryEmail, e.message);
   }
 
-  // 3. Énumération exhaustive de TOUS les Drives partagés
-  const tousLesDrives = listerTousDrivesPartages_(ctx.traceId);
+  // 3. Récupération des Drives partagés (Mode ciblé ultra-rapide par impersonation si configuré, sinon scan global)
+  const debutTraitement = Date.now();
+  let tousLesDrives = listerDrivesUtilisateurCible_(primaryEmail, ctx.traceId);
+  const modeCible = (tousLesDrives !== null);
+  if (!modeCible) {
+    tousLesDrives = listerTousDrivesPartages_(ctx.traceId);
+  }
 
-  // 4. Parcours de chaque Drive partagé pour analyser et supprimer les permissions directes
+  // 4. Parcours des Drives partagés ciblés pour analyser et supprimer les permissions directes
   const retraits = [];
   const conservesViaGroupe = [];
   const erreurs = [];
 
   for (let i = 0; i < tousLesDrives.length; i++) {
+    // Protection contre le dépassement du temps d'exécution Apps Script (limite 6 min)
+    if (!modeCible && (Date.now() - debutTraitement > 270000)) { // 4.5 minutes
+      console.warn('[%s] Arrêt préventif du scan de Drives partagés pour respecter le quota de temps (traité %s/%s)', ctx.traceId, i, tousLesDrives.length);
+      erreurs.push('Dépassement du temps d\'exécution : ' + i + ' Drives analysés sur ' + tousLesDrives.length + '. Configurez un compte de service (DWD) pour activer le mode instantané.');
+      break;
+    }
+
     const d = tousLesDrives[i];
     const driveId = d.id;
     const driveName = d.name || driveId;
@@ -144,22 +156,24 @@ function actionRetirerTousDrivesPartages_(data, ctx) {
   }
 
   let message = '';
+  const suffixeMode = modeCible ? ' (mode ciblé impersonation)' : '';
   if (nbRetraits === 0 && nbGroupes === 0) {
-    message = primaryEmail + ' n\'a aucun accès (ni direct, ni par groupe) sur les ' + tousLesDrives.length + ' Drives partagés.';
+    message = primaryEmail + ' n\'a aucun accès (ni direct, ni par groupe) sur les ' + tousLesDrives.length + ' Drives partagés' + suffixeMode + '.';
   } else if (nbRetraits === 0 && nbGroupes > 0) {
-    message = primaryEmail + ' n\'a aucun accès direct à révoquer (' + nbGroupes + ' accès conservé(s) via groupes Google sur ' + tousLesDrives.length + ' Drives analysés).';
+    message = primaryEmail + ' n\'a aucun accès direct à révoquer (' + nbGroupes + ' accès conservé(s) via groupes Google sur ' + tousLesDrives.length + ' Drives partagés analysés' + suffixeMode + ').';
   } else {
     message = nbRetraits + ' accès direct(s) révoqué(s) sur les Drives partagés pour ' + primaryEmail;
     if (nbGroupes > 0) {
       message += ' (' + nbGroupes + ' accès conservé(s) par groupe)';
     }
-    message += ' sur ' + tousLesDrives.length + ' Drives analysés.';
+    message += ' sur ' + tousLesDrives.length + ' Drives partagés analysés' + suffixeMode + '.';
   }
 
   return {
     target: primaryEmail,
     message: message,
     details: {
+      mode_cible: modeCible,
       total_drives_analyses: tousLesDrives.length,
       retraits_effectues: nbRetraits,
       conserves_via_groupe: nbGroupes,

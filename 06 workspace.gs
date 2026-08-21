@@ -1141,6 +1141,57 @@ function listerTousDrivesPartages_(traceId) {
 }
 
 /**
+ * Tente de récupérer la liste des Drives partagés auxquels un utilisateur spécifique a accès
+ * en utilisant l'impersonation par compte de service (si configuré).
+ *
+ * Cette méthode permet de cibler en 1 seconde uniquement les N Drives du compte, évitant ainsi
+ * de devoir scanner séquentiellement des milliers de Drives du domaine (ex: 3800 Drives).
+ *
+ * @param {string} emailCible Adresse de l'utilisateur.
+ * @param {string=} traceId Identifiant de trace.
+ * @return {?Array<!{id: string, name: string}>} Liste des Drives cibles ou null si l'impersonation n'est pas active.
+ */
+function listerDrivesUtilisateurCible_(emailCible, traceId) {
+  const saEmail = getProp_('SERVICE_ACCOUNT_EMAIL');
+  const saKey = getProp_('SERVICE_ACCOUNT_KEY');
+  if (!saEmail || !saKey) return null;
+
+  try {
+    const tokenImpersonne = creerJetonImpersonation_(emailCible, 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive');
+    const drives = [];
+    let pageToken = null;
+    do {
+      let url = 'https://www.googleapis.com/drive/v3/drives?pageSize=100&fields=nextPageToken,drives(id,name)';
+      if (pageToken) url += '&pageToken=' + encodeURIComponent(pageToken);
+      const rep = UrlFetchApp.fetch(url, {
+        method: 'GET',
+        headers: { Authorization: 'Bearer ' + tokenImpersonne },
+        muteHttpExceptions: true
+      });
+      if (rep.getResponseCode() === 200) {
+        const data = JSON.parse(rep.getContentText());
+        const liste = data.drives || data.items || [];
+        for (let i = 0; i < liste.length; i++) {
+          if (liste[i] && liste[i].id) {
+            drives.push({ id: liste[i].id, name: liste[i].name || liste[i].id });
+          }
+        }
+        pageToken = data.nextPageToken || null;
+      } else {
+        console.warn('[%s] Impersonation Drive pour %s a retourné HTTP %s : %s', traceId || '-', emailCible, rep.getResponseCode(), rep.getContentText());
+        return null;
+      }
+    } while (pageToken);
+
+    console.log('[%s] Mode ciblé impersonation réussi pour %s : %s Drive(s) partagé(s)', traceId || '-', emailCible, drives.length);
+    return drives;
+  } catch (err) {
+    console.warn('[%s] Échec impersonation Drive pour %s : %s (passage au scan global)', traceId || '-', emailCible, err.message);
+    return null;
+  }
+}
+
+/**
  * Récupère toutes les permissions d'un Drive partagé ou d'un fichier.
  *
  * Tente d'abord avec useDomainAdminAccess: true, puis sans en cas de refus.
