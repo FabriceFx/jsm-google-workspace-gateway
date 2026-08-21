@@ -963,6 +963,188 @@
     .svg-amber { color: #b45309; }
     .svg-accent { color: var(--primary); }
 
+    /* ═══════════════════════════════════════════════════════════════════════
+       MODE SÉQUENCE MULTI-ACTIONS (COMPTE CIBLE)
+       ═══════════════════════════════════════════════════════════════════════ */
+    .mode-selector-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 6px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .mode-toggle-btn {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .mode-toggle-btn:hover {
+      background: rgba(13, 89, 115, 0.05);
+      color: var(--primary);
+    }
+    .mode-toggle-btn.active {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 8px rgba(13, 89, 115, 0.25);
+    }
+    .badge-pill {
+      background: rgba(255, 255, 255, 0.25);
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-weight: 500;
+    }
+    .mode-toggle-btn:not(.active) .badge-pill {
+      background: #e2e8f0;
+      color: var(--text-secondary);
+    }
+    .preset-chips-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin: 10px 0 16px;
+    }
+    .preset-chip {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+    }
+    .preset-chip:hover {
+      border-color: var(--primary);
+      background: rgba(13, 89, 115, 0.04);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+    .seq-actions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 10px;
+      margin: 14px 0 20px;
+    }
+    .seq-action-card {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+    }
+    .seq-action-card:hover {
+      background: #ffffff;
+      border-color: var(--primary);
+      box-shadow: var(--shadow-sm);
+    }
+    .seq-action-card.checked {
+      background: #f0f7f9;
+      border-color: var(--primary);
+    }
+    .seq-action-card input[type="checkbox"] {
+      margin-top: 3px;
+      width: 17px;
+      height: 17px;
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+    .seq-action-info {
+      flex: 1;
+      min-width: 0;
+    }
+    .seq-action-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+    .seq-action-name {
+      font-family: 'Consolas', 'Menlo', monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--primary-dark);
+    }
+    .seq-action-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.35;
+    }
+    .stepper-container {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .stepper-item {
+      background: #ffffff;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      transition: var(--transition);
+    }
+    .stepper-item.running {
+      border-left: 4px solid var(--primary);
+      background: #f0f7f9;
+      box-shadow: var(--shadow-sm);
+    }
+    .stepper-item.success {
+      border-left: 4px solid #2e7d32;
+      background: #f1f8e9;
+    }
+    .stepper-item.idempotent {
+      border-left: 4px solid #f57f17;
+      background: #fffde7;
+    }
+    .stepper-item.error {
+      border-left: 4px solid #c62828;
+      background: #ffebee;
+    }
+    .stepper-progress-bar {
+      width: 100%;
+      height: 8px;
+      background: var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      margin: 12px 0 16px;
+    }
+    .stepper-progress-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--primary), var(--accent));
+      transition: width 0.4s ease;
+    }
+
     /* Footer */
     footer {
       background: var(--primary-dark);
@@ -1034,116 +1216,246 @@
         <span class="material-symbols-outlined" aria-hidden="true">warning</span>
         <span><strong>Console d'exécution réelle.</strong> Les actions lancées ici s'appliquent immédiatement à Google Workspace (création, suppression, effacement…), exactement comme via Jira. Les actions destructives demandent une confirmation.</span>
       </div>
-      <div class="console-grid">
-        <!-- Colonne gauche : Liste des actions -->
-        <aside class="card">
+      <!-- Barre de sélection de mode (Unitaire vs Séquence) -->
+      <div class="mode-selector-bar">
+        <button type="button" class="mode-toggle-btn active" id="btn-mode-unitaire" onclick="changerModeConsole('unitaire')">
+          <span class="material-symbols-outlined">touch_app</span>
+          <span>Mode Unitaire (Formulaire standard)</span>
+        </button>
+        <button type="button" class="mode-toggle-btn" id="btn-mode-sequence" onclick="changerModeConsole('sequence')">
+          <span class="material-symbols-outlined">alt_route</span>
+          <span>Mode Séquence Multi-Actions (Compte cible)</span>
+          <span class="badge-pill" id="badge-compat-actions">Chargement...</span>
+        </button>
+      </div>
+
+      <!-- VUE 1 : CONSOLE STANDARD (MODE UNITAIRE) -->
+      <div id="view-mode-unitaire">
+        <div class="console-grid">
+          <!-- Colonne gauche : Liste des actions -->
+          <aside class="card">
+            <div class="card-title">
+              <span class="material-symbols-outlined" aria-hidden="true">widgets</span>
+              <span>Actions disponibles (<span id="action-count">50</span>)</span>
+            </div>
+
+            <div class="search-box">
+              <span class="material-symbols-outlined" aria-hidden="true">search</span>
+              <input type="text" id="search-input" placeholder="Filtrer une action..." oninput="filtrerActions()" />
+            </div>
+
+            <div class="action-list" id="action-list">
+              <div style="text-align: center; padding: 24px; color: var(--text-secondary);">
+                <div class="spinner" style="border-top-color: var(--primary); margin: 0 auto 12px;"></div>
+                Chargement du catalogue...
+              </div>
+            </div>
+          </aside>
+
+          <!-- Colonne droite : Formulaire dynamique & Exécution -->
+          <section>
+            <div class="card">
+              <div class="card-title" id="form-title-container">
+                <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+                <span id="form-title">Sélectionnez une action</span>
+              </div>
+
+              <p id="form-description" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+                Choisissez une action dans la liste de gauche pour configurer les paramètres et l'exécuter réellement sur Google Workspace.
+              </p>
+
+              <form id="action-form" onsubmit="soumettreFormulaire(event)" style="display: none;">
+                <div class="form-section-title">En-tête de la requête (Jira Webhook)</div>
+
+                <div class="form-grid">
+                  <div class="md-field">
+                    <label for="ticket_key">Clé du Ticket (ticket_key) <span class="req">*</span></label>
+                    <input type="text" id="ticket_key" value="ITSM-1001" required />
+                  </div>
+
+                  <div class="md-field">
+                    <label for="request_id">ID de Requête (request_id)</label>
+                    <input type="text" id="request_id" placeholder="Généré automatiquement si vide" />
+                  </div>
+                </div>
+
+                <div class="form-section-title">Paramètres métier (data)</div>
+
+                <div id="fields-loading" role="status" aria-live="polite"
+                     style="display:none; align-items:center; gap:10px; padding:10px 14px; margin-bottom:14px; background:#f0f7f9; border:1px solid var(--border,#e2e8f0); border-radius:8px; color:var(--text-secondary); font-size:14px;">
+                  <div class="spinner" style="width:18px; height:18px; border-top-color:var(--primary); margin:0;"></div>
+                  <span>Chargement des listes depuis Google…</span>
+                </div>
+
+                <div class="form-grid" id="dynamic-fields">
+                  <!-- Champs générés dynamiquement ici -->
+                </div>
+
+                <div class="form-section-title">Options de dérogation hors créneau</div>
+
+                <div class="switch-container">
+                  <div>
+                    <div class="switch-label">Forcer l'exécution immédiate (force_immediat)</div>
+                    <div class="switch-desc">Ignore les créneaux d'administration en cas d'urgence</div>
+                  </div>
+                  <label class="switch">
+                    <input type="checkbox" id="force_immediat" onchange="toggleUrgenceMotif()" aria-controls="motif-urgence-container" aria-expanded="false" />
+                    <span class="slider"></span>
+                  </label>
+                </div>
+
+                <div class="md-field" id="motif-urgence-container" style="display: none; margin-top: 16px;">
+                  <label for="motif_urgence">Motif de l'urgence (motif_urgence) <span class="req">*</span></label>
+                  <input type="text" id="motif_urgence" placeholder="Ex: Panne bloquante sur site de production" />
+                </div>
+
+                <div class="btn-group">
+                  <button type="submit" class="btn btn-primary" id="btn-submit">
+                    <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
+                    <span>Exécuter l'action</span>
+                  </button>
+                  <button type="button" class="btn btn-secondary" onclick="remplirExemple()">
+                    <span class="material-symbols-outlined" aria-hidden="true">auto_fix_high</span>
+                    <span>Remplir avec un exemple</span>
+                  </button>
+                </div>
+              </form>
+
+              <!-- Zone de résultat -->
+              <div class="result-box" id="result-box">
+                <div class="card-title" style="margin-top: 24px;">
+                  <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
+                  <span>Résultat de l'exécution</span>
+                </div>
+
+                <div class="status-banner" id="status-banner" role="status" aria-live="polite">
+                  <span class="material-symbols-outlined status-icon" id="status-icon" aria-hidden="true">info</span>
+                  <div class="status-info">
+                    <h4 id="status-title">Traitement en cours...</h4>
+                    <p id="status-message">Veuillez patienter.</p>
+                  </div>
+                </div>
+
+                <div class="json-preview" id="json-preview">{}</div>
+              </div>
+
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <!-- VUE 2 : MODE SÉQUENCE MULTI-ACTIONS (COMPTE CIBLE) -->
+      <div id="view-mode-sequence" style="display: none;">
+        <div class="card">
           <div class="card-title">
-            <span class="material-symbols-outlined" aria-hidden="true">widgets</span>
-            <span>Actions disponibles (<span id="action-count">50</span>)</span>
+            <span class="material-symbols-outlined" aria-hidden="true">alt_route</span>
+            <span>Enchaînement d'actions pour un compte cible</span>
           </div>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
+            Exécutez à la suite plusieurs actions du catalogue sur une même adresse e-mail. L'ordonnancement est automatiquement optimisé et sécurisé (nettoyage des accès et transferts avant suspension).
+          </p>
 
-          <div class="search-box">
-            <span class="material-symbols-outlined" aria-hidden="true">search</span>
-            <input type="text" id="search-input" placeholder="Filtrer une action..." oninput="filtrerActions()" />
-          </div>
-
-          <div class="action-list" id="action-list">
-            <div style="text-align: center; padding: 24px; color: var(--text-secondary);">
-              <div class="spinner" style="border-top-color: var(--primary); margin: 0 auto 12px;"></div>
-              Chargement du catalogue...
-            </div>
-          </div>
-        </aside>
-
-        <!-- Colonne droite : Formulaire dynamique & Exécution -->
-        <section>
-          <div class="card">
-            <div class="card-title" id="form-title-container">
-              <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
-              <span id="form-title">Sélectionnez une action</span>
+          <form id="sequence-form" onsubmit="soumettreSequence(event)">
+            <div class="form-section-title">1. Compte cible & En-tête de la séquence</div>
+            <div class="form-grid">
+              <div class="md-field">
+                <label for="seq_email_cible">E-mail du compte cible (email_cible) <span class="req">*</span></label>
+                <input type="email" id="seq_email_cible" placeholder="Ex: jean.dupont@cooperl.com" required oninput="actualiserBoutonSequence()" />
+              </div>
+              <div class="md-field">
+                <label for="seq_ticket_key">Clé du Ticket (ticket_key) <span class="req">*</span></label>
+                <input type="text" id="seq_ticket_key" value="ITSM-SEQ-101" required />
+              </div>
             </div>
 
-            <p id="form-description" style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px;">
-              Choisissez une action dans la liste de gauche pour configurer les paramètres et l'exécuter réellement sur Google Workspace.
-            </p>
-
-            <form id="action-form" onsubmit="soumettreFormulaire(event)" style="display: none;">
-              <div class="form-section-title">En-tête de la requête (Jira Webhook)</div>
-
-              <div class="form-grid">
-                <div class="md-field">
-                  <label for="ticket_key">Clé du Ticket (ticket_key) <span class="req">*</span></label>
-                  <input type="text" id="ticket_key" value="ITSM-1001" required />
-                </div>
-
-                <div class="md-field">
-                  <label for="request_id">ID de Requête (request_id)</label>
-                  <input type="text" id="request_id" placeholder="Généré automatiquement si vide" />
-                </div>
+            <div class="switch-container" style="margin-top: 10px;">
+              <div>
+                <div class="switch-label">Forcer l'exécution immédiate sur toutes les étapes (force_immediat)</div>
+                <div class="switch-desc">Ignore les créneaux d'administration en cas d'urgence opérationnelle</div>
               </div>
+              <label class="switch">
+                <input type="checkbox" id="seq_force_immediat" />
+                <span class="slider"></span>
+              </label>
+            </div>
 
-              <div class="form-section-title">Paramètres métier (data)</div>
+            <div class="form-section-title" style="margin-top: 24px;">2. Préréglages rapides 1-clic</div>
+            <div class="preset-chips-grid">
+              <button type="button" class="preset-chip" onclick="appliquerPresetSequence('offboarding')">
+                <span class="material-symbols-outlined" style="font-size:16px; color:#c62828;">person_off</span>
+                <span>⚡ Offboarding express (6 actions)</span>
+              </button>
+              <button type="button" class="preset-chip" onclick="appliquerPresetSequence('killswitch')">
+                <span class="material-symbols-outlined" style="font-size:16px; color:#d97706;">shield</span>
+                <span>🛡️ Kill-Switch Sécurité (3 actions)</span>
+              </button>
+              <button type="button" class="preset-chip" onclick="appliquerPresetSequence('nettoyage')">
+                <span class="material-symbols-outlined" style="font-size:16px; color:#0284c7;">cleaning_services</span>
+                <span>🧹 Nettoyage des accès (3 actions)</span>
+              </button>
+              <button type="button" class="preset-chip" onclick="appliquerPresetSequence('diagnostic')">
+                <span class="material-symbols-outlined" style="font-size:16px; color:#16a34a;">manage_search</span>
+                <span>🔍 Diagnostic & Audit (2 actions)</span>
+              </button>
+              <button type="button" class="preset-chip" onclick="appliquerPresetSequence('messagerie')">
+                <span class="material-symbols-outlined" style="font-size:16px; color:#7c3aed;">mail_lock</span>
+                <span>✉️ Arrêt messagerie (2 actions)</span>
+              </button>
+            </div>
 
-              <div id="fields-loading" role="status" aria-live="polite"
-                   style="display:none; align-items:center; gap:10px; padding:10px 14px; margin-bottom:14px; background:#f0f7f9; border:1px solid var(--border,#e2e8f0); border-radius:8px; color:var(--text-secondary); font-size:14px;">
-                <div class="spinner" style="width:18px; height:18px; border-top-color:var(--primary); margin:0;"></div>
-                <span>Chargement des listes depuis Google…</span>
+            <div class="form-section-title" style="margin-top: 20px; display:flex; align-items:center; justify-content:space-between;">
+              <span>3. Sélection des actions compatibles (<span id="seq-selected-count">0</span> sélectionnée(s))</span>
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="cocherToutesActionsSequence(true)">Tout cocher</button>
+                <button type="button" class="btn btn-secondary" style="padding:4px 10px; font-size:12px;" onclick="cocherToutesActionsSequence(false)">Tout décocher</button>
               </div>
+            </div>
 
-              <div class="form-grid" id="dynamic-fields">
-                <!-- Champs générés dynamiquement ici -->
-              </div>
+            <div class="seq-actions-grid" id="seq-actions-grid">
+              <!-- Rempli dynamiquement par initialiserModeSequence() -->
+            </div>
 
-              <div class="form-section-title">Options de dérogation hors créneau</div>
+            <div class="btn-group" style="margin-top: 24px;">
+              <button type="submit" class="btn btn-primary" id="btn-submit-sequence" disabled>
+                <span class="material-symbols-outlined" aria-hidden="true">playlist_play</span>
+                <span id="btn-submit-sequence-text">Lancer la séquence</span>
+              </button>
+            </div>
+          </form>
 
-              <div class="switch-container">
-                <div>
-                  <div class="switch-label">Forcer l'exécution immédiate (force_immediat)</div>
-                  <div class="switch-desc">Ignore les créneaux d'administration en cas d'urgence</div>
-                </div>
-                <label class="switch">
-                  <input type="checkbox" id="force_immediat" onchange="toggleUrgenceMotif()" aria-controls="motif-urgence-container" aria-expanded="false" />
-                  <span class="slider"></span>
-                </label>
-              </div>
+          <!-- Zone de progression et résultat du Stepper -->
+          <div class="result-box" id="sequence-result-box" style="margin-top: 30px;">
+            <div class="card-title" style="margin-top: 10px;">
+              <span class="material-symbols-outlined" aria-hidden="true">timeline</span>
+              <span>Déroulement de la séquence</span>
+            </div>
 
-              <div class="md-field" id="motif-urgence-container" style="display: none; margin-top: 16px;">
-                <label for="motif_urgence">Motif de l'urgence (motif_urgence) <span class="req">*</span></label>
-                <input type="text" id="motif_urgence" placeholder="Ex: Panne bloquante sur site de production" />
-              </div>
+            <div class="stepper-progress-bar">
+              <div class="stepper-progress-fill" id="seq-progress-fill"></div>
+            </div>
 
-              <div class="btn-group">
-                <button type="submit" class="btn btn-primary" id="btn-submit">
-                  <span class="material-symbols-outlined" aria-hidden="true">play_arrow</span>
-                  <span>Exécuter l'action</span>
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="remplirExemple()">
-                  <span class="material-symbols-outlined" aria-hidden="true">auto_fix_high</span>
-                  <span>Remplir avec un exemple</span>
-                </button>
-              </div>
-            </form>
+            <div class="stepper-container" id="seq-stepper-container">
+              <!-- Étapes générées dynamiquement -->
+            </div>
 
-            <!-- Zone de résultat -->
-            <div class="result-box" id="result-box">
-              <div class="card-title" style="margin-top: 24px;">
-                <span class="material-symbols-outlined" aria-hidden="true">terminal</span>
-                <span>Résultat de l'exécution</span>
-              </div>
-
-              <div class="status-banner" id="status-banner" role="status" aria-live="polite">
-                <span class="material-symbols-outlined status-icon" id="status-icon" aria-hidden="true">info</span>
+            <div id="seq-final-summary" style="display:none; margin-top:20px;">
+              <div class="status-banner success" id="seq-summary-banner">
+                <span class="material-symbols-outlined status-icon" id="seq-summary-icon">check_circle</span>
                 <div class="status-info">
-                  <h4 id="status-title">Traitement en cours...</h4>
-                  <p id="status-message">Veuillez patienter.</p>
+                  <h4 id="seq-summary-title">Séquence terminée</h4>
+                  <p id="seq-summary-desc">Toutes les étapes ont été traitées.</p>
                 </div>
               </div>
-
-              <div class="json-preview" id="json-preview">{}</div>
+              <div class="btn-group" style="margin-top: 14px;">
+                <button type="button" class="btn btn-secondary" onclick="copierRapportSequence()">
+                  <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+                  <span>Copier le rapport de séquence</span>
+                </button>
+              </div>
             </div>
-
           </div>
-        </section>
+
+        </div>
       </div>
     </div>
 
@@ -2037,6 +2349,7 @@
       const compteur = document.getElementById('action-count');
       if (compteur) compteur.innerText = actions.length;
       filtrerActions();
+      initialiserModeSequence();
       // Le guide a pu être affiché avec la liste de repli avant l'arrivée du
       // catalogue : on vide l'accordéon pour qu'il se régénère avec les vraies
       // actions à la prochaine ouverture de l'onglet.
@@ -3173,6 +3486,433 @@
           afficherToast('Matrice de recette réinitialisée (local).');
         }
       }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════════
+    //  GESTION DU MODE SÉQUENCE MULTI-ACTIONS (COMPTE CIBLE)
+    // ═══════════════════════════════════════════════════════════════════════
+    let modeConsoleActif = 'unitaire';
+    let actionsCompatiblesSequence = [];
+    let rapportSequenceEnCours = [];
+
+    const ORDRE_EXECUTION_SEQUENCE = [
+      // 1. Diagnostics & Revue initiale
+      'INFO_COMPTE',
+      'AUDIT_ACCES_COMPLET',
+      // 2. Messagerie
+      'DESACTIVATION_REPONSE_ABSENCE',
+      'ARRET_TRANSFERT_EMAILS',
+      // 3. Permissions & Groupes & Drives partagés
+      'RETRAIT_TOUS_GROUPES',
+      'RETRAIT_TOUS_DRIVES_PARTAGES',
+      // 4. Coordonnées de récupération
+      'RETRAIT_INFOS_RECUPERATION',
+      // 5. Flotte mobile MDM
+      'BLOCAGE_APPAREIL',
+      'APPROBATION_APPAREIL',
+      // 6. Licences & Archivage
+      'RETRAIT_LICENCE',
+      'ARCHIVAGE_COMPTE',
+      // 7. Sécurité & Sessions
+      'DECONNEXION_FORCEE',
+      'REVOCATION_TOKENS_APPS',
+      'SUSPENSION',
+      'REACTIVATION',
+      // 8. Groupes orchestrés
+      'DEPART_COLLABORATEUR',
+      'RETOUR_ABSENCE',
+      'URGENCE_COMPROMISSION'
+    ];
+
+    function changerModeConsole(mode) {
+      modeConsoleActif = mode;
+      const btnUni = document.getElementById('btn-mode-unitaire');
+      const btnSeq = document.getElementById('btn-mode-sequence');
+      const viewUni = document.getElementById('view-mode-unitaire');
+      const viewSeq = document.getElementById('view-mode-sequence');
+
+      if (mode === 'sequence') {
+        if (btnUni) btnUni.classList.remove('active');
+        if (btnSeq) btnSeq.classList.add('active');
+        if (viewUni) viewUni.style.display = 'none';
+        if (viewSeq) viewSeq.style.display = 'block';
+        if (actionsCompatiblesSequence.length === 0) initialiserModeSequence();
+      } else {
+        if (btnSeq) btnSeq.classList.remove('active');
+        if (btnUni) btnUni.classList.add('active');
+        if (viewSeq) viewSeq.style.display = 'none';
+        if (viewUni) viewUni.style.display = 'block';
+      }
+    }
+
+    function initialiserModeSequence() {
+      const grid = document.getElementById('seq-actions-grid');
+      const badge = document.getElementById('badge-compat-actions');
+      if (!grid) return;
+
+      if (!catalogueActions || catalogueActions.length === 0) {
+        grid.innerHTML = '<div style="color:var(--text-secondary); text-align:center; padding:16px; grid-column:1/-1;">Chargement du catalogue…</div>';
+        return;
+      }
+
+      // Actions dont tous les champs obligatoires sont satisfaits par email_cible
+      actionsCompatiblesSequence = catalogueActions.filter(a => {
+        const req = a.required || [];
+        return req.length === 0 || (req.length === 1 && req[0] === 'email_cible');
+      });
+
+      // Tri selon l'ordre optimal de sécurité
+      actionsCompatiblesSequence.sort((a, b) => {
+        const idxA = ORDRE_EXECUTION_SEQUENCE.indexOf(a.action);
+        const idxB = ORDRE_EXECUTION_SEQUENCE.indexOf(b.action);
+        const posA = idxA !== -1 ? idxA : 999;
+        const posB = idxB !== -1 ? idxB : 999;
+        return posA - posB;
+      });
+
+      if (badge) badge.innerText = `${actionsCompatiblesSequence.length} compatibles`;
+
+      grid.innerHTML = '';
+      actionsCompatiblesSequence.forEach(a => {
+        const famille = determinerFamilleAction(a.action);
+        const card = document.createElement('label');
+        card.className = 'seq-action-card';
+        card.id = 'seq-card-' + a.action;
+        card.onclick = (e) => {
+          if (e.target.tagName !== 'INPUT') {
+            const cb = card.querySelector('input[type="checkbox"]');
+            if (cb) { cb.checked = !cb.checked; actualiserBoutonSequence(); }
+          }
+        };
+
+        const badgeDestructive = a.destructive ? '<span style="font-size:10px; background:#ffebee; color:#c62828; padding:2px 6px; border-radius:4px; font-weight:600;">⚠️ Sensible</span>' : '';
+
+        card.innerHTML = `
+          <input type="checkbox" name="seq_action" value="${escapeHtml(a.action)}" onchange="actualiserBoutonSequence()" />
+          <div class="seq-action-info">
+            <div class="seq-action-header">
+              <span class="seq-action-name">${escapeHtml(a.action)}</span>
+              <span style="display:flex; align-items:center; gap:4px;">
+                <span class="badge-fenetre badge-standard" style="font-size:10px; padding:1px 6px;">${escapeHtml(famille)}</span>
+                ${badgeDestructive}
+              </span>
+            </div>
+            <div class="seq-action-desc">${escapeHtml(a.description)}</div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+
+      actualiserBoutonSequence();
+    }
+
+    function actualiserBoutonSequence() {
+      const emailInput = document.getElementById('seq_email_cible');
+      const checkboxes = document.querySelectorAll('input[name="seq_action"]:checked');
+      const btn = document.getElementById('btn-submit-sequence');
+      const btnText = document.getElementById('btn-submit-sequence-text');
+      const countEl = document.getElementById('seq-selected-count');
+
+      const nbChecked = checkboxes.length;
+      if (countEl) countEl.innerText = nbChecked;
+
+      // Mise à jour visuelle des cartes cochées
+      document.querySelectorAll('.seq-action-card').forEach(card => {
+        const cb = card.querySelector('input[type="checkbox"]');
+        if (cb && cb.checked) card.classList.add('checked');
+        else card.classList.remove('checked');
+      });
+
+      const emailVal = emailInput ? emailInput.value.trim() : '';
+      const emailValide = emailVal.includes('@') && emailVal.includes('.');
+
+      if (btn) {
+        if (nbChecked > 0 && emailValide) {
+          btn.disabled = false;
+          if (btnText) btnText.innerText = `Lancer la séquence (${nbChecked} action${nbChecked > 1 ? 's' : ''})`;
+        } else {
+          btn.disabled = true;
+          if (btnText) {
+            if (!emailValide) btnText.innerText = 'Saisir un e-mail cible valide';
+            else btnText.innerText = 'Sélectionnez au moins une action';
+          }
+        }
+      }
+    }
+
+    function cocherToutesActionsSequence(cocher) {
+      document.querySelectorAll('input[name="seq_action"]').forEach(cb => {
+        cb.checked = !!cocher;
+      });
+      actualiserBoutonSequence();
+    }
+
+    function appliquerPresetSequence(presetKey) {
+      cocherToutesActionsSequence(false);
+
+      const presets = {
+        'offboarding': ['RETRAIT_TOUS_GROUPES', 'RETRAIT_TOUS_DRIVES_PARTAGES', 'RETRAIT_INFOS_RECUPERATION', 'DECONNEXION_FORCEE', 'REVOCATION_TOKENS_APPS', 'SUSPENSION'],
+        'killswitch': ['DECONNEXION_FORCEE', 'REVOCATION_TOKENS_APPS', 'SUSPENSION'],
+        'nettoyage': ['RETRAIT_TOUS_GROUPES', 'RETRAIT_TOUS_DRIVES_PARTAGES', 'RETRAIT_INFOS_RECUPERATION'],
+        'diagnostic': ['INFO_COMPTE', 'AUDIT_ACCES_COMPLET'],
+        'messagerie': ['DESACTIVATION_REPONSE_ABSENCE', 'ARRET_TRANSFERT_EMAILS']
+      };
+
+      const cibles = presets[presetKey] || [];
+      cibles.forEach(nom => {
+        const cb = document.querySelector(`input[name="seq_action"][value="${nom}"]`);
+        if (cb) cb.checked = true;
+      });
+
+      actualiserBoutonSequence();
+      afficherToast(`Préréglage appliqué (${cibles.length} actions).`);
+    }
+
+    function soumettreSequence(event) {
+      event.preventDefault();
+      const emailCible = document.getElementById('seq_email_cible').value.trim();
+      const ticketKey = document.getElementById('seq_ticket_key').value.trim() || 'ITSM-SEQ';
+      const forceImmediat = document.getElementById('seq_force_immediat').checked;
+
+      const checkedBoxes = Array.from(document.querySelectorAll('input[name="seq_action"]:checked'));
+      if (checkedBoxes.length === 0) {
+        afficherToast('Veuillez cocher au moins une action.');
+        return;
+      }
+
+      // Tri selon l'ordre optimal d'exécution
+      const actionsAExecuter = checkedBoxes.map(cb => cb.value).sort((a, b) => {
+        const idxA = ORDRE_EXECUTION_SEQUENCE.indexOf(a);
+        const idxB = ORDRE_EXECUTION_SEQUENCE.indexOf(b);
+        const posA = idxA !== -1 ? idxA : 999;
+        const posB = idxB !== -1 ? idxB : 999;
+        return posA - posB;
+      });
+
+      // Vérifier si des actions destructives sont cochées
+      const destructives = actionsAExecuter.filter(nom => {
+        const spec = catalogueActions.find(a => a.action === nom);
+        return spec && spec.destructive;
+      });
+
+      if (destructives.length > 0) {
+        const msg = `Vous êtes sur le point d'exécuter une séquence de ${actionsAExecuter.length} action(s) sur ${emailCible}, dont ${destructives.length} action(s) sensible(s) (${destructives.join(', ')}).`;
+        demanderConfirmation('SEQUENCE_MULTI_ACTIONS', emailCible, function() {
+          executerSequencePasAPas(emailCible, ticketKey, forceImmediat, actionsAExecuter);
+        });
+      } else {
+        executerSequencePasAPas(emailCible, ticketKey, forceImmediat, actionsAExecuter);
+      }
+    }
+
+    function appelerApiAction(payload) {
+      return new Promise((resolve) => {
+        if (typeof google !== 'undefined' && google.script && google.script.run) {
+          google.script.run
+            .withSuccessHandler(res => resolve(res || {}))
+            .withFailureHandler(err => resolve({
+              status: 'error',
+              http_status: 500,
+              error_code: 'SERVER_ERROR',
+              message: err.message || String(err)
+            }))
+            .executerActionDepuisUI(payload);
+        } else {
+          // Simulation locale
+          setTimeout(() => {
+            resolve({
+              status: 'success',
+              http_status: 200,
+              action: payload.action,
+              ticket_key: payload.ticket_key,
+              request_id: payload.request_id,
+              trace_id: 'SIMUL-SEQ',
+              message: `[SIMULATION] Action ${payload.action} traitée avec succès pour ${payload.data.email_cible}`,
+              details: payload.data
+            });
+          }, 650);
+        }
+      });
+    }
+
+    async function executerSequencePasAPas(emailCible, ticketKey, forceImmediat, actionsAExecuter) {
+      const resultBox = document.getElementById('sequence-result-box');
+      resultBox.classList.add('active');
+      resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+      const stepperContainer = document.getElementById('seq-stepper-container');
+      stepperContainer.innerHTML = '';
+      const progressFill = document.getElementById('seq-progress-fill');
+      progressFill.style.width = '0%';
+
+      const summaryBox = document.getElementById('seq-final-summary');
+      summaryBox.style.display = 'none';
+
+      const btn = document.getElementById('btn-submit-sequence');
+      btn.disabled = true;
+      document.getElementById('btn-submit-sequence-text').innerText = 'Exécution en cours…';
+
+      // Construction des items du Stepper
+      actionsAExecuter.forEach((nomAction, idx) => {
+        const item = document.createElement('div');
+        item.className = 'stepper-item';
+        item.id = 'seq-step-' + idx;
+        item.innerHTML = `
+          <div style="display:flex; align-items:center; gap:12px; min-width:0;">
+            <span class="material-symbols-outlined status-icon" id="seq-step-icon-${idx}" style="font-size:22px; color:var(--text-secondary);">hourglass_empty</span>
+            <div style="min-width:0;">
+              <div style="font-family:'Consolas','Menlo',monospace; font-weight:700; font-size:13px; color:var(--primary-dark);">
+                [${idx + 1}/${actionsAExecuter.length}] ${escapeHtml(nomAction)}
+              </div>
+              <div id="seq-step-msg-${idx}" style="font-size:12px; color:var(--text-secondary); margin-top:2px; overflow-wrap:anywhere;">En attente…</div>
+            </div>
+          </div>
+          <div id="seq-step-timing-${idx}" style="font-size:12px; color:var(--text-secondary); font-family:monospace; white-space:nowrap;">--</div>
+        `;
+        stepperContainer.appendChild(item);
+      });
+
+      rapportSequenceEnCours = [];
+      let nbSucces = 0;
+      let nbErreurs = 0;
+      const tDebutGlobal = Date.now();
+
+      for (let i = 0; i < actionsAExecuter.length; i++) {
+        const nomAction = actionsAExecuter[i];
+        const stepEl = document.getElementById('seq-step-' + i);
+        const iconEl = document.getElementById('seq-step-icon-' + i);
+        const msgEl = document.getElementById('seq-step-msg-' + i);
+        const timingEl = document.getElementById('seq-step-timing-' + i);
+
+        stepEl.className = 'stepper-item running';
+        iconEl.innerText = 'sync';
+        iconEl.style.color = 'var(--primary)';
+        msgEl.innerText = 'Traitement en cours côté Google Apps Script…';
+
+        const t0 = Date.now();
+        const payload = {
+          action: nomAction,
+          ticket_key: ticketKey,
+          request_id: ticketKey + '-SEQ-' + (i + 1) + '-' + Date.now().toString(36),
+          data: { email_cible: emailCible }
+        };
+        if (forceImmediat) {
+          payload.force_immediat = true;
+          payload.motif_urgence = 'Séquence multi-actions console WebApp';
+        }
+
+        try {
+          const res = await appelerApiAction(payload);
+          const dureeMs = Date.now() - t0;
+          timingEl.innerText = dureeMs + ' ms';
+
+          const estOk = (res.status === 'success' || res.http_status === 200);
+          const estIdempotent = res.details && res.details.idempotent;
+
+          if (estOk) {
+            nbSucces++;
+            if (estIdempotent) {
+              stepEl.className = 'stepper-item idempotent';
+              iconEl.innerText = 'check_circle';
+              iconEl.style.color = '#f57f17';
+              msgEl.innerText = res.message || 'Déjà à jour (idempotent).';
+            } else {
+              stepEl.className = 'stepper-item success';
+              iconEl.innerText = 'check_circle';
+              iconEl.style.color = '#2e7d32';
+              msgEl.innerText = res.message || 'Exécuté avec succès.';
+            }
+          } else {
+            nbErreurs++;
+            stepEl.className = 'stepper-item error';
+            iconEl.innerText = 'error';
+            iconEl.style.color = '#c62828';
+            msgEl.innerText = (res.error_code ? '[' + res.error_code + '] ' : '') + (res.message || 'Erreur lors de l\'exécution.');
+          }
+
+          rapportSequenceEnCours.push({
+            index: i + 1,
+            action: nomAction,
+            statut: estOk ? (estIdempotent ? 'DEJA_FAIT' : 'SUCCES') : 'ERREUR',
+            duree_ms: dureeMs,
+            message: res.message || '',
+            details: res.details
+          });
+
+        } catch (err) {
+          const dureeMs = Date.now() - t0;
+          timingEl.innerText = dureeMs + ' ms';
+          nbErreurs++;
+          stepEl.className = 'stepper-item error';
+          iconEl.innerText = 'error';
+          iconEl.style.color = '#c62828';
+          msgEl.innerText = 'Erreur réseau ou serveur : ' + err.message;
+
+          rapportSequenceEnCours.push({
+            index: i + 1,
+            action: nomAction,
+            statut: 'ERREUR',
+            duree_ms: dureeMs,
+            message: err.message
+          });
+        }
+
+        const pct = Math.round(((i + 1) / actionsAExecuter.length) * 100);
+        progressFill.style.width = pct + '%';
+      }
+
+      const dureeTotaleSec = ((Date.now() - tDebutGlobal) / 1000).toFixed(1);
+
+      // Résumé final
+      summaryBox.style.display = 'block';
+      const summaryBanner = document.getElementById('seq-summary-banner');
+      const summaryTitle = document.getElementById('seq-summary-title');
+      const summaryDesc = document.getElementById('seq-summary-desc');
+      const summaryIcon = document.getElementById('seq-summary-icon');
+
+      if (nbErreurs === 0) {
+        summaryBanner.className = 'status-banner success';
+        summaryIcon.innerText = 'verified';
+        summaryTitle.innerText = `Séquence terminée avec succès (${nbSucces}/${actionsAExecuter.length} étapes en ${dureeTotaleSec}s)`;
+        summaryDesc.innerText = `Toutes les opérations ont été appliquées pour ${emailCible}.`;
+      } else {
+        summaryBanner.className = 'status-banner error';
+        summaryIcon.innerText = 'warning';
+        summaryTitle.innerText = `Séquence terminée avec ${nbErreurs} anomalie(s) (${nbSucces} réussie(s) en ${dureeTotaleSec}s)`;
+        summaryDesc.innerText = `Certaines étapes ont échoué. Consultez le détail ci-dessus.`;
+      }
+
+      btn.disabled = false;
+      document.getElementById('btn-submit-sequence-text').innerText = 'Relancer la séquence';
+      actualiserBoutonSequence();
+    }
+
+    function copierRapportSequence() {
+      if (!rapportSequenceEnCours.length) {
+        afficherToast('Aucun rapport de séquence disponible.');
+        return;
+      }
+
+      const emailCible = document.getElementById('seq_email_cible').value.trim();
+      const ticketKey = document.getElementById('seq_ticket_key').value.trim();
+      const now = new Date().toLocaleString('fr-FR');
+
+      const lignes = [
+        `# Rapport d'Exécution — Séquence Multi-Actions`,
+        `> **Compte cible :** ${emailCible} | **Ticket :** ${ticketKey} | **Date :** ${now}`,
+        ``,
+        `### Détail des étapes (${rapportSequenceEnCours.length}) :`
+      ];
+
+      rapportSequenceEnCours.forEach(r => {
+        const icone = r.statut === 'SUCCES' ? '✅' : (r.statut === 'DEJA_FAIT' ? '⚠️' : '❌');
+        lignes.push(`- ${icone} **[${r.index}] ${r.action}** (${r.duree_ms} ms) : ${r.message}`);
+      });
+
+      lignes.push(``, `---`, `*Généré par la Passerelle Jira Service Management → Google Workspace*`);
+
+      copierTexte(lignes.join('\n'));
+      afficherToast('Rapport de séquence copié dans le presse-papier !');
     }
   </script>
 </body>

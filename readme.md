@@ -142,11 +142,11 @@ flowchart TD
 En ouvrant l'URL de votre application web (`https://script.google.com/macros/s/.../exec`) dans votre navigateur, vous disposez d'un centre de contrôle complet en **Material Design 3** :
 
 1. 🧪 **Onglet 1 — Console d'administration** :
-   * Formulaire interactif pour tester en temps réel les **49 actions**.
-   * Bouton « Remplir avec un exemple » pour tester chaque action en 1 clic.
+   * **Mode Unitaire** : Formulaire interactif pour tester en temps réel les **50 actions** avec bouton « Remplir avec un exemple ».
+   * **Mode Séquence Multi-Actions** : Permet de lancer à la suite plusieurs actions pour un même compte cible (`email_cible`) avec préréglages 1-clic (*Offboarding express*, *Kill-Switch Sécurité*, *Nettoyage des accès*, *Diagnostic complet*, *Arrêt messagerie*), suivi pas-à-pas en direct et export du rapport d'exécution.
    * Sécurité étanche : accès réservé aux e-mails déclarés dans `ADMIN_UI_EMAILS`.
 2. 📋 **Onglet 2 — Banc d'Essai & Recette** :
-   * Matrice de qualification opérationnelle couvrant les 49 actions.
+   * Matrice de qualification opérationnelle couvrant les 50 actions.
    * Sélecteur de statut (🟢 *Validé*, 🟡 *À tester*, 🔴 *Anomalie*, ⚪ *Non applicable*) et saisie d'observations persistées dans le script.
    * Bouton « Exporter le bilan » pour générer le PV de recette officiel en Markdown.
 3. 📖 **Onglet 3 — Guide d'Intégration JSM** :
@@ -160,7 +160,7 @@ En ouvrant l'URL de votre application web (`https://script.google.com/macros/s/.
 
 ## Prérequis & Activation des API Google Cloud
 
-Pour que l'ensemble des 49 actions fonctionnent, les API Google Cloud suivantes doivent être actives dans votre projet GCP :
+Pour que l'ensemble des 50 actions fonctionnent, les API Google Cloud suivantes doivent être actives dans votre projet GCP :
 
 | API Google | Utilisation dans la passerelle | Activation dans GCP |
 |---|---|---|
@@ -370,8 +370,8 @@ flowchart TD
 Opening the deployed WebApp URL in your browser gives you an enterprise **Material Design 3** control center:
 
 1. 🧪 **Tab 1 — Admin Console**:
-   * Interactive execution console for all **50 actions**.
-   * One-click "Fill with example" button to test any action instantly.
+   * **Single Action Mode**: Interactive execution console for all **50 actions** with one-click "Fill with example" button.
+   * **Multi-Action Sequence Runner**: Run multiple actions in sequence on a single target account (`email_cible`) with 1-click presets (*Offboarding express*, *Security Kill-Switch*, *Access cleanup*, *Diagnostics & Audit*, *Mailbox deactivation*), live stepper progress, and execution report export.
    * Access restricted strictly to emails declared in `ADMIN_UI_EMAILS`.
 2. 📋 **Tab 2 — Test Bench & Acceptance**:
    * Operational qualification matrix covering all 50 actions.
