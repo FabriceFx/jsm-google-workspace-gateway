@@ -67,6 +67,13 @@ function actionRetirerTousGroupes_(data, ctx) {
   var echecs = [];
 
   groupes.forEach(function (groupe) {
+    const emailG = String(groupe).toLowerCase();
+    // Détection amont par convention de nommage des groupes dynamiques
+    if (emailG.indexOf('_dyn_') !== -1 || emailG.indexOf('dynamique') !== -1) {
+      dynamiques.push(groupe);
+      return;
+    }
+
     try {
       AdminDirectory.Members.remove(groupe, data.email_cible);
       retires.push(groupe);
@@ -75,8 +82,8 @@ function actionRetirerTousGroupes_(data, ctx) {
         // 404 = appartenance indirecte (membre d'un groupe imbriqué).
         ignores.push(groupe);
       } else if (estErreurGroupeDynamique_(err)) {
-        // Groupe dynamique : l'appartenance est calculée par requête, on ne
-        // peut pas la retirer manuellement. Ce n'est pas un échec.
+        // Groupe dynamique ou conditionnel (ex: "Condition not met", "Dynamic group").
+        // L'appartenance est calculée automatiquement par règle d'annuaire.
         dynamiques.push(groupe);
       } else {
         echecs.push(groupe + ' (' + err.message + ')');

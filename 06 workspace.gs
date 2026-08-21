@@ -190,7 +190,10 @@ function estNotFound_(err) {
  */
 function estErreurGroupeDynamique_(err) {
     const m = String((err && err.message) || err).toUpperCase();
-    return m.indexOf('DYNAMIC') !== -1 ||
+    return m.indexOf('CONDITION NOT MET') !== -1 ||
+           m.indexOf('CONDITION_NOT_MET') !== -1 ||
+           m.indexOf('PRECONDITION') !== -1 ||
+           m.indexOf('DYNAMIC') !== -1 ||
            m.indexOf('CANNOT MUTATE') !== -1 ||
            m.indexOf('CANNOT_MUTATE') !== -1 ||
            m.indexOf('CANNOT MODIFY MEMBERS') !== -1 ||
@@ -198,7 +201,9 @@ function estErreurGroupeDynamique_(err) {
            m.indexOf('CANNOT BE UPDATED DIRECTLY') !== -1 ||
            m.indexOf('SYSTEM GROUP') !== -1 ||
            m.indexOf('SYSTEM_GROUP') !== -1 ||
-           m.indexOf('MANAGED AUTOMATICALLY') !== -1;
+           m.indexOf('MANAGED AUTOMATICALLY') !== -1 ||
+           m.indexOf('INVALID MEMBER TYPE') !== -1 ||
+           m.indexOf('INVALID_MEMBER_TYPE') !== -1;
 }
 
 /**
