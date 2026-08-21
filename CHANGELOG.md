@@ -3,6 +3,22 @@
 Tous les changements notables de ce projet sont documentés ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [3.2.0] — 2026-08-21
+
+### Révocation en masse des Drives partagés (catalogue à 49 actions)
+
+> **La certitude absolue qu'aucun document confidentiel ne reste accessible après une mobilité ou un départ.** Tu n'as plus à éplucher un par un les dizaines de Drives partagés de l'entreprise pour vérifier si un ancien membre y a encore des droits. En un seul clic ou ticket Jira, tous ses accès directs sont révoqués en bloc, tout en préservant intacts ses accès légitimes par groupe. Zéro oubli, zéro stress d'audit.
+
+### Nouvelle Action (portant le catalogue à 49 actions)
+
+- **Drives partagés (Shared Drives)** :
+  - `RETRAIT_TOUS_DRIVES_PARTAGES` : Énumère l'ensemble des Drives partagés de l'organisation via l'API Drive v3, identifie et supprime en masse toutes les permissions directes de l'utilisateur (`type: "user"`), tout en préservant strictement ses accès hérités par des groupes Google (`type: "group"`).
+
+### Améliorations & Ajustements
+
+- **Banc d'Essai & Recette** : Intégration de la 49ᵉ action dans la console WebApp, les formulaires dynamiques et la grille de qualification opérationnelle.
+- **Présentation & Documentation** : Compteurs et schémas directeurs synchronisés sur 49 actions.
+
 ## [3.1.0] — 2026-08-20
 
 ### Boucle fermée Jira, Déclenchement programmé, Audit d'accès & Signatures

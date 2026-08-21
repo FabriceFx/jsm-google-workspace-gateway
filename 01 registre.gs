@@ -91,6 +91,7 @@ function declarationsFormulaires_() {
     // --- Drives partagés (Shared Drives) -------------------------------------
     SPEC_AJOUT_MEMBRE_DRIVE_PARTAGE,
     SPEC_RETRAIT_MEMBRE_DRIVE_PARTAGE,
+    SPEC_RETRAIT_TOUS_DRIVES_PARTAGES,
     SPEC_CREATION_DRIVE_PARTAGE,
 
     // --- Calendriers Google & Ressources ------------------------------------

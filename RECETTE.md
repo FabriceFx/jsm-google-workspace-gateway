@@ -1,7 +1,7 @@
 # Cahier de Recette & Guide de Qualification Opérationnelle
 # *Acceptance Test Playbook & Operational Qualification Guide*
 
-> **Passerelle Jira Service Management → Google Workspace (v3.1.0)**  
+> **Passerelle Jira Service Management → Google Workspace (v3.2.0)**  
 > *Développé par Fabrice Faucheux ([faucheux.bzh](https://faucheux.bzh))*
 
 ---
@@ -9,7 +9,7 @@
 ## 🇫🇷 Version Française
 
 ### 1. Présentation & Objectifs
-Ce cahier de recette accompagne la mise en service de la passerelle. Il permet de tester méthodiquement chacune des **48 actions**, de vérifier leur conformité opérationnelle et de consigner leur validation directement dans le **Banc d'Essai & Matrice de Recette** de la console d'administration avant le raccordement en production avec Jira Service Management.
+Ce cahier de recette accompagne la mise en service de la passerelle. Il permet de tester méthodiquement chacune des **49 actions**, de vérifier leur conformité opérationnelle et de consigner leur validation directement dans le **Banc d'Essai & Matrice de Recette** de la console d'administration avant le raccordement en production avec Jira Service Management.
 
 ### 2. Outils de test à disposition
 1. **Banc d'Essai & Recette (Onglet 2 de la WebApp)** : Tableau de bord de qualification avec sélecteur d'état opérationnel (🟢 *Validé*, 🟡 *À tester*, 🔴 *Anomalie*, ⚪ *Non applicable*), saisie d'observations et export du PV de recette.
@@ -89,6 +89,7 @@ Ce cahier de recette accompagne la mise en service de la passerelle. Il permet d
 | `CREATION_DRIVE_PARTAGE` | `nom_drive`: "Projet Recette", `gestionnaire_email`: "votre-email@domaine.com" | Shared Drive créé avec rôle `organizer` assigné au gestionnaire. |
 | `AJOUT_MEMBRE_DRIVE_PARTAGE` | `email_cible`: "collaborateur@domaine.com", `drive_id`: "ID_DU_DRIVE", `role`: "fileOrganizer" | Permission créée sur le Drive partagé. |
 | `RETRAIT_MEMBRE_DRIVE_PARTAGE`| `email_cible`: "collaborateur@domaine.com", `drive_id`: "ID_DU_DRIVE" | Permission révoquée du Drive partagé. |
+| `RETRAIT_TOUS_DRIVES_PARTAGES`| `email_cible`: "collaborateur@domaine.com" | Révocation en masse des permissions directes sur tous les Drives partagés (accès via groupes conservés). |
 
 #### 📅 9. Calendriers Google & Salles de Réunion
 | Action | Données de test | Résultat attendu |

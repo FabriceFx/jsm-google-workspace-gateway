@@ -1,6 +1,6 @@
 # Passerelle Jira Service Management → Google Workspace
 
-> **v3.1.0** — Automatise les opérations d'administration Google Workspace
+> **v3.2.0** — Automatise les opérations d'administration Google Workspace
 > déclenchées par les formulaires Jira Service Management.
 
 *[English version below](#jira-service-management--google-workspace-gateway)*
@@ -15,7 +15,7 @@ envoie un webhook POST vers cette webapp Google Apps Script. Le routeur
 identifie l'action demandée, vérifie l'authentification et les données, puis
 exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 
-### Actions disponibles (48 actions)
+### Actions disponibles (49 actions)
 
 | Action | Description | Fenêtre |
 |---|---|---|
@@ -63,6 +63,7 @@ exécute l'opération via l'Admin SDK — le tout sans intervention manuelle.
 | `CREATION_DRIVE_PARTAGE` | Crée un nouveau Shared Drive et lui assigne son gestionnaire initial | Standard |
 | `AJOUT_MEMBRE_DRIVE_PARTAGE` | Ajoute un membre ou un groupe à un Drive partagé avec rôle (organizer, fileOrganizer, commenter, reader) | Standard |
 | `RETRAIT_MEMBRE_DRIVE_PARTAGE` | Révoque l'accès d'un membre à un Drive partagé | Permanente |
+| `RETRAIT_TOUS_DRIVES_PARTAGES` | Révocation en masse de tous les accès directs d'un collaborateur aux Drives partagés (conserve les accès par groupes) | Permanente |
 | **Calendriers & Salles** | | |
 | `PARTAGE_CALENDRIER` | Accorde l'accès à un agenda Google Calendar (lecture, modification, gestion) | Standard |
 | `RETRAIT_PARTAGE_CALENDRIER` | Révoque l'accès d'un collaborateur à un agenda | Permanente |
@@ -370,6 +371,7 @@ Toutes les autres actions fonctionnent uniquement avec l'Admin SDK.
 56 action configgroupe.gs    Configuration et modération des groupes (API Groups Settings)
 57 action creationressourcecalendrier.gs Création de ressource de calendrier / salle
 58 action suppressionressourcecalendrier.gs Suppression de ressource de calendrier
+59 action retraittousdrivespartages.gs Révocation globale des accès directs aux Drives partagés
 90 administration.gs         Fonctions de pilotage manuel
 91 tests.gs                  Tests (unitaires + diagnostics manuels)
 ui_test.html                 Console WebApp, simulateur & banc d'essai
@@ -396,7 +398,7 @@ MIT — Voir le fichier LICENSE pour les détails.
 
 # Jira Service Management → Google Workspace gateway
 
-> **v3.1.0** — Automates Google Workspace administration operations triggered
+> **v3.2.0** — Automates Google Workspace administration operations triggered
 > by Jira Service Management forms.
 
 ## Overview
@@ -407,7 +409,7 @@ Script webapp. The router identifies the requested action, verifies
 authentication and data, then executes the operation via the Admin SDK — all
 without manual intervention.
 
-### Available actions (48 actions)
+### Available actions (49 actions)
 
 | Action | Description | Window |
 |---|---|---|
@@ -455,6 +457,7 @@ without manual intervention.
 | `CREATION_DRIVE_PARTAGE` | Creates a new Shared Drive and assigns its initial manager | Standard |
 | `AJOUT_MEMBRE_DRIVE_PARTAGE` | Adds a user or group to a Shared Drive with specific role | Standard |
 | `RETRAIT_MEMBRE_DRIVE_PARTAGE` | Revokes a member's access from a Shared Drive | Permanent |
+| `RETRAIT_TOUS_DRIVES_PARTAGES` | Bulk removes user from all direct Shared Drive memberships (preserves memberships inherited via groups) | Permanent |
 | **Calendars & Room Resources** | | |
 | `PARTAGE_CALENDRIER` | Shares a Google Calendar with specific permissions | Standard |
 | `RETRAIT_PARTAGE_CALENDRIER` | Revokes calendar sharing access | Permanent |
