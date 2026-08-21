@@ -1,12 +1,12 @@
 # Passerelle Jira Service Management → Google Workspace
 
-[![Version](https://img.shields.io/badge/version-3.2.0-blue.svg)](CHANGELOG.md)
-[![Actions](https://img.shields.io/badge/catalogue-49_actions-green.svg)](#actions-disponibles-49-actions)
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](CHANGELOG.md)
+[![Actions](https://img.shields.io/badge/catalogue-50_actions-green.svg)](#actions-disponibles-50-actions)
 [![Google Workspace](https://img.shields.io/badge/Google_Workspace-Admin_SDK-4285F4.svg)](https://developers.google.com/admin-sdk)
 [![Jira Cloud](https://img.shields.io/badge/Jira_Cloud-Automation_REST-0052CC.svg)](https://www.atlassian.com/software/jira/service-management)
 [![Licence](https://img.shields.io/badge/licence-MIT-purple.svg)](LICENSE)
 
-> **v3.2.0** — Automatise 100% des opérations d'administration Google Workspace déclenchées par les formulaires Jira Service Management, avec file d'attente ouvrable, exécution programmée à date future et boucle de retour fermée sur les tickets.
+> **v3.3.0** — Automatise 100% des opérations d'administration Google Workspace déclenchées par les formulaires Jira Service Management, avec file d'attente ouvrable, exécution programmée à date future et boucle de retour fermée sur les tickets.
 
 *[English version below](#jira-service-management--google-workspace-gateway)*
 
@@ -15,7 +15,7 @@
 ## Sommaire
 
 1. [Présentation & Architecture](#présentation)
-2. [Catalogue des 49 Actions](#actions-disponibles-49-actions)
+2. [Catalogue des 50 Actions](#actions-disponibles-50-actions)
 3. [Groupes d'Actions (Séquences Orchestrées)](#groupes-daction)
 4. [Console WebApp & Les 4 Onglets](#console-webapp-interactive--les-4-onglets)
 5. [Prérequis & Activation des API Google Cloud](#prérequis--activation-des-api-google-cloud)
@@ -48,7 +48,7 @@ flowchart TD
     F --> G["⏰ Trigger récurrent (15 min)"]
     G --> D
     
-    E -- "Créneau OK ou Permanente" --> H["⚙️ Registre : 49 Actions & Groupes"]
+    E -- "Créneau OK ou Permanente" --> H["⚙️ Registre : 50 Actions & Groupes"]
     
     H --> I["🏢 Google Workspace Admin SDK"]
     H --> J["📁 Google Drive API v3 (Shared Drives)"]
@@ -63,7 +63,7 @@ flowchart TD
 
 ---
 
-### Actions disponibles (49 actions)
+### Actions disponibles (50 actions)
 
 | Action | Description | Fenêtre |
 |---|---|---|
@@ -91,6 +91,7 @@ flowchart TD
 | `DECONNEXION_FORCEE` | Déconnecte toutes les sessions (le compte reste actif) | Permanente |
 | `REVOCATION_TOKENS_APPS` | Révoque les accès des applications tierces | Permanente |
 | `GENERATION_CODES_SECOURS` | Génère de nouveaux codes 2FA (anciens révoqués) | Standard |
+| `RETRAIT_INFOS_RECUPERATION` | Supprime l'e-mail et le téléphone de récupération de la fiche d'un compte | Standard |
 | **Appareils mobiles (MDM)** | | |
 | `EFFACEMENT_APPAREIL` | Efface à distance un appareil (vol, perte) | Permanente |
 | `BLOCAGE_APPAREIL` | Bloque un appareil suspect | Permanente |
@@ -231,7 +232,72 @@ Dans votre règle **Jira Automation** (sur validation du ticket) :
 }
 ```
 
-### Available Actions (49 actions)
+---
+
+# Jira Service Management → Google Workspace Gateway
+
+[![Version](https://img.shields.io/badge/version-3.3.0-blue.svg)](CHANGELOG.md)
+[![Actions](https://img.shields.io/badge/catalogue-50_actions-green.svg)](#available-actions-50-actions)
+[![Google Workspace](https://img.shields.io/badge/Google_Workspace-Admin_SDK-4285F4.svg)](https://developers.google.com/admin-sdk)
+[![Jira Cloud](https://img.shields.io/badge/Jira_Cloud-Automation_REST-0052CC.svg)](https://www.atlassian.com/software/jira/service-management)
+[![License](https://img.shields.io/badge/license-MIT-purple.svg)](LICENSE)
+
+> **v3.3.0** — Fully automates 100% of Google Workspace administration operations triggered by Jira Service Management tickets, featuring business-hours scheduling, future date/time dispatch, and closed-loop Jira issue updates.
+
+---
+
+## Table of Contents
+
+1. [Overview & Architecture](#overview)
+2. [Catalogue of 50 Actions](#available-actions-50-actions)
+3. [Action Groups (Orchestrated Sequences)](#action-groups)
+4. [Interactive WebApp & The 4 Tabs](#interactive-webapp-control-center--the-4-tabs)
+5. [Prerequisites & Google Cloud API Enablement](#prerequisites--google-cloud-api-enablement)
+6. [Setup & Deployment](#setup)
+7. [Script Configuration (Properties)](#script-properties)
+8. [Jira Automation Setup](#jira-webhook-configuration)
+9. [Gmail & Domain-Wide Delegation Setup](#gmail-service-account-setup)
+10. [Testing & Verification](#testing--verification)
+11. [Security](#security)
+12. [Author & License](#author)
+
+---
+
+## Overview
+
+When a JSM agent or manager approves a ticket (employee onboarding, offboarding, internal transfer, password reset, Shared Drive creation, calendar room provisioning, company-wide HTML signature...), **Jira Automation** sends a secure `POST` webhook to this Google Apps Script WebApp.
+
+The router verifies authentication in constant time, validates input parameters, applies admin business windows or future execution scheduling, performs the operation via the Google Workspace Admin SDK, logs execution to the audit spreadsheet, and comments/auto-resolves the Jira ticket.
+
+### System Architecture
+
+```mermaid
+flowchart TD
+    A["👤 Requester (JSM Portal)"] --> B["🎫 JSM Ticket (Agent Approval)"]
+    B --> C["⚡ Jira Automation (Webhook POST)"]
+    C --> D["🛡️ Apps Script Gateway (Router & Auth Token)"]
+    
+    D --> E{"Business Window Check"}
+    E -- "Outside Business Hours" --> F["📥 Priority Queue (Google Sheets)"]
+    F --> G["⏰ Recurrent Trigger (15 min)"]
+    G --> D
+    
+    E -- "Within Window or Permanent" --> H["⚙️ Action Registry (50 Actions & Groups)"]
+    
+    H --> I["🏢 Google Workspace Admin SDK"]
+    H --> J["📁 Google Drive API v3 (Shared Drives)"]
+    H --> K["📧 Gmail API (Signatures, Delegations, Vacation)"]
+    H --> L["📅 Google Calendar API (Resources & Rooms)"]
+    H --> M["💳 Enterprise License Manager"]
+    
+    I & J & K & L & M --> N["📋 Audit Log (Google Sheets)"]
+    N --> O["💬 Jira Callback (Internal Note & Resolution)"]
+    O --> B
+```
+
+---
+
+### Available Actions (50 actions)
 
 | Action | Description | Window |
 |---|---|---|
@@ -259,6 +325,7 @@ Dans votre règle **Jira Automation** (sur validation du ticket) :
 | `DECONNEXION_FORCEE` | Signs out all active user sessions (account remains active) | Permanent |
 | `REVOCATION_TOKENS_APPS` | Revokes third-party application OAuth tokens | Permanent |
 | `GENERATION_CODES_SECOURS` | Generates new 2FA backup verification codes | Standard |
+| `RETRAIT_INFOS_RECUPERATION` | Clears recovery email and phone from an account profile | Standard |
 | **Mobile Devices (MDM)** | | |
 | `EFFACEMENT_APPAREIL` | Remotely wipes a mobile device (lost/stolen) | Permanent |
 | `BLOCAGE_APPAREIL` | Blocks a suspicious mobile device | Permanent |
@@ -303,11 +370,11 @@ Dans votre règle **Jira Automation** (sur validation du ticket) :
 Opening the deployed WebApp URL in your browser gives you an enterprise **Material Design 3** control center:
 
 1. 🧪 **Tab 1 — Admin Console**:
-   * Interactive execution console for all **49 actions**.
+   * Interactive execution console for all **50 actions**.
    * One-click "Fill with example" button to test any action instantly.
    * Access restricted strictly to emails declared in `ADMIN_UI_EMAILS`.
 2. 📋 **Tab 2 — Test Bench & Acceptance**:
-   * Operational qualification matrix covering all 49 actions.
+   * Operational qualification matrix covering all 50 actions.
    * Status toggles (🟢 *Validated*, 🟡 *Pending*, 🔴 *Defect*, ⚪ *N/A*) and notes persisted across sessions.
    * One-click "Export Report" to generate an official Markdown acceptance document.
 3. 📖 **Tab 3 — JSM Integration Guide**:

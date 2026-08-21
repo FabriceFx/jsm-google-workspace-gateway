@@ -1,7 +1,7 @@
 # Cahier de Recette & Guide de Qualification Opérationnelle
 # *Acceptance Test Playbook & Operational Qualification Guide*
 
-> **Passerelle Jira Service Management → Google Workspace (v3.2.0)**  
+> **Passerelle Jira Service Management → Google Workspace (v3.3.0)**  
 > *Développé par Fabrice Faucheux ([faucheux.bzh](https://faucheux.bzh))*
 
 ---
@@ -9,7 +9,7 @@
 ## 🇫🇷 Version Française
 
 ### 1. Présentation & Objectifs
-Ce cahier de recette accompagne la mise en service de la passerelle. Il permet de tester méthodiquement chacune des **49 actions**, de vérifier leur conformité opérationnelle et de consigner leur validation directement dans le **Banc d'Essai & Matrice de Recette** de la console d'administration avant le raccordement en production avec Jira Service Management.
+Ce cahier de recette accompagne la mise en service de la passerelle. Il permet de tester méthodiquement chacune des **50 actions**, de vérifier leur conformité opérationnelle et de consigner leur validation directement dans le **Banc d'Essai & Matrice de Recette** de la console d'administration avant le raccordement en production avec Jira Service Management.
 
 ### 2. Outils de test à disposition
 1. **Banc d'Essai & Recette (Onglet 2 de la WebApp)** : Tableau de bord de qualification avec sélecteur d'état opérationnel (🟢 *Validé*, 🟡 *À tester*, 🔴 *Anomalie*, ⚪ *Non applicable*), saisie d'observations et export du PV de recette.
@@ -28,25 +28,25 @@ Ce cahier de recette accompagne la mise en service de la passerelle. Il permet d
 | `CREATION_COMPTE` | `prenom`: "Test", `nom`: "Recette", `email_souhaite`: "test.recette@domaine.com", `manager_email`: "votre-email@domaine.com" | Compte créé dans l'annuaire, mot de passe provisoire reçu par email. | Vérifier dans Google Admin (OU, statut actif, mot de passe temporaire exigé au 1er login). |
 | `CHANGEMENT_OU` | `email_cible`: "test.recette@domaine.com", `unite_organisationnelle`: "/Direction/IT" | Compte déplacé dans la nouvelle OU. | Vérifier l'OU dans Google Admin. |
 | `MISE_A_JOUR_PROFIL` | `email_cible`: "test.recette@domaine.com", `intitule_poste`: "Directeur Projets", `telephone_pro`: "+33 2 96 00 00 00" | Profil mis à jour sans écraser les autres attributs. | Vérifier la préservation des attributs personnalisés RH. |
-| `RENOMMER_COMPTE` | `email_cible`: "test.recette@domaine.com", `nouvel_email`: "test.recette2@domaine.com" | L'adresse principale change ; l'ancienne adresse devient automatiquement un alias. | Vérifier que l'ancien email est listé dans les alias. |
-| `SUPPRESSION_COMPTE` | `email_cible`: "test.recette2@domaine.com", `confirmation`: "CONFIRMER_SUPPRESSION" | Compte supprimé définitivement. | L'utilisateur n'existe plus dans l'annuaire. Refus si compte admin. |
+| `RENOMMER_COMPTE` | `email_cible`: "ancien.nom@domaine.com", `nouvel_email`: "nouveau.nom@domaine.com" | Adresse principale renommée, l'ancienne adresse devient un alias. | Vérifier la continuité de réception. |
+| `SUPPRESSION_COMPTE` | `email_cible`: "test.recette@domaine.com", `confirmation`: "CONFIRMER_SUPPRESSION" | Compte supprimé définitivement. | Action destructive (garde-fou confirmation obligatoire). |
 
-#### 👥 2. Groupes Google
-| Action | Données de test recommandées | Résultat attendu | Points de contrôle |
-|---|---|---|---|
-| `CREATION_GROUPE` | `email_groupe`: "test-groupe-recette@domaine.com", `nom_groupe`: "Groupe Test Recette" | Groupe créé dans Google Workspace. | Visible dans Groupes de Google Admin. |
-| `AJOUT_GROUPE` | `email_cible`: "votre-email@domaine.com", `email_groupe`: "test-groupe-recette@domaine.com", `role`: "MEMBER" | Utilisateur ajouté comme membre. | Idempotence : rejouer l'action renvoie `idempotent: true`. |
-| `CONFIG_GROUPE` | `email_groupe`: "test-groupe-recette@domaine.com", `who_can_post_message`: "ANYONE_CAN_POST", `allow_external_members`: "true" | Droits et modération modifiés via Groups Settings API. | Contrôler dans Google Groups. |
-| `LISTE_MEMBRES_GROUPE` | `email_groupe`: "test-groupe-recette@domaine.com" | Liste des membres retournée en lecture seule. | Contient votre adresse avec le rôle MEMBER. |
-| `RETRAIT_GROUPE` | `email_cible`: "votre-email@domaine.com", `email_groupe`: "test-groupe-recette@domaine.com" | Utilisateur retiré du groupe. | Retrait confirmé dans l'annuaire. |
-| `RETRAIT_TOUS_GROUPES`| `email_cible`: "votre-email@domaine.com" | Utilisateur retiré de tous ses groupes directs. | Les groupes dynamiques sont sautés gracieusement. |
-| `SUPPRESSION_GROUPE` | `email_groupe`: "test-groupe-recette@domaine.com", `confirmation`: "CONFIRMER_SUPPRESSION" | Groupe supprimé. | Le groupe n'existe plus. |
+#### 👥 2. Groupes Google & Listes de Diffusion
+| Action | Données de test | Résultat attendu |
+|---|---|---|
+| `CREATION_GROUPE` | `email_groupe`: "grp-recette@domaine.com", `nom_groupe`: "Groupe Recette", `proprietaire_email`: "votre-email@domaine.com" | Groupe créé dans Google Admin avec son propriétaire. |
+| `AJOUT_GROUPE` | `email_cible`: "collaborateur@domaine.com", `email_groupe`: "grp-recette@domaine.com", `role`: "MEMBER" | Utilisateur ajouté au groupe avec le rôle demandé. |
+| `RETRAIT_GROUPE` | `email_cible`: "collaborateur@domaine.com", `email_groupe`: "grp-recette@domaine.com" | Utilisateur retiré du groupe. |
+| `RETRAIT_TOUS_GROUPES` | `email_cible`: "partant@domaine.com" | Utilisateur retiré de tous ses groupes directs (ignore gracieusement les groupes dynamiques). |
+| `LISTE_MEMBRES_GROUPE` | `email_groupe`: "grp-recette@domaine.com" | Liste complète des membres avec leurs rôles retournée. |
+| `CONFIG_GROUPE` | `email_groupe`: "grp-recette@domaine.com", `qui_peut_poster`: "ALL_IN_DOMAIN_CAN_POST", `qui_peut_voir`: "ALL_IN_DOMAIN_CAN_VIEW" | Paramètres de publication et de modération mis à jour via Groups Settings API. |
+| `SUPPRESSION_GROUPE` | `email_groupe`: "grp-recette@domaine.com", `confirmation`: "CONFIRMER_SUPPRESSION" | Groupe supprimé. |
 
 #### 🏷️ 3. Alias E-mail
 | Action | Données de test | Résultat attendu |
 |---|---|---|
-| `AJOUT_ALIAS` | `email_cible`: "compte-test@domaine.com", `alias`: "alias-test@domaine.com" | Alias ajouté au compte principal. |
-| `RETRAIT_ALIAS` | `email_cible`: "compte-test@domaine.com", `alias`: "alias-test@domaine.com" | Alias dissocié du compte. |
+| `AJOUT_ALIAS` | `email_cible`: "test.recette@domaine.com", `alias`: "test.alias@domaine.com" | Alias rattaché au compte. |
+| `RETRAIT_ALIAS` | `email_cible`: "test.recette@domaine.com", `alias`: "test.alias@domaine.com" | Alias supprimé du compte. |
 
 #### 🔒 4. Sécurité & Mots de Passe
 | Action | Données de test | Résultat attendu | Points de contrôle |
@@ -57,6 +57,7 @@ Ce cahier de recette accompagne la mise en service de la passerelle. Il permet d
 | `DECONNEXION_FORCEE`| `email_cible`: "compte-test@domaine.com" | Toutes les sessions web et Google sont coupées. | Le compte reste actif mais doit se ré-authentifier. |
 | `REVOCATION_TOKENS_APPS` | `email_cible`: "compte-test@domaine.com" | Accès tiers OAuth révoqués. | Vérifier la section Sécurité du compte. |
 | `GENERATION_CODES_SECOURS` | `email_cible`: "compte-test@domaine.com", `manager_email`: "votre-email@domaine.com" | Nouveaux codes 2FA générés et envoyés au manager. | Anciens codes révoqués. |
+| `RETRAIT_INFOS_RECUPERATION` | `email_cible`: "compte-test@domaine.com" | E-mail personnel et numéro de téléphone de secours purgés de la fiche du compte. | Idempotent si aucun contact enregistré. |
 
 #### 📱 5. Flotte Mobile
 | Action | Données de test | Résultat attendu |

@@ -3,6 +3,22 @@
 Tous les changements notables de ce projet sont documentés ici.
 Le format suit [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/).
 
+## [3.3.0] — 2026-08-21
+
+### Purge des informations de récupération & Cap des 50 Actions
+
+> **La certitude absolue qu'aucun canal personnel de secours ne subsiste pour compromettre un compte.** Tu n'as plus à craindre qu'un ancien collaborateur dont le compte est réassigné ou gelé puisse réinitialiser un mot de passe ou intercepter un code de sécurité via son adresse e-mail ou son numéro de mobile personnel. En une seule action, ses coordonnées de secours sont définitivement purgées de la fiche Workspace.
+
+### Nouvelle Action (portant le catalogue à 50 actions)
+
+- **Sécurité & Protection des Comptes** :
+  - `RETRAIT_INFOS_RECUPERATION` : Efface l'adresse e-mail de récupération (`recoveryEmail`) et le numéro de téléphone de secours (`recoveryPhone`) sur la fiche Workspace d'un utilisateur, garantissant la rupture totale avec tout canal personnel.
+
+### Améliorations & Résilience
+
+- **Retrait de tous les groupes (`RETRAIT_TOUS_GROUPES`)** : Traitement 100% piloté par l'API officielle de Google avec interception de l'erreur `Condition not met` pour ignorer gracieusement les groupes dynamiques et conditionnels d'annuaire sans bloquer la révocation des groupes statiques.
+- **Console WebApp & Matrice de Recette** : Passage du catalogue à 50 actions, intégration des formulaires et suppression des listes de secours statiques résiduelles.
+
 ## [3.2.0] — 2026-08-21
 
 ### Révocation en masse des Drives partagés (catalogue à 49 actions)

@@ -59,6 +59,7 @@ function declarationsFormulaires_() {
     SPEC_DECONNEXION_FORCEE,
     SPEC_REVOCATION_TOKENS_APPS,
     SPEC_GENERATION_CODES_SECOURS,
+    SPEC_RETRAIT_INFOS_RECUPERATION,
 
     // --- Appareils mobiles ---------------------------------------------------
     SPEC_EFFACEMENT_APPAREIL,

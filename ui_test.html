@@ -1000,7 +1000,7 @@
           <span class="material-symbols-outlined" style="font-size:18px;">slideshow</span>
           <span>Présentation & Schéma</span>
         </button>
-        <span class="badge-version">v3.2.0</span>
+        <span class="badge-version">v3.3.0</span>
       </div>
     </div>
   </header>
@@ -1039,7 +1039,7 @@
         <aside class="card">
           <div class="card-title">
             <span class="material-symbols-outlined" aria-hidden="true">widgets</span>
-            <span>Actions disponibles (<span id="action-count">49</span>)</span>
+            <span>Actions disponibles (<span id="action-count">50</span>)</span>
           </div>
 
           <div class="search-box">
@@ -2407,6 +2407,9 @@
           { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
           { id: 'manager_email', label: 'E-mail du destinataire des codes', type: 'email', placeholder: 'manager@cooperl.com' }
         ],
+        'RETRAIT_INFOS_RECUPERATION': [
+          { id: 'email_cible', label: 'E-mail du compte à purger', type: 'email', placeholder: 'jean.dupont@cooperl.com' }
+        ],
         'DECONNEXION_FORCEE': [
           { id: 'email_cible', label: 'E-mail du compte', type: 'email', placeholder: 'jean.dupont@cooperl.com' },
           { id: 'motif', label: 'Motif', placeholder: 'Sessions suspectes' }
@@ -2871,7 +2874,7 @@
       if (['CREATION_COMPTE', 'CHANGEMENT_OU', 'MISE_A_JOUR_PROFIL', 'RENOMMER_COMPTE', 'SUPPRESSION_COMPTE'].includes(nom)) return 'Comptes';
       if (['AJOUT_GROUPE', 'RETRAIT_GROUPE', 'RETRAIT_TOUS_GROUPES', 'CREATION_GROUPE', 'SUPPRESSION_GROUPE', 'LISTE_MEMBRES_GROUPE', 'CONFIG_GROUPE'].includes(nom)) return 'Groupes';
       if (['AJOUT_ALIAS', 'RETRAIT_ALIAS'].includes(nom)) return 'Alias';
-      if (['SUSPENSION', 'REACTIVATION', 'RESET_MOT_DE_PASSE', 'DECONNEXION_FORCEE', 'REVOCATION_TOKENS_APPS', 'GENERATION_CODES_SECOURS'].includes(nom)) return 'Sécurité';
+      if (['SUSPENSION', 'REACTIVATION', 'RESET_MOT_DE_PASSE', 'DECONNEXION_FORCEE', 'REVOCATION_TOKENS_APPS', 'GENERATION_CODES_SECOURS', 'RETRAIT_INFOS_RECUPERATION'].includes(nom)) return 'Sécurité';
       if (['EFFACEMENT_APPAREIL', 'BLOCAGE_APPAREIL', 'APPROBATION_APPAREIL'].includes(nom)) return 'Appareils';
       if (['DELEGATION_EMAIL', 'RETRAIT_DELEGATION_EMAIL', 'REPONSE_ABSENCE', 'DESACTIVATION_REPONSE_ABSENCE', 'TRANSFERT_EMAILS', 'ARRET_TRANSFERT_EMAILS', 'SIGNATURE_EMAIL'].includes(nom)) return 'Messagerie';
       if (['INFO_COMPTE', 'AUDIT_ACCES_COMPLET'].includes(nom)) return 'Diagnostic';
