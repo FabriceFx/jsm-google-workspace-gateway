@@ -1123,7 +1123,7 @@ function listerTousDrivesPartages_(traceId) {
     }
   }
 
-  if (drivesMap.size === 0 && erreurs.length > 0 && useAdvanced) {
+  if (drivesMap.size === 0 && erreurs.length > 0) {
     // Toutes les méthodes ont échoué par erreur technique
     throw new AppError_('DRIVE_API_ERROR', 'Impossible d\'énumérer les Drives partagés : ' + erreurs[0], 502);
   }

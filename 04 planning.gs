@@ -215,24 +215,50 @@ function parseDateIso_(valeur, champ) {
   var s = String(valeur).trim();
   var libelle = champ ? " (champ '" + champ + "')" : '';
 
-  // Supporte 'yyyy-MM-dd' ainsi que les horodatages ISO complets 'yyyy-MM-ddTHH:mm' ou 'yyyy-MM-dd HH:mm'
-  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/.exec(s);
+  // Regex strictement ancrée supportant yyyy-MM-dd, heure optionnelle et fuseau horaire optionnel (Z ou +/-HH:mm)
+  var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?(?:(Z)|([+-]\d{2})(?::?(\d{2}))?)?)?$/.exec(s);
   if (!m) {
     throw new AppError_('INVALID_DATE',
       "Date invalide" + libelle + " : '" + valeur + "'. Format attendu : " +
-      'yyyy-MM-dd (ex. 2026-08-15) ou yyyy-MM-ddTHH:mm.');
+      'yyyy-MM-dd (ex. 2026-08-15), yyyy-MM-ddTHH:mm ou ISO 8601 complet (Z).');
   }
 
   var annee = Number(m[1]), mois = Number(m[2]), jour = Number(m[3]);
   var heure = m[4] !== undefined ? Number(m[4]) : 0;
   var minute = m[5] !== undefined ? Number(m[5]) : 0;
   var seconde = m[6] !== undefined ? Number(m[6]) : 0;
+  var isUtc = !!m[7];
+  var tzSignAndHour = m[8]; // ex: '+02' ou '-05'
+  var tzMinute = m[9] !== undefined ? Number(m[9]) : 0;
 
-  var d = new Date(annee, mois - 1, jour, heure, minute, seconde);
-  if (d.getFullYear() !== annee || d.getMonth() !== mois - 1 || d.getDate() !== jour) {
-    throw new AppError_('INVALID_DATE',
-      "Date inexistante" + libelle + " : '" + valeur + "'.");
+  // Validation des bornes élémentaires
+  if (heure > 23 || minute > 59 || seconde > 59 || mois < 1 || mois > 12 || jour < 1 || jour > 31) {
+    throw new AppError_('INVALID_DATE', "Composante horaire ou date hors borne" + libelle + " : '" + valeur + "'.");
   }
+
+  // Vérification de la cohérence du calendrier grégorien (ex: 2026-02-31)
+  var dVerifUtc = new Date(Date.UTC(annee, mois - 1, jour));
+  if (dVerifUtc.getUTCFullYear() !== annee || dVerifUtc.getUTCMonth() !== mois - 1 || dVerifUtc.getUTCDate() !== jour) {
+    throw new AppError_('INVALID_DATE', "Date calendaire inexistante" + libelle + " : '" + valeur + "'.");
+  }
+
+  var d;
+  if (isUtc) {
+    // Horodatage UTC explicite (suffixe 'Z')
+    d = new Date(Date.UTC(annee, mois - 1, jour, heure, minute, seconde));
+  } else if (tzSignAndHour) {
+    // Horodatage avec décalage de fuseau (ex: +02:00)
+    var tzOffsetMinutes = Number(tzSignAndHour) * 60 + (Number(tzSignAndHour) >= 0 ? tzMinute : -tzMinute);
+    var utcMillis = Date.UTC(annee, mois - 1, jour, heure, minute, seconde) - (tzOffsetMinutes * 60000);
+    d = new Date(utcMillis);
+  } else {
+    // Heure locale du script (sans fuseau explicite)
+    d = new Date(annee, mois - 1, jour, heure, minute, seconde);
+    if (d.getFullYear() !== annee || d.getMonth() !== mois - 1 || d.getDate() !== jour) {
+      throw new AppError_('INVALID_DATE', "Date inexistante" + libelle + " : '" + valeur + "'.");
+    }
+  }
+
   return d;
 }
 

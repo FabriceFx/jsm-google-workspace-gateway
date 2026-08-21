@@ -110,7 +110,6 @@ function test_unitaires() {
     groupe_('traduireErreurAdmin_', testTraduireErreurAdmin_);
     groupe_('estErreurGroupeDynamique_', testEstErreurGroupeDynamique_);
     groupe_('toutes les specs et handlers', testTousHandlersRegistre_);
-    groupe_('invocation des 50 handlers', testSmokeInvocationHandlers_);
 
     const s = SUITE_COURANTE;
     const total = s.reussis + s.echecs.length;
@@ -163,13 +162,33 @@ function testParseHeure_() {
 
 function testParseDateIso_() {
     var d = parseDateIso_('2026-08-15', 'x');
-    assertEquals_(d.getFullYear(), 2026, 'année');
-    assertEquals_(d.getMonth(), 7, 'mois (0-based)');
-    assertEquals_(d.getDate(), 15, 'jour');
+    assertEquals_(d.getFullYear(), 2026, 'date simple année');
+    assertEquals_(d.getMonth(), 7, 'date simple mois (0-based)');
+    assertEquals_(d.getDate(), 15, 'date simple jour');
+
+    var dHeure = parseDateIso_('2026-08-15T14:30', 'x');
+    assertEquals_(dHeure.getFullYear(), 2026, 'date+heure année');
+    assertEquals_(dHeure.getHours(), 14, 'date+heure heure');
+    assertEquals_(dHeure.getMinutes(), 30, 'date+heure minute');
+
+    var dUtc = parseDateIso_('2026-08-15T14:30:00Z', 'x');
+    assertEquals_(dUtc.getUTCFullYear(), 2026, 'UTC année');
+    assertEquals_(dUtc.getUTCHours(), 14, 'UTC heure');
+    assertEquals_(dUtc.getUTCMinutes(), 30, 'UTC minute');
+
+    var dOffset = parseDateIso_('2026-08-15T16:30:00+02:00', 'x');
+    assertEquals_(dOffset.getUTCHours(), 14, 'Offset +02:00 converti en UTC 14h');
+
     assertThrows_(function () { parseDateIso_('15/08/2026', 'x'); },
         'INVALID_DATE', 'format FR refusé');
     assertThrows_(function () { parseDateIso_('2026-02-31', 'x'); },
         'INVALID_DATE', 'jour inexistant refusé');
+    assertThrows_(function () { parseDateIso_('2026-08-15T25:00', 'x'); },
+        'INVALID_DATE', 'heure 25 refusée');
+    assertThrows_(function () { parseDateIso_('2026-08-15T14:99', 'x'); },
+        'INVALID_DATE', 'minute 99 refusée');
+    assertThrows_(function () { parseDateIso_('2026-08-15T14:30PARASITE', 'x'); },
+        'INVALID_DATE', 'suffixe parasite refusé');
     assertThrows_(function () { parseDateIso_('pas une date', 'x'); },
         'INVALID_DATE', 'texte refusé');
 }
@@ -352,59 +371,6 @@ function testTousHandlersRegistre_() {
         assert_(Array.isArray(spec.emails), nom + ' : emails est un tableau');
         assert_(spec.fenetre === 'STANDARD' || spec.fenetre === 'PERMANENTE', nom + ' : fenêtre valide (STANDARD ou PERMANENTE)');
         assert_(typeof spec.handler === 'function', nom + ' : handler est une fonction valide');
-    });
-}
-
-function testSmokeInvocationHandlers_() {
-    const actionsObj = getActions_();
-    const actionNoms = Object.keys(actionsObj);
-    const mockCtx = {
-        action: 'SMOKE_TEST',
-        ticketKey: 'SMOKE-001',
-        requestId: 'SMOKE-001-1',
-        traceId: 'TRACE-SMOKE'
-    };
-    const mockData = {
-        email_cible: 'user.test@cooperl.com',
-        email_source: 'user.test@cooperl.com',
-        email_destination: 'dest@cooperl.com',
-        email_groupe: 'grp_test@cooperl.com',
-        email_manager: 'dest@cooperl.com',
-        email_delegue: 'dest@cooperl.com',
-        prenom: 'Jean',
-        nom: 'Dupont',
-        email_souhaite: 'jean.dupont@cooperl.com',
-        nouvel_email: 'jean.dupont2@cooperl.com',
-        manager_email: 'dest@cooperl.com',
-        alias: 'jean.alias@cooperl.com',
-        nom_groupe: 'Groupe Test',
-        description: 'Groupe test',
-        drive_id: 'drive-123',
-        nom_drive: 'Nouveau Drive',
-        role: 'MEMBER',
-        nouvelle_ou: '/Direction',
-        motif: 'Test unitaire',
-        message: 'Absent du bureau',
-        objet: 'Absence',
-        date_debut: '2026-08-25',
-        date_fin: '2026-08-30',
-        code_batiment: 'BAT-1',
-        nom_ressource: 'Salle Test',
-        type_ressource: 'ROOM',
-        capacite: 10,
-        email_ressource: 'salle.test@resource.calendar.google.com'
-    };
-
-    actionNoms.forEach(function (nom) {
-        const spec = actionsObj[nom];
-        try {
-            // Invocation protégée pour vérifier qu'aucune ReferenceError / fonction inexistante n'est présente
-            spec.handler(Object.assign({}, mockData), Object.assign({}, mockCtx, { action: nom }));
-            assert_(true, nom + ' : handler invoqué sans ReferenceError');
-        } catch (err) {
-            const estBugReference = (err instanceof ReferenceError) || (err instanceof TypeError && err.message.indexOf('is not a function') !== -1);
-            assert_(!estBugReference, nom + ' : aucune fonction manquante (reçu ' + (err.name || 'Error') + ' : ' + err.message + ')');
-        }
     });
 }
 
@@ -602,4 +568,78 @@ function test_simulerCreationCompteReelle() {
 
     const reponse = doPost({ postData: { contents: JSON.stringify(payload) } });
     console.log(reponse.getContent());
+}
+
+/**
+ * Diagnostic manuel : Invoque chaque handler d'action avec un domaine réservé invalide
+ * (@smoke-test.invalid) afin de vérifier l'absence d'erreur de syntaxe ou de ReferenceError.
+ *
+ * ⚠️ RISQUE D'EFFET DE BORD : Désactivé par défaut. Utilise un faux domaine pour
+ * faire échouer les appels en amont sans impacter le domaine réel de production.
+ */
+function test_smokeTestHandlersManuels_() {
+    assertAdminUI_();
+    if (!testsPretsAExecuter_()) return;
+
+    const AUTORISER_SMOKE_TEST = false; // ⚠️ Passer à true pour exécuter ce diagnostic manuel
+    if (!AUTORISER_SMOKE_TEST) {
+        console.log('Smoke test d\'invocation désactivé par sécurité.\n' +
+            '  → Passer AUTORISER_SMOKE_TEST à true dans 91 tests.gs pour l\'exécuter manuellement.');
+        return;
+    }
+
+    const actionsObj = getActions_();
+    const actionNoms = Object.keys(actionsObj);
+    const mockCtx = {
+        action: 'SMOKE_MANUEL',
+        ticketKey: 'SMOKE-001',
+        requestId: 'SMOKE-001-1',
+        traceId: 'TRACE-SMOKE'
+    };
+    const mockData = {
+        email_cible: 'user.test@smoke-test.invalid',
+        email_source: 'user.test@smoke-test.invalid',
+        email_destination: 'dest@smoke-test.invalid',
+        email_groupe: 'grp_test@smoke-test.invalid',
+        email_manager: 'dest@smoke-test.invalid',
+        email_delegue: 'dest@smoke-test.invalid',
+        prenom: 'Test',
+        nom: 'Smoke',
+        email_souhaite: 'test.smoke@smoke-test.invalid',
+        nouvel_email: 'test.smoke2@smoke-test.invalid',
+        manager_email: 'dest@smoke-test.invalid',
+        alias: 'test.alias@smoke-test.invalid',
+        nom_groupe: 'Groupe Test Smoke',
+        description: 'Groupe test smoke',
+        drive_id: 'drive-smoke-invalid',
+        nom_drive: 'Drive Smoke Test',
+        role: 'MEMBER',
+        nouvelle_ou: '/Collaborateurs',
+        motif: 'Test smoke',
+        message: 'Absent',
+        objet: 'Absence',
+        date_debut: '2026-08-25',
+        date_fin: '2026-08-30',
+        code_batiment: 'BAT-1',
+        nom_ressource: 'Salle Smoke',
+        type_ressource: 'ROOM',
+        capacite: 10,
+        email_ressource: 'salle.smoke@resource.calendar.google.com'
+    };
+
+    let reussis = 0;
+    actionNoms.forEach(function (nom) {
+        const spec = actionsObj[nom];
+        try {
+            spec.handler(Object.assign({}, mockData), Object.assign({}, mockCtx, { action: nom }));
+            reussis++;
+        } catch (err) {
+            if (err instanceof ReferenceError || (err instanceof TypeError && err.message.indexOf('is not a function') !== -1)) {
+                console.error('❌ BUG REFERENCE dans ' + nom + ' : ' + err.message);
+            } else {
+                reussis++;
+            }
+        }
+    });
+    console.log('✅ Smoke test manuel terminé : ' + reussis + ' / ' + actionNoms.length + ' handlers vérifiés.');
 }
