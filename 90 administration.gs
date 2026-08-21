@@ -59,6 +59,18 @@ function setup_verifierConfiguration() {
             '\n  → Activer le service avancé "Admin SDK API" et vérifier les droits.');
     }
 
+    try {
+        if (typeof Drive !== 'undefined' && Drive.Drives) {
+            Drive.Drives.list({ pageSize: 1 });
+            rapport.push('Drive API (Service Avancé) : OK');
+        } else {
+            rapport.push('Drive API (Service Avancé) : Non détecté (utilise le fallback REST)');
+        }
+    } catch (errDrive) {
+        rapport.push('Drive API (Service Avancé) : ERREUR — ' + errDrive.message +
+            '\n  → Ré-autoriser le script depuis l\'éditeur et mettre à jour le déploiement WebApp.');
+    }
+
     rapport.push('Quota e-mail restant : ' + MailApp.getRemainingDailyQuota());
     rapport.push('Fuseau du projet   : ' + Session.getScriptTimeZone());
     rapport.push('Jours fériés       : ' +
