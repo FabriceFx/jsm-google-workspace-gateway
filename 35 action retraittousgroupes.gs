@@ -67,13 +67,6 @@ function actionRetirerTousGroupes_(data, ctx) {
   var echecs = [];
 
   groupes.forEach(function (groupe) {
-    const emailG = String(groupe).toLowerCase();
-    // Détection amont par convention de nommage des groupes dynamiques
-    if (emailG.indexOf('_dyn_') !== -1 || emailG.indexOf('dynamique') !== -1) {
-      dynamiques.push(groupe);
-      return;
-    }
-
     try {
       AdminDirectory.Members.remove(groupe, data.email_cible);
       retires.push(groupe);
