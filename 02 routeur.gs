@@ -284,6 +284,19 @@ function getSpecsCatalogue() {
 }
 
 /**
+ * Fournit les métadonnées de l'application (version, nombre d'actions).
+ * Réservé aux administrateurs autorisés (voir assertAdminUI_).
+ * @return {!{version: string, nbActions: number}}
+ */
+function getAppInfoUI() {
+  assertAdminUI_();
+  return {
+    version: CONFIG.VERSION || '3.3.0',
+    nbActions: Object.keys(getActions_()).length
+  };
+}
+
+/**
  * Fournit les options d'une liste déroulante dynamique de la console.
  * Réservé aux administrateurs autorisés (voir assertAdminUI_).
  *

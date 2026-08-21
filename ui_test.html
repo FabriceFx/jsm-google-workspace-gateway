@@ -1182,7 +1182,7 @@
           <span class="material-symbols-outlined" style="font-size:18px;">slideshow</span>
           <span>Présentation & Schéma</span>
         </button>
-        <span class="badge-version">v3.3.0</span>
+        <span class="badge-version" id="app-version-badge">v3.3.0</span>
       </div>
     </div>
   </header>
@@ -1840,7 +1840,7 @@
               <span>Matrice de Recette & Qualification Opérationnelle</span>
             </h2>
             <p style="color: var(--text-secondary); font-size: 14px; margin-top: 4px;">
-              Testez et qualifiez le bon fonctionnement de chacune des 43 actions avant le raccordement définitif à Jira Service Management.
+              Testez et qualifiez le bon fonctionnement de chacune des <span class="dyn-actions-count">50</span> actions avant le raccordement définitif à Jira Service Management.
             </p>
           </div>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -2069,7 +2069,7 @@
                 <rect x="394" y="296" width="136" height="34" rx="17" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
                 <text x="462" y="317" text-anchor="middle" font-size="11.5" fill="currentColor">validation des données</text>
                 <rect x="250" y="344" width="136" height="34" rx="17" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
-                <text x="318" y="365" text-anchor="middle" font-size="11.5" fill="currentColor">registre : 49 actions</text>
+                <text x="318" y="365" text-anchor="middle" font-size="11.5" fill="currentColor">registre : <tspan id="svg-actions-count">50</tspan> actions</text>
                 <rect x="394" y="344" width="136" height="34" rx="17" fill="none" stroke="currentColor" stroke-width="1.1" opacity="0.75"/>
                 <text x="462" y="365" text-anchor="middle" font-size="11.5" fill="currentColor">créneaux + file d'attente</text>
               </g>
@@ -2141,7 +2141,7 @@
             </div>
             <div class="pres-extra">
               <h4>Un catalogue, pas des scripts épars</h4>
-              <p>49 actions déclarées dans un registre unique, avec les mêmes contrôles, le même journal et le même retour Jira — au lieu de scripts isolés à maintenir un par un.</p>
+              <p><span id="pres-actions-count">50</span> actions déclarées dans un registre unique, avec les mêmes contrôles, le même journal et le même retour Jira — au lieu de scripts isolés à maintenir un par un.</p>
             </div>
           </div>
           <div class="pres-catalog" style="margin-top:12px;">
@@ -2219,7 +2219,7 @@
   </div>
 
   <footer>
-    Passerelle Jira Service Management → Google Workspace (v3.1.0) — Développé par 
+    Passerelle Jira Service Management → Google Workspace (<span id="footer-version">v3.3.0</span>) — <span id="footer-actions-count"><span class="dyn-actions-count">50</span> actions</span> — Développé par 
     <a href="https://faucheux.bzh" target="_blank" rel="noopener">Fabrice Faucheux</a>
   </footer>
 
@@ -2283,10 +2283,42 @@
       }
     }
 
-    // Chargement initial du catalogue
+    // Chargement initial du catalogue & métadonnées de l'application
     window.addEventListener('DOMContentLoaded', function() {
       chargerCatalogue();
+      chargerInfosApp();
     });
+
+    function chargerInfosApp() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(info) {
+            if (info && info.version) {
+              const v = 'v' + String(info.version).replace(/^v/, '');
+              const hV = document.getElementById('app-version-badge');
+              if (hV) hV.innerText = v;
+              const fV = document.getElementById('footer-version');
+              if (fV) fV.innerText = v;
+            }
+            if (info && info.nbActions) {
+              mettreAJourCompteursActions(info.nbActions);
+            }
+          })
+          .getAppInfoUI();
+      }
+    }
+
+    function mettreAJourCompteursActions(total) {
+      document.querySelectorAll('.dyn-actions-count').forEach(el => el.innerText = total);
+      const actionCount = document.getElementById('action-count');
+      if (actionCount) actionCount.innerText = total;
+      const svgCount = document.getElementById('svg-actions-count');
+      if (svgCount) svgCount.textContent = total;
+      const presCount = document.getElementById('pres-actions-count');
+      if (presCount) presCount.innerText = total;
+      const footerCount = document.getElementById('footer-actions-count');
+      if (footerCount) footerCount.innerHTML = `<span class="dyn-actions-count">${total}</span> actions`;
+    }
 
     function chargerCatalogue() {
       const listEl = document.getElementById('action-list');
@@ -2346,8 +2378,7 @@
 
     function afficherCatalogue(actions) {
       catalogueActions = actions;
-      const compteur = document.getElementById('action-count');
-      if (compteur) compteur.innerText = actions.length;
+      mettreAJourCompteursActions(actions.length);
       filtrerActions();
       initialiserModeSequence();
       // Le guide a pu être affiché avec la liste de repli avant l'arrivée du
@@ -3453,7 +3484,7 @@
         nonApplicables.length ? nonApplicables.join('\n') : `*(Aucune)*`,
         ``,
         `---`,
-        `*Généré par la Passerelle Jira Service Management → Google Workspace (v3.1.0)*`
+        `*Généré par la Passerelle Jira Service Management → Google Workspace (${document.getElementById('footer-version')?.innerText || 'v3.3.0'})*`
       ];
 
       document.getElementById('recette-export-text').innerText = lignes.join('\n');
