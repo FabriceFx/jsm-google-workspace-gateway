@@ -4,7 +4,7 @@
  * Persistance des demandes hors créneau dans l'onglet FILE_ATTENTE du
  * classeur d'audit, et vidange périodique par déclencheur temporel.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v3.1.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

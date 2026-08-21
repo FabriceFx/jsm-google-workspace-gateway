@@ -8,7 +8,7 @@
  *   email_calendrier (agenda source), email_beneficiaire (qui reçoit l'accès),
  *   [role] ∈ {freeBusyReader, reader, writer, owner} (défaut : reader)
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v3.0.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v3.1.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

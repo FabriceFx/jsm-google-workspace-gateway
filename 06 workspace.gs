@@ -4,7 +4,7 @@
  * Briques réutilisables au-dessus de l'Admin SDK : lecture d'utilisateur,
  * appartenance à un groupe, génération et transmission des mots de passe.
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v3.1.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 

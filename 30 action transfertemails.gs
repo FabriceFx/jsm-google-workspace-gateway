@@ -9,7 +9,7 @@
  *
  * Champs attendus dans `data` : email_cible, email_destination, [conserver_copie]
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v2.8.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v3.1.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
