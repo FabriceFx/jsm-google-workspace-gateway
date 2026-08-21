@@ -49,7 +49,18 @@ function actionRetirerGroupe_(data, ctx) {
         '. Aucune action réalisée.'
     };
   }
-  AdminDirectory.Members.remove(data.email_groupe, data.email_cible);
+  try {
+    AdminDirectory.Members.remove(data.email_groupe, data.email_cible);
+  } catch (err) {
+    if (estErreurGroupeDynamique_(err)) {
+      return {
+        idempotent: true,
+        target: data.email_cible,
+        message: data.email_groupe + " est un groupe dynamique (appartenance gérée automatiquement par requête). Le retrait manuel est impossible et n'est pas applicable."
+      };
+    }
+    throw err;
+  }
   return {
     target: data.email_cible,
     message: data.email_cible + ' retiré du groupe ' + data.email_groupe + '.'

@@ -182,14 +182,23 @@ function estNotFound_(err) {
 
 /**
  * Indique si une erreur signale un GROUPE DYNAMIQUE (appartenance calculée par
- * une requête, non modifiable manuellement). Utilisé pour distinguer ce cas
- * d'un échec réel lors des retraits en masse.
+ * une requête, non modifiable manuellement) ou système. Utilisé pour distinguer
+ * ce cas d'un échec réel lors des retraits en masse ou ciblés.
  *
  * @param {!Error} err Erreur levée par l'Admin SDK.
  * @return {boolean}
  */
 function estErreurGroupeDynamique_(err) {
-    return String((err && err.message) || err).toUpperCase().indexOf('DYNAMIC') !== -1;
+    const m = String((err && err.message) || err).toUpperCase();
+    return m.indexOf('DYNAMIC') !== -1 ||
+           m.indexOf('CANNOT MUTATE') !== -1 ||
+           m.indexOf('CANNOT_MUTATE') !== -1 ||
+           m.indexOf('CANNOT MODIFY MEMBERS') !== -1 ||
+           m.indexOf('CANNOT_MODIFY_MEMBERS') !== -1 ||
+           m.indexOf('CANNOT BE UPDATED DIRECTLY') !== -1 ||
+           m.indexOf('SYSTEM GROUP') !== -1 ||
+           m.indexOf('SYSTEM_GROUP') !== -1 ||
+           m.indexOf('MANAGED AUTOMATICALLY') !== -1;
 }
 
 /**

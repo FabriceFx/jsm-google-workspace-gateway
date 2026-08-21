@@ -66,6 +66,11 @@ function actionAjouterGroupe_(data, ctx) {
         'Groupe ' + data.email_groupe + ' ou membre ' + data.email_cible +
         ' introuvable.', 404);
     }
+    if (estErreurGroupeDynamique_(err)) {
+      throw new AppError_('GROUPE_DYNAMIQUE',
+        "Impossible d'ajouter manuellement un membre au groupe " + data.email_groupe +
+        " : il s'agit d'un groupe dynamique géré automatiquement par requête d'annuaire.", 400);
+    }
     throw err;
   }
 

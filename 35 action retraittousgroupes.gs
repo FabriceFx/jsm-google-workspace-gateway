@@ -10,14 +10,14 @@
  *
  * Champs attendus dans `data` : email_cible
  *
- * Projet : Passerelle Jira Service Management → Google Workspace (v3.1.0)
+ * Projet : Passerelle Jira Service Management → Google Workspace (v3.2.0)
  * ⚠️ Aucun code ne doit s'exécuter au chargement de ce fichier (voir README).
  */
 
 function SPEC_RETRAIT_TOUS_GROUPES() {
   return {
     action: 'RETRAIT_TOUS_GROUPES',
-    description: 'Retire un utilisateur de tous les groupes dont il est membre direct.',
+    description: 'Retire un utilisateur de tous ses groupes directs (ignore les groupes dynamiques).',
     required: ['email_cible'],
     emails: ['email_cible'],
     fenetre: 'PERMANENTE',   // retrait d'accès : jamais différé
@@ -60,11 +60,12 @@ function actionRetirerTousGroupes_(data, ctx) {
   }
 
   // Retrait un par un : on isole les échecs pour ne pas masquer un retrait
-  // partiel derrière une « erreur interne » (même logique que REVOCATION_TOKENS).
+  // partiel derrière une « erreur interne ».
   var retires = [];
   var ignores = [];      // appartenances indirectes (groupe imbriqué)
-  var dynamiques = [];   // groupes dynamiques : membres non modifiables
+  var dynamiques = [];   // groupes dynamiques : membres non modifiables manuellement
   var echecs = [];
+
   groupes.forEach(function (groupe) {
     try {
       AdminDirectory.Members.remove(groupe, data.email_cible);
@@ -74,9 +75,8 @@ function actionRetirerTousGroupes_(data, ctx) {
         // 404 = appartenance indirecte (membre d'un groupe imbriqué).
         ignores.push(groupe);
       } else if (estErreurGroupeDynamique_(err)) {
-        // Groupe dynamique : l'appartenance est calculée, on ne peut pas la
-        // retirer ici. Ce n'est pas un échec — l'accès suivra l'évolution des
-        // attributs du compte (à traiter par ailleurs si nécessaire).
+        // Groupe dynamique : l'appartenance est calculée par requête, on ne
+        // peut pas la retirer manuellement. Ce n'est pas un échec.
         dynamiques.push(groupe);
       } else {
         echecs.push(groupe + ' (' + err.message + ')');
@@ -91,15 +91,35 @@ function actionRetirerTousGroupes_(data, ctx) {
       '. Relancer l\'action pour réessayer les groupes restants.', 502);
   }
 
-  var notes = [];
-  if (ignores.length) notes.push(ignores.length + ' appartenance(s) indirecte(s) ignorée(s)');
-  if (dynamiques.length) notes.push(dynamiques.length + ' groupe(s) dynamique(s) non modifiable(s) : ' + dynamiques.join(', '));
+  var message = '';
+  if (retires.length === 0) {
+    if (dynamiques.length > 0) {
+      message = data.email_cible + ' n\'appartient à aucun groupe statique (' +
+        dynamiques.length + ' groupe(s) dynamique(s) ignoré(s) car géré(s) automatiquement : ' +
+        dynamiques.join(', ') + ').';
+    } else {
+      message = data.email_cible + ' n\'a aucun groupe direct à révoquer (' +
+        ignores.length + ' appartenance(s) indirecte(s) ignorée(s)).';
+    }
+  } else {
+    message = data.email_cible + ' retiré de ' + retires.length + ' groupe(s) direct(s)';
+    if (dynamiques.length > 0) {
+      message += ' (' + dynamiques.length + ' groupe(s) dynamique(s) ignoré(s))';
+    }
+    if (ignores.length > 0) {
+      message += ' (' + ignores.length + ' appartenance(s) indirecte(s) ignorée(s))';
+    }
+    message += ' : ' + retires.join(', ') + '.';
+  }
 
   return {
     target: data.email_cible,
-    message: data.email_cible + ' retiré de ' + retires.length + ' groupe(s)' +
-      (notes.length ? ' (' + notes.join(' ; ') + ')' : '') +
-      (retires.length ? ' : ' + retires.join(', ') : '') + '.',
-    details: { retires: retires, ignores: ignores, dynamiques: dynamiques }
+    message: message,
+    details: {
+      retires: retires,
+      ignores: ignores,
+      dynamiques: dynamiques,
+      total_groupes: groupes.length
+    }
   };
 }
