@@ -31,6 +31,47 @@ function setup_genererToken() {
 }
 
 /**
+ * Déclenche l'autorisation de tous les services Google Workspace requis par le projet
+ * (Google Drive, Admin Directory, Agenda, Feuilles de calcul et Messagerie).
+ *
+ * À exécuter UNE FOIS depuis l'éditeur Apps Script lors de l'installation ou après
+ * l'ajout d'un nouveau service/scope pour consentir aux permissions.
+ */
+function setup_forcerAutorisationScopes() {
+    assertAdminUI_();
+    console.log('Test d\'accès aux services pour validation du consentement OAuth...');
+
+    // 1. Google Drive
+    try {
+        const root = DriveApp.getRootFolder();
+        console.log('✓ Google Drive accessible : ' + root.getName());
+    } catch (e) {
+        console.warn('Google Drive : ' + e.message);
+    }
+
+    // 2. Admin SDK
+    try {
+        const users = AdminDirectory.Users.list({ customer: 'my_customer', maxResults: 1 });
+        console.log('✓ Admin Directory accessible : ' + (users.users ? users.users.length : 0) + ' utilisateur test');
+    } catch (e) {
+        console.warn('Admin Directory : ' + e.message);
+    }
+
+    // 3. Google Sheets (Audit)
+    try {
+        const sheetId = getProp_('AUDIT_SHEET_ID');
+        if (sheetId) {
+            const ss = SpreadsheetApp.openById(sheetId);
+            console.log('✓ Google Sheets accessible : ' + ss.getName());
+        }
+    } catch (e) {
+        console.warn('Google Sheets : ' + e.message);
+    }
+
+    console.log('🎉 Tous les services ont été sollicités. Si la fenêtre Google vous a invité à autoriser, les scopes sont maintenant actifs !');
+}
+
+/**
  * Vérifie que la configuration est complète et que l'Admin SDK répond.
  * Retourne un diagnostic dans les logs d'exécution.
  */
@@ -68,7 +109,16 @@ function setup_verifierConfiguration() {
         }
     } catch (errDrive) {
         rapport.push('Drive API (Service Avancé) : ERREUR — ' + errDrive.message +
-            '\n  → Ré-autoriser le script depuis l\'éditeur et mettre à jour le déploiement WebApp.');
+            '\n  → Exécuter setup_forcerAutorisationScopes() pour déclencher la fenêtre d\'autorisation Google.');
+    }
+
+    try {
+        if (typeof DriveApp !== 'undefined') {
+            const root = DriveApp.getRootFolder();
+            rapport.push('Google Drive natif (DriveApp) : OK (' + root.getName() + ')');
+        }
+    } catch (errDriveApp) {
+        rapport.push('Google Drive natif (DriveApp) : ERREUR — ' + errDriveApp.message);
     }
 
     rapport.push('Quota e-mail restant : ' + MailApp.getRemainingDailyQuota());
