@@ -48,42 +48,57 @@ function actionRetirerTousDrivesPartages_(data, ctx) {
     console.warn('[%s] Impossible de lister les groupes de %s : %s', ctx.traceId, primaryEmail, e.message);
   }
 
-  // 2. Énumération de TOUS les Drives partagés du domaine via l'API Drive v3 (Admin Access)
+  // 2. Énumération de TOUS les Drives partagés du domaine (Admin Access)
   let pageToken = null;
   const tousLesDrives = [];
   const token = ScriptApp.getOAuthToken();
+  const useAdvanced = (typeof Drive !== 'undefined' && Drive.Drives && typeof Drive.Drives.list === 'function');
 
   do {
-    let urlDrives = 'https://www.googleapis.com/drive/v3/drives?pageSize=100&useDomainAdminAccess=true';
-    if (pageToken) {
-      urlDrives += '&pageToken=' + encodeURIComponent(pageToken);
-    }
-
-    const repDrives = UrlFetchApp.fetch(urlDrives, {
-      method: 'GET',
-      headers: { Authorization: 'Bearer ' + token },
-      muteHttpExceptions: true
-    });
-
-    const codeDrives = repDrives.getResponseCode();
-    if (codeDrives >= 400) {
-      let errMsg = repDrives.getContentText();
-      try { errMsg = JSON.parse(errMsg).error.message; } catch (e) {}
-      if (codeDrives === 401 || codeDrives === 403 || errMsg.indexOf('insufficient') !== -1) {
-        throw new AppError_('DRIVE_AUTH_REQUIRED',
-          "Permissions Google Drive insuffisantes. Le nouveau scope 'https://www.googleapis.com/auth/drive' " +
-          "nécessite d'être ré-autorisé : ouvrez l'éditeur Apps Script et cliquez sur Exécuter sur n'importe quelle " +
-          "fonction (ex: admin_verifierApis ou test_unitaires) pour valider l'écran d'autorisation Google.", 403);
+    if (useAdvanced) {
+      try {
+        const options = { pageSize: 100, useDomainAdminAccess: true };
+        if (pageToken) options.pageToken = pageToken;
+        const rep = Drive.Drives.list(options);
+        const drives = rep.drives || [];
+        for (let i = 0; i < drives.length; i++) tousLesDrives.push(drives[i]);
+        pageToken = rep.nextPageToken || null;
+      } catch (errAdv) {
+        console.warn('[%s] Erreur service avancé Drive.Drives.list : %s — tentative via REST', ctx.traceId, errAdv.message);
+        // Fallback REST ci-dessous
+        break;
       }
-      throw new AppError_('DRIVE_API_ERROR', 'Impossible d\'énumérer les Drives partagés : ' + errMsg, codeDrives);
-    }
+    } else {
+      let urlDrives = 'https://www.googleapis.com/drive/v3/drives?pageSize=100&useDomainAdminAccess=true';
+      if (pageToken) {
+        urlDrives += '&pageToken=' + encodeURIComponent(pageToken);
+      }
 
-    const dataDrives = JSON.parse(repDrives.getContentText());
-    const drives = dataDrives.drives || [];
-    for (let i = 0; i < drives.length; i++) {
-      tousLesDrives.push(drives[i]);
+      const repDrives = UrlFetchApp.fetch(urlDrives, {
+        method: 'GET',
+        headers: { Authorization: 'Bearer ' + token },
+        muteHttpExceptions: true
+      });
+
+      const codeDrives = repDrives.getResponseCode();
+      if (codeDrives >= 400) {
+        let errMsg = repDrives.getContentText();
+        try { errMsg = JSON.parse(errMsg).error.message; } catch (e) {}
+        if (codeDrives === 401 || codeDrives === 403 || errMsg.indexOf('insufficient') !== -1) {
+          throw new AppError_('DRIVE_AUTH_REQUIRED',
+            "Permissions Google Drive insuffisantes ou API Drive non activée dans le projet GCP. " +
+            "Vérifiez que l'API Google Drive est activée dans la console GCP et réautorisez le script.", 403);
+        }
+        throw new AppError_('DRIVE_API_ERROR', 'Impossible d\'énumérer les Drives partagés : ' + errMsg, codeDrives);
+      }
+
+      const dataDrives = JSON.parse(repDrives.getContentText());
+      const drives = dataDrives.drives || [];
+      for (let i = 0; i < drives.length; i++) {
+        tousLesDrives.push(drives[i]);
+      }
+      pageToken = dataDrives.nextPageToken || null;
     }
-    pageToken = dataDrives.nextPageToken || null;
   } while (pageToken);
 
   // 3. Parcours de chaque Drive partagé pour analyser et supprimer les permissions directes

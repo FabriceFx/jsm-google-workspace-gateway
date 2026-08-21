@@ -360,8 +360,18 @@ function admin_verifierApis() {
         return 'accessible';
     }));
 
-    // 7. Google Drive & Drives partagés (Admin Access)
+    // 7. Google Drive & Drives partagés
     lignes.push(testerApi_('Drive / Drives partagés', function () {
+        if (typeof Drive !== 'undefined' && Drive.Drives && typeof Drive.Drives.list === 'function') {
+            try {
+                var rAdv = Drive.Drives.list({ pageSize: 1, useDomainAdminAccess: true });
+                return 'accessible via service avancé (' + ((rAdv.drives || []).length) + ' drive(s) lu(s))';
+            } catch (eAdv) {
+                // Essai sans useDomainAdminAccess si le compte n'a pas les droits Drive admin globaux
+                var rAdv2 = Drive.Drives.list({ pageSize: 1 });
+                return 'accessible en membre direct (' + ((rAdv2.drives || []).length) + ' drive(s) lu(s))';
+            }
+        }
         var rep = UrlFetchApp.fetch(
             'https://www.googleapis.com/drive/v3/drives?pageSize=1&useDomainAdminAccess=true',
             {
@@ -373,10 +383,13 @@ function admin_verifierApis() {
             var msg = '';
             try { msg = JSON.parse(rep.getContentText()).error.message; }
             catch (e) { msg = rep.getContentText(); }
+            if (code === 403) {
+                throw new Error('HTTP 403 — Activer l\'API Google Drive sur le projet GCP 507613315199 : https://console.developers.google.com/apis/api/drive.googleapis.com/overview?project=507613315199');
+            }
             throw new Error('HTTP ' + code + ' — ' + msg);
         }
         var data = JSON.parse(rep.getContentText());
-        return 'accessible (' + (data.drives || []).length + ' drive(s) lu(s))';
+        return 'accessible via REST (' + (data.drives || []).length + ' drive(s) lu(s))';
     }));
 
     // 8. Google Calendar / Ressources
