@@ -69,6 +69,12 @@ function actionRetirerTousDrivesPartages_(data, ctx) {
     if (codeDrives >= 400) {
       let errMsg = repDrives.getContentText();
       try { errMsg = JSON.parse(errMsg).error.message; } catch (e) {}
+      if (codeDrives === 401 || codeDrives === 403 || errMsg.indexOf('insufficient') !== -1) {
+        throw new AppError_('DRIVE_AUTH_REQUIRED',
+          "Permissions Google Drive insuffisantes. Le nouveau scope 'https://www.googleapis.com/auth/drive' " +
+          "nécessite d'être ré-autorisé : ouvrez l'éditeur Apps Script et cliquez sur Exécuter sur n'importe quelle " +
+          "fonction (ex: admin_verifierApis ou test_unitaires) pour valider l'écran d'autorisation Google.", 403);
+      }
       throw new AppError_('DRIVE_API_ERROR', 'Impossible d\'énumérer les Drives partagés : ' + errMsg, codeDrives);
     }
 
